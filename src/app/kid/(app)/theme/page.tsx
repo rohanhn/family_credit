@@ -25,6 +25,11 @@ async function KidTheme() {
         <h1 className="font-display text-2xl font-extrabold md:text-3xl">Chọn giao diện của con</h1>
       </div>
       <KidThemeForm current={isThemeId(kid.theme) ? kid.theme : FAMILY_THEME} familyTheme={familyTheme} />
+      {/* Trên điện thoại, màn này là lối vào "Đổi PIN" (sidebar màn rộng có mục riêng). */}
+      <Link href="/kid/pin" className="flex min-h-12 items-center gap-2.5 self-start rounded-[14px] bg-card px-4 font-extrabold text-ink shadow-flat no-underline md:hidden">
+        <Icon name="lock" />
+        Đổi PIN của con
+      </Link>
     </>
   );
 }

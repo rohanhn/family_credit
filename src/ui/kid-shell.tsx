@@ -15,6 +15,7 @@ export const KID_NAV: NavItem[] = [
   { href: "/kid/history", label: "Lịch sử", icon: "history" },
   { href: "/kid/rules", label: "Rule", icon: "list" },
   { href: "/kid/theme", label: "Giao diện", icon: "palette", sidebarOnly: true },
+  { href: "/kid/pin", label: "Đổi PIN", icon: "lock", sidebarOnly: true },
 ];
 
 export function KidShell({

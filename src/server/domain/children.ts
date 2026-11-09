@@ -11,7 +11,7 @@ import { logSecurityEvent } from "../log";
 // Hồ sơ con (spec family-accounts "Quản lý hồ sơ con").
 
 export type Child = typeof children.$inferSelect;
-export type ChildSummary = Pick<Child, "id" | "name" | "avatar" | "theme" | "archivedAt" | "goalRewardId">;
+export type ChildSummary = Pick<Child, "id" | "name" | "avatar" | "theme" | "archivedAt" | "goalRewardId" | "pinChangedAt">;
 
 export const PIN_FORMAT_MESSAGE = "PIN phải gồm đúng 4 chữ số";
 
@@ -89,7 +89,15 @@ export async function listChildren(db: DbOrTx, familyId: number, opts: { include
   const conditions = [eq(children.familyId, familyId)];
   if (!opts.includeArchived) conditions.push(isNull(children.archivedAt));
   return db
-    .select({ id: children.id, name: children.name, avatar: children.avatar, theme: children.theme, archivedAt: children.archivedAt, goalRewardId: children.goalRewardId })
+    .select({
+      id: children.id,
+      name: children.name,
+      avatar: children.avatar,
+      theme: children.theme,
+      archivedAt: children.archivedAt,
+      goalRewardId: children.goalRewardId,
+      pinChangedAt: children.pinChangedAt,
+    })
     .from(children)
     .where(and(...conditions))
     .orderBy(asc(children.id));

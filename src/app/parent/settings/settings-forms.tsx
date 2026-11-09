@@ -41,7 +41,7 @@ export function AddChildForm() {
   );
 }
 
-export function ChildRow({ child }: { child: { id: number; name: string; avatar: string } }) {
+export function ChildRow({ child }: { child: { id: number; name: string; avatar: string; pinChangedAt: string | null } }) {
   const [editing, setEditing] = useState(false);
   const [saveState, save] = useActionState(updateChildAction, undefined);
   const [archiveState, archive] = useActionState(archiveChildAction, undefined);
@@ -49,7 +49,10 @@ export function ChildRow({ child }: { child: { id: number; name: string; avatar:
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <ChibiAvatar avatar={child.avatar} size={48} />
-        <span className="flex-1 text-lg font-extrabold">{child.name}</span>
+        <span className="flex flex-1 flex-col">
+          <span className="text-lg font-extrabold">{child.name}</span>
+          <span className="text-sm font-semibold text-muted">{child.pinChangedAt ? `PIN đổi lần cuối: ${child.pinChangedAt}` : "PIN chưa đổi từ khi tạo"}</span>
+        </span>
         <Button variant="outline" onClick={() => setEditing(!editing)} aria-expanded={editing}>
           {editing ? "Đóng" : "Sửa"}
         </Button>

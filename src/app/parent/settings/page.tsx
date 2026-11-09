@@ -40,7 +40,15 @@ async function Settings() {
         <h1 className="font-display text-3xl font-extrabold">Cài đặt</h1>
         <Section id="con" title="Các con">
           {kids.map((k) => (
-            <ChildRow key={k.id} child={k} />
+            <ChildRow
+              key={k.id}
+              child={{
+                id: k.id,
+                name: k.name,
+                avatar: k.avatar,
+                pinChangedAt: k.pinChangedAt ? k.pinChangedAt.toLocaleDateString("vi-VN", { timeZone: family.timezone }) : null,
+              }}
+            />
           ))}
           <Card>
             <AddChildForm />

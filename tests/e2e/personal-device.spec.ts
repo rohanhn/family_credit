@@ -94,3 +94,44 @@ test("Máy riêng: con nhập PIN mỗi lần mở lại trình duyệt; phiên 
   await expect(again.getByRole("button", { name: /^Bin/ })).toBeVisible();
   await kidLogin(again, "Bin", "1234");
 });
+
+async function typePin(page: Page, pin: string): Promise<void> {
+  for (const d of pin) await page.getByRole("button", { name: `Số ${d}`, exact: true }).click();
+}
+
+test("Con đổi PIN: PIN cũ không đăng nhập được, PIN mới thì được; bố mẹ thấy PIN đổi lần cuối", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Chỉ chạy một lần");
+  test.setTimeout(120_000);
+  const parent = await newPage(browser);
+  const email = await registerFamily(parent, { familyName: `Nhà đổi PIN ${Date.now()}`, prefix: "pin" });
+  await addChild(parent, "Bin", "1234", 1);
+  await parent.goto("/parent/settings");
+  await expect(parent.getByText("PIN chưa đổi từ khi tạo")).toBeVisible();
+
+  const phone = await newPage(browser);
+  await login(phone, email);
+  await phone.goto("/parent");
+  await enablePersonalDevice(phone, "Bin");
+  await kidLogin(phone, "Bin", "1234");
+
+  await phone.goto("/kid/pin");
+  await expect(phone.getByText("Bước 1/3")).toBeVisible();
+  await typePin(phone, "0000");
+  await typePin(phone, "4321");
+  await typePin(phone, "4321");
+  await expect(phone.getByRole("alert").filter({ hasText: "PIN hiện tại chưa đúng, con thử lại nhé" })).toBeVisible();
+  await typePin(phone, "1234");
+  await typePin(phone, "4321");
+  await typePin(phone, "4321");
+  await expect(phone.getByRole("status")).toContainText("Đã đổi PIN");
+
+  // Thoát rồi đăng nhập lại: PIN cũ sai, PIN mới đúng.
+  await phone.locator("form", { has: phone.getByRole("button", { name: "Thoát" }) }).filter({ visible: true }).first().getByRole("button").click();
+  await phone.waitForURL("**/kid");
+  await typePin(phone, "1234");
+  await expect(phone.getByRole("alert").filter({ hasText: "PIN chưa đúng" })).toBeVisible();
+  await kidLogin(phone, "Bin", "4321");
+
+  await parent.goto("/parent/settings");
+  await expect(parent.getByText(/PIN đổi lần cuối: /)).toBeVisible();
+});

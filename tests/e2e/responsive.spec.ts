@@ -5,7 +5,7 @@ import { addChild, enableFamilyMode, kidLogin, registerFamily, setRandomClientIp
 // khu vực con chuyển giữa thanh tab dưới và sidebar đúng ở 768px, vùng bấm phía con tối thiểu 44x44px.
 
 const PARENT_PAGES = ["/parent", "/parent/apply", "/parent/tasks", "/parent/rules", "/parent/shop", "/parent/history", "/parent/settings"];
-const KID_PAGES = ["/kid/home", "/kid/shop", "/kid/history", "/kid/rules", "/kid/theme"];
+const KID_PAGES = ["/kid/home", "/kid/shop", "/kid/history", "/kid/rules", "/kid/theme", "/kid/pin"];
 
 async function expectNoHorizontalScroll(page: Page, path: string) {
   await page.goto(path);

@@ -74,7 +74,7 @@ Thiết kế auth hiện tại (D4 của change MVP đã archive; xem `src/serve
 - Cài đặt bố mẹ hiện "PIN đổi lần cuối: <ngày>" ở thẻ của từng con.
 - Giao diện con:
   - trang `/kid/pin` dùng bàn phím số giống màn đăng nhập, ba bước: PIN hiện tại, PIN mới, nhập lại;
-  - lối vào nằm trong menu "Giao diện" (sidebar) và trong header ở điện thoại.
+  - lối vào là mục "Đổi PIN" trong sidebar ở màn rộng; trên điện thoại, nằm ở cuối màn "Giao diện" (mở bằng avatar trên header), để header ở 360px không thêm nút.
 
 ### D5. Lối vào ở `/`
 - Chuyển trang ngay trong `src/proxy.ts` khi `pathname === "/"`, chỉ dựa vào cookie có mặt hay không, không đọc DB. Thứ tự:

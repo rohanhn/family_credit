@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db/client";
-import { loginChildWithPin, logoutChild } from "@/server/auth/family-mode";
+import { changeChildPin, loginChildWithPin, logoutChild } from "@/server/auth/family-mode";
 import { clearSessionCookie, getDeviceAuth, readCookie, requireChild, setChildSessionCookie } from "@/server/auth/next";
 import { DomainError } from "@/server/domain/errors";
 import { setChildTheme } from "@/server/domain/themes";
@@ -45,6 +45,18 @@ export async function kidSetThemeAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: "Đã đổi giao diện" };
   } catch (err) {
+    return fromError(err);
+  }
+}
+
+/** Con tự đổi PIN (spec family-accounts "Con đổi PIN"). Sai PIN hiện tại được tính vào bộ đếm khóa. */
+export async function kidChangePinAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const kid = await requireChild();
+  try {
+    await changeChildPin(getDb(), kid, { currentPin: str(form, "currentPin"), newPin: str(form, "newPin"), confirmPin: str(form, "confirmPin") });
+    return { ok: true, message: "Đã đổi PIN. Lần đăng nhập sau con dùng PIN mới nhé" };
+  } catch (err) {
+    if (err instanceof DomainError && err.code === "LOCKED") return { error: err.message, data: { locked: "1" } };
     return fromError(err);
   }
 }
