@@ -1,0 +1,49 @@
+# Chạy my-credit trên VPS sau Traefik (design D8). VPS chỉ cần file này và .env (chép từ .env.example).
+#   docker compose pull && docker compose up -d
+# Cập nhật hoặc rollback: đổi IMAGE_TAG trong .env rồi chạy lại hai lệnh trên.
+name: my-credit
+
+services:
+  app:
+    image: ghcr.io/${GHCR_OWNER:?Đặt GHCR_OWNER trong .env}/my-credit:${IMAGE_TAG:?Đặt IMAGE_TAG (vX.Y.Z) trong .env}
+    restart: unless-stopped
+    # Không publish port: mọi request đều đi qua Traefik (design D9, X-Forwarded-For đáng tin).
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Đặt DATABASE_URL trong .env}
+      DATABASE_POOL_MAX: ${DATABASE_POOL_MAX:-5}
+      APP_URL: ${APP_URL:?Đặt APP_URL trong .env}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    # App không giữ trạng thái: hệ thống file chỉ đọc, chỉ cache của Next và /tmp là ghi được.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache:uid=1000,gid=1000
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - traefik
+      - postgres
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK}
+      traefik.http.routers.my-credit.rule: Host(`${APP_HOST:?Đặt APP_HOST trong .env}`)
+      traefik.http.routers.my-credit.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.my-credit.tls.certresolver: ${TRAEFIK_CERTRESOLVER:?Đặt TRAEFIK_CERTRESOLVER trong .env}
+      traefik.http.services.my-credit.loadbalancer.server.port: "3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:?Đặt TRAEFIK_NETWORK trong .env}
+  postgres:
+    external: true
+    name: ${POSTGRES_NETWORK:?Đặt POSTGRES_NETWORK trong .env}
