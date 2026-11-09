@@ -1,0 +1,165 @@
+# CI/CD (design D8/D9).
+# - Pull request: lint, typecheck, npm audit, unit test, test chống race và e2e trên Postgres thật.
+# - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, quét Trivy, rồi push lên GHCR
+#   với tag sha-<short>, latest (master) và vX.Y.Z (tag).
+# Biến của repo: vars.APP_URL (ví dụ https://app3.domain.xyz) được đóng gói vào image lúc build.
+# Các action được ghim theo commit SHA; Dependabot cập nhật hằng tuần.
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NODE_VERSION: "22"
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/my-credit
+
+jobs:
+  check:
+    name: Kiểm tra
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: my_credit
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: my_credit
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U my_credit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://my_credit:ci-only-password@localhost:5432/my_credit
+      DATABASE_URL_TEST: postgres://my_credit:ci-only-password@localhost:5432/my_credit_test
+      PGPASSWORD: ci-only-password
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Cài dependency
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: npm audit (dependency production)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Tạo database test và chạy migration
+        run: |
+          psql -h localhost -U my_credit -d my_credit -c 'CREATE DATABASE my_credit_test'
+          npx tsx src/server/db/migrate.ts
+
+      - name: Unit test và test chống race
+        run: npm test
+
+      - name: Cài trình duyệt cho Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E
+        run: npm run test:e2e
+
+      - name: Lưu báo cáo Playwright khi lỗi
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  image:
+    name: Build, quét và push image
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Kiểm tra biến APP_URL
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "::warning::Chưa đặt biến repo APP_URL: image sẽ không có allowedOrigins cho Server Actions"
+          fi
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Tính tag image
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=ref,event=tag
+
+      - name: Build image (chưa push) để quét
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: APP_URL=${{ vars.APP_URL }}
+          load: true
+          tags: my-credit:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Quét lỗ hổng bằng Trivy (dừng nếu có HIGH/CRITICAL đã có bản vá)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: my-credit:scan
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Đăng nhập GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          build-args: APP_URL=${{ vars.APP_URL }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

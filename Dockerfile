@@ -35,7 +35,11 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/dist/scripts ./scripts
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN echo '{"type":"module"}' > scripts/package.json \
+# Lúc chạy chỉ cần node: gỡ npm/corepack đi kèm image gốc (bớt bề mặt tấn công, và các lỗ hổng
+# trong dependency của npm không còn làm Trivy chặn image).
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+       /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    && echo '{"type":"module"}' > scripts/package.json \
     && chmod 0755 /usr/local/bin/docker-entrypoint.sh \
     && mkdir -p .next/cache && chown node:node .next/cache
 
