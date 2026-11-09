@@ -5,22 +5,16 @@ import { getDb } from "../db/client";
 import { logSecurityEvent } from "../log";
 import { clientIpFrom } from "./client-ip";
 import { authenticateChild, authenticateDevice, authenticateParent, type ChildAuth, type DeviceAuth, type ParentAuth } from "./guards";
-import type { SessionSubject } from "./sessions";
+import { COOKIE, sessionCookieOptions, type SessionSubject } from "./session-cookies";
 
 // Lớp mỏng cho Next.js: đọc cookie, gọi lõi guard, chuyển hướng khi chưa đăng nhập.
 // Với Cache Components, mọi chỗ gọi các hàm này phải nằm trong <Suspense>.
 // Server Action luôn gọi lại guard, không tin dữ liệu từ client.
 
-export const COOKIE = { parent: "mc_parent", device: "mc_device", child: "mc_child" } as const satisfies Record<SessionSubject, string>;
+export { COOKIE };
 
 export async function setSessionCookie(kind: SessionSubject, token: string, expiresAt: Date): Promise<void> {
-  (await cookies()).set(COOKIE[kind], token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    expires: expiresAt,
-  });
+  (await cookies()).set(COOKIE[kind], token, sessionCookieOptions(expiresAt));
 }
 
 export async function clearSessionCookie(kind: SessionSubject): Promise<void> {

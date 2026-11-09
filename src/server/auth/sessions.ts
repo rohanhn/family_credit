@@ -1,21 +1,14 @@
 import { and, eq, ne } from "drizzle-orm";
-import { systemClock, type Clock, DAY, HOUR } from "../clock";
-import { sessions, SESSION_SUBJECTS } from "../db/schema";
+import { systemClock, type Clock } from "../clock";
+import { sessions } from "../db/schema";
+import { SESSION_TTL_MS, SLIDING, type SessionSubject } from "./session-cookies";
 import type { DbOrTx } from "../db/types";
 import { randomToken, sha256 } from "./crypto";
 
 // Phiên lưu trong DB, chỉ lưu SHA-256 của token (design D4).
 
-export type SessionSubject = (typeof SESSION_SUBJECTS)[number];
-
-export const SESSION_TTL_MS: Record<SessionSubject, number> = {
-  parent: 30 * DAY,
-  device: 90 * DAY,
-  child: 2 * HOUR,
-};
-
-/** Phiên bố mẹ và con được gia hạn khi còn dùng; phiên thiết bị có hạn cố định. */
-const SLIDING: Record<SessionSubject, boolean> = { parent: true, device: false, child: true };
+export type { SessionSubject };
+export { SESSION_TTL_MS };
 
 export async function createSession(db: DbOrTx, subjectType: SessionSubject, subjectId: number, clock: Clock = systemClock) {
   const token = randomToken();

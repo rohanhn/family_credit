@@ -108,7 +108,8 @@ auth_attempts(key, window_start, count)
 
 ### D4. Auth tự làm
 - **Bố mẹ**: băm mật khẩu bằng argon2id (`@node-rs/argon2`). Session dùng token ngẫu nhiên 32 byte, cookie `httpOnly` + `SameSite=Lax` + `Secure` (khi chạy production), trong DB chỉ lưu SHA-256 của token. Hạn 30 ngày, kéo dài khi còn dùng.
-- **Chế độ gia đình**: bố mẹ bật thì thiết bị nhận một cookie `device` (subject_type=device, gắn family_id, hạn 90 ngày). Cookie này chỉ cho phép xem màn hình chọn avatar và đăng nhập PIN. Bố mẹ có thể thu hồi thiết bị.
+- **Gia hạn cookie**: DB kéo dài `expires_at` của phiên bố mẹ và con khi còn dùng; `src/proxy.ts` đặt lại hạn cookie `mc_parent`/`mc_child` ở mỗi request GET để trình duyệt không xóa cookie sớm hơn DB (không làm với POST để khỏi tranh chấp với Server Action đặt hoặc xóa cookie).
+- **Chế độ gia đình**: bố mẹ bật thì thiết bị nhận một cookie `device` (subject_type=device, gắn family_id, hạn 90 ngày), và phiên bố mẹ trên thiết bị đó bị kết thúc. Cookie này chỉ cho phép xem màn hình chọn avatar và đăng nhập PIN. Bố mẹ có thể thu hồi thiết bị.
 - **Con**: PIN được băm bằng argon2id. Đăng nhập đúng tạo session `child` ngắn hạn (2 giờ, gia hạn khi hoạt động), tồn tại song song với cookie `device`. Số lần nhập sai và thời điểm khóa lưu trên dòng `children`.
 - **Guard**: mọi Server Action và truy vấn đi qua `requireParent()` / `requireChild()`, trả về `{familyId, …}`. Mọi truy vấn domain nhận `familyId` từ guard, không bao giờ lấy từ input. Truy cập sai gia đình trả về "không tìm thấy".
 - Server Actions của Next.js đã có kiểm tra Origin để chống CSRF; không thêm GET nào có tác dụng ghi.
