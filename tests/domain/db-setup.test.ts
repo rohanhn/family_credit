@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { fixedClock, MINUTE } from "@/server/clock";
-import { children, families, parents, transactions } from "@/server/db/schema";
+import { children, families, parents, sessions, transactions } from "@/server/db/schema";
 import { createTestDb, type TestDb } from "../helpers/db";
 
 let t: TestDb;
@@ -87,6 +87,15 @@ describe("sổ cái chỉ ghi thêm (task 2.2)", () => {
         description: "sai",
         actorParentId: txn.actorParentId,
       }),
+    ).rejects.toThrow();
+  });
+
+  it("CHECK: device_child_id chỉ dùng cho phiên device", async () => {
+    const txn = await seedTransaction();
+    const base = { expiresAt: new Date("2030-01-01T00:00:00Z") };
+    await t.db.insert(sessions).values({ ...base, idHash: "d1", subjectType: "device", subjectId: txn.familyId, deviceChildId: txn.childId });
+    await expect(
+      t.db.insert(sessions).values({ ...base, idHash: "p1", subjectType: "parent", subjectId: txn.actorParentId, deviceChildId: txn.childId }),
     ).rejects.toThrow();
   });
 });

@@ -36,6 +36,13 @@
       "when": 1794234638289,
       "tag": "0004_adjust_once",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794237092382,
+      "tag": "0005_personal_device",
+      "breakpoints": true
     }
   ]
 }

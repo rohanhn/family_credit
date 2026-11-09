@@ -102,6 +102,8 @@ export const children = pgTable(
     archivedAt: ts("archived_at"),
     failedPinCount: smallint("failed_pin_count").notNull().default(0),
     lockedUntil: ts("locked_until"),
+    /** Lần cuối PIN được đổi (con tự đổi hoặc bố mẹ đặt lại); null nếu chưa đổi từ khi tạo. */
+    pinChangedAt: ts("pin_changed_at"),
     createdAt: createdAt(),
   },
   (t) => [
@@ -333,12 +335,16 @@ export const sessions = pgTable(
     subjectType: text("subject_type", { enum: SESSION_SUBJECTS }).notNull(),
     /** parent: parents.id; device: families.id; child: children.id. */
     subjectId: ref("subject_id").notNull(),
+    /** Chỉ với phiên device: con sở hữu máy riêng; null là máy dùng chung của gia đình. */
+    deviceChildId: ref("device_child_id").references(() => children.id),
     expiresAt: ts("expires_at").notNull(),
     createdAt: createdAt(),
   },
   (t) => [
     check("sessions_subject_type", inList("subject_type", SESSION_SUBJECTS)),
+    check("sessions_device_child_only_device", sql`${t.deviceChildId} is null or ${t.subjectType} = 'device'`),
     index("sessions_subject_idx").on(t.subjectType, t.subjectId),
+    index("sessions_device_child_idx").on(t.deviceChildId),
   ],
 );
 

@@ -2,7 +2,7 @@
 
 ## 1. Dữ liệu và phiên
 
-- [ ] 1.1 Viết migration thêm `sessions.device_child_id` (FK, có thể null, CHECK chỉ dùng cho `device`, có index) và `children.pin_changed_at` (design D1), rồi cập nhật `schema.ts`. Kiểm tra bằng `npm run db:migrate` trên DB dev và `tests/domain/db-setup.test.ts` pass
+- [x] 1.1 Viết migration thêm `sessions.device_child_id` (FK, có thể null, CHECK chỉ dùng cho `device`, có index) và `children.pin_changed_at` (design D1), rồi cập nhật `schema.ts`. Kiểm tra bằng `npm run db:migrate` trên DB dev và `tests/domain/db-setup.test.ts` pass
 - [ ] 1.2 `resolveSession` gia hạn phiên `device` của máy riêng. TTL phiên con trên máy riêng là 30 ngày, tự gia hạn (design D2). Kiểm tra bằng unit test với đồng hồ giả: máy riêng dùng đều sau 120 ngày vẫn còn hiệu lực; máy dùng chung hết hạn sau 90 ngày như cũ
 
 ## 2. Máy riêng của con (family-accounts)
