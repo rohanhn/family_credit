@@ -30,7 +30,7 @@
 ## 6. Tài liệu và tổng kiểm
 
 - [x] 6.1 Cập nhật README: cách bật máy riêng cho con, hành vi nhập PIN khi mở lại (kèm lưu ý trình duyệt khôi phục phiên), con đổi PIN và bố mẹ đặt lại PIN, cách "Thêm vào màn hình chính". Kiểm tra bằng cách làm theo README trên một điện thoại thật hoặc chế độ giả lập thiết bị
-- [ ] 6.2 Chạy toàn bộ `npm run lint`, `npm test`, `npm run test:e2e` và `next build`. Kiểm tra tất cả pass
+- [x] 6.2 Chạy toàn bộ `npm run lint`, `npm test`, `npm run test:e2e` và `next build`. Kiểm tra tất cả pass
 
 ## Workflow follow-up
 
