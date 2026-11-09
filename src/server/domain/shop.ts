@@ -1,11 +1,12 @@
-import { and, asc, desc, eq } from "drizzle-orm";
-import { systemClock, type Clock } from "../clock";
+import { and, asc, desc, eq, gte } from "drizzle-orm";
+import { DAY, systemClock, type Clock } from "../clock";
 import { children, redemptions, rewards } from "../db/schema";
 import type { Db, DbOrTx, Tx } from "../db/types";
 import { DomainError, invalid, notFound } from "./errors";
 import { getBalance, lockChild, recordTransaction, type Transaction } from "./ledger";
 import { notifyRejected } from "./notifications";
 import { validatePoints } from "./rules";
+import { DEFAULT_REWARD_ICON, REWARD_ICONS, type RewardIcon } from "@/lib/reward-icons";
 
 // Cửa hàng đổi thưởng (spec reward-shop, design D3 "Đổi thưởng").
 // - Gửi yêu cầu không trừ điểm; tên và giá được chụp lại lúc gửi.
@@ -15,9 +16,7 @@ import { validatePoints } from "./rules";
 export type Reward = typeof rewards.$inferSelect;
 export type Redemption = typeof redemptions.$inferSelect;
 
-export const REWARD_ICONS = ["gift", "game", "icecream", "park", "blocks", "book", "movie"] as const;
-export type RewardIcon = (typeof REWARD_ICONS)[number];
-export const DEFAULT_REWARD_ICON: RewardIcon = "gift";
+export { REWARD_ICONS, DEFAULT_REWARD_ICON, type RewardIcon };
 
 export const ALREADY_DECIDED_MESSAGE = "Yêu cầu này đã được xử lý";
 export const ALREADY_PENDING_MESSAGE = "Con đã gửi yêu cầu đổi phần thưởng này, đang chờ bố mẹ duyệt";
@@ -211,6 +210,22 @@ export function listChildRedemptions(db: DbOrTx, childId: number, status: Redemp
     .from(redemptions)
     .where(and(eq(redemptions.childId, childId), eq(redemptions.status, status)))
     .orderBy(desc(redemptions.id));
+}
+
+/** Yêu cầu bị từ chối trong vài ngày gần nhất (con xem lại lý do ở cửa hàng), mới nhất trước. */
+export function listRecentRejectedRedemptions(
+  db: DbOrTx,
+  childId: number,
+  opts: { days?: number; limit?: number } = {},
+  clock: Clock = systemClock,
+): Promise<Redemption[]> {
+  const since = new Date(clock.now().getTime() - (opts.days ?? 7) * DAY);
+  return db
+    .select()
+    .from(redemptions)
+    .where(and(eq(redemptions.childId, childId), eq(redemptions.status, "rejected"), gte(redemptions.decidedAt, since)))
+    .orderBy(desc(redemptions.decidedAt), desc(redemptions.id))
+    .limit(opts.limit ?? 3);
 }
 
 /** Yêu cầu đổi thưởng đang chờ của cả gia đình (cho hàng chờ duyệt chung), kèm số dư hiện tại của con. */

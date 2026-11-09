@@ -12,6 +12,7 @@ import {
   goalProgress,
   listChildRedemptions,
   listPendingRedemptions,
+  listRecentRejectedRedemptions,
   listRewards,
   rejectRedemption,
   setGoal,
@@ -240,6 +241,19 @@ describe("Bố mẹ duyệt yêu cầu đổi thưởng", () => {
     expect(await getBalance(t.db, bin.id)).toBe(60);
     const unread = await getUnreadSummary(t.db, bin.id);
     expect(unread.items.at(-1)).toMatchObject({ kind: "rejected", title: "30 phút chơi game", reason: "Tối nay không chơi game" });
+  });
+
+  it("Con xem lại yêu cầu bị từ chối trong 7 ngày gần nhất", async () => {
+    const { familyId, actor, bin } = await setup();
+    await give(familyId, actor, bin.id, 100);
+    const r = await createReward(t.db, familyId, { name: "Game", price: 50 });
+    const now = new Date("2026-11-10T03:00:00Z");
+    const old = await createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id });
+    await rejectRedemption(t.db, { familyId, actorParentId: actor, redemptionId: old.id, reason: "Cũ" }, { now: () => new Date(now.getTime() - 8 * 86_400_000) });
+    const fresh = await createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id });
+    await rejectRedemption(t.db, { familyId, actorParentId: actor, redemptionId: fresh.id, reason: "Mới" }, { now: () => now });
+    const list = await listRecentRejectedRedemptions(t.db, bin.id, {}, { now: () => now });
+    expect(list.map((x) => x.reason)).toEqual(["Mới"]);
   });
 
   it("Không duyệt hay từ chối được yêu cầu của gia đình khác", async () => {

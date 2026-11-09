@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 import { approveClaimAction, rejectClaimAction } from "@/app/actions/rules";
+import { approveRedemptionAction, rejectRedemptionAction } from "@/app/actions/shop";
 import type { DbOrTx } from "@/server/db/types";
 import { listPendingTaskDays } from "@/server/domain/daily-tasks";
 import { listPendingClaims } from "@/server/domain/rule-claims";
+import { listPendingRedemptions } from "@/server/domain/shop";
 import { dateInZone, formatDate, formatDateTime, signed } from "@/lib/time";
 import { Card, Chip } from "@/ui/primitives";
 import { DecisionForm } from "./decision-form";
 import { TaskDecision } from "./task-decision";
 
 // Hàng chờ duyệt chung của gia đình (design D3): gộp các nguồn đang chờ.
-// Task 4.2: khai rule. Nhiệm vụ (5.5) và đổi thưởng (6.2) thêm nguồn vào `loadQueue`.
+// Nguồn: nhiệm vụ đã báo xong, khai rule thưởng, yêu cầu đổi thưởng.
 
 export type QueueItem = {
   key: string;
@@ -18,12 +20,18 @@ export type QueueItem = {
   meta: string;
   amount: number;
   amountSuffix?: string;
+  /** Cảnh báo hiện dưới tiêu đề (ví dụ số dư không đủ để duyệt đổi thưởng). */
+  warning?: string;
   decision: ReactNode;
   createdAt: Date;
 };
 
 export async function loadQueue(db: DbOrTx, familyId: number, timezone: string): Promise<QueueItem[]> {
-  const [claims, taskItems] = await Promise.all([listPendingClaims(db, familyId), listPendingTaskDays(db, familyId)]);
+  const [claims, taskItems, redemptions] = await Promise.all([
+    listPendingClaims(db, familyId),
+    listPendingTaskDays(db, familyId),
+    listPendingRedemptions(db, familyId),
+  ]);
   const today = dateInZone(new Date(), timezone);
   const tasks: QueueItem[] = taskItems.map((i) => {
     const reporter = i.members.find((m) => m.id === i.reportedByChildId)?.name;
@@ -48,7 +56,17 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     decision: <DecisionForm id={c.id} approve={approveClaimAction} reject={rejectClaimAction} />,
     createdAt: c.createdAt,
   }));
-  return [...tasks, ...items].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  const redeems: QueueItem[] = redemptions.map((r) => ({
+    key: `redeem-${r.id}`,
+    tag: "Đổi thưởng",
+    title: `${r.childName} · ${r.nameSnapshot}`,
+    meta: `${r.childName} gửi lúc ${formatDateTime(r.createdAt, timezone)} · số dư hiện tại ${r.balance}`,
+    amount: -r.priceSnapshot,
+    warning: r.balance < r.priceSnapshot ? `Số dư hiện tại (${r.balance}) không đủ để duyệt; có thể từ chối kèm lý do.` : undefined,
+    decision: <DecisionForm id={r.id} approve={approveRedemptionAction} reject={rejectRedemptionAction} />,
+    createdAt: r.createdAt,
+  }));
+  return [...tasks, ...items, ...redeems].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }
 
 export function ApprovalQueue({ items }: { items: QueueItem[] }) {
@@ -74,6 +92,7 @@ export function ApprovalQueue({ items }: { items: QueueItem[] }) {
                   {it.amountSuffix ?? ""}
                 </span>
               </span>
+              {it.warning && <span className="w-fit rounded-xl bg-wait-bg px-2.5 py-1 text-[13px] font-bold text-wait-fg">{it.warning}</span>}
             </div>
             {it.decision}
           </Card>
