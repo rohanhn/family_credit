@@ -40,9 +40,17 @@ export async function addChild(page: Page, name: string, pin: string, avatar = 1
   await page.getByText(`Đã thêm ${name}`).waitFor();
 }
 
-/** Bật chế độ gia đình trên thiết bị hiện tại; trang dừng ở màn chọn avatar. */
+/** Bật chế độ gia đình (máy dùng chung) trên thiết bị hiện tại; trang dừng ở màn chọn avatar. */
 export async function enableFamilyMode(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Bật chế độ gia đình" }).click();
+  await page.locator("summary", { hasText: "Bật chế độ gia đình" }).filter({ visible: true }).first().click();
+  await page.getByRole("button", { name: /^Máy dùng chung/ }).filter({ visible: true }).first().click();
+  await page.waitForURL("**/kid");
+}
+
+/** Bật thiết bị hiện tại thành máy riêng của một con; trang dừng ở màn nhập PIN. */
+export async function enablePersonalDevice(page: Page, childName: string): Promise<void> {
+  await page.locator("summary", { hasText: "Bật chế độ gia đình" }).filter({ visible: true }).first().click();
+  await page.getByRole("button", { name: `Máy riêng của ${childName}` }).filter({ visible: true }).first().click();
   await page.waitForURL("**/kid");
 }
 

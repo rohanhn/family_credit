@@ -1,11 +1,10 @@
 import { Suspense, type ReactNode } from "react";
-import { enableFamilyModeAction } from "@/app/actions/family";
 import { getDb } from "@/server/db/client";
 import { requireParentWithFamily } from "@/server/auth/next";
+import { listChildren } from "@/server/domain/children";
 import { getFamily } from "@/server/domain/families";
-import { Icon } from "@/ui/icons";
+import { DeviceMenu } from "./device-menu";
 import { ParentShell } from "@/ui/parent-shell";
-import { Button } from "@/ui/primitives";
 import { SoundProvider } from "@/ui/sound";
 import { effectiveTheme } from "@/ui/themes";
 
@@ -13,19 +12,15 @@ import { effectiveTheme } from "@/ui/themes";
 
 async function ParentFrame({ children }: { children: ReactNode }) {
   const auth = await requireParentWithFamily();
-  const family = await getFamily(getDb(), auth.familyId);
+  const db = getDb();
+  const [family, kids] = await Promise.all([getFamily(db, auth.familyId), listChildren(db, auth.familyId)]);
   return (
     <SoundProvider familyEnabled={family.soundEnabled}>
       <ParentShell
         theme={effectiveTheme(null, family.defaultTheme)}
         familyName={family.name}
         actions={
-          <form action={enableFamilyModeAction}>
-            <Button type="submit">
-              <Icon name="phone" size={18} />
-              Bật chế độ gia đình
-            </Button>
-          </form>
+          <DeviceMenu kids={kids.map((k) => ({ id: k.id, name: k.name }))} />
         }
       >
         {children}

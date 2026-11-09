@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, setRandomClientIp } from "./helpers";
+import { enableFamilyMode, uniqueEmail, setRandomClientIp } from "./helpers";
 
 // Task 3.7: header bảo mật có mặt, và các trang chính chạy không có lỗi CSP trong console.
 
@@ -45,8 +45,7 @@ test("luồng tới màn con chạy không lỗi CSP", async ({ page }) => {
   await page.getByRole("button", { name: "Thêm con" }).click();
   await expect(page.getByText("Đã thêm Bin")).toBeVisible();
 
-  await page.getByRole("button", { name: "Bật chế độ gia đình" }).click();
-  await page.waitForURL("**/kid");
+  await enableFamilyMode(page);
   await expect(page.getByLabel("Mã PIN 4 số")).toBeFocused();
   await page.keyboard.type("1234");
   await page.waitForURL("**/kid/home");

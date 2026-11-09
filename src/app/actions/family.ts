@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db/client";
-import { enableFamilyMode, revokeDevice } from "@/server/auth/family-mode";
+import { enableFamilyMode, enablePersonalDevice, revokeDevice } from "@/server/auth/family-mode";
 import { clearSessionCookie, readCookie, requireParentWithFamily, setSessionCookie } from "@/server/auth/next";
 import { archiveChild, createChild, updateChild } from "@/server/domain/children";
 import { updateCurrency } from "@/server/domain/currency";
@@ -77,6 +77,18 @@ export async function updateCurrencyAction(_prev: ActionState, form: FormData): 
 export async function enableFamilyModeAction(): Promise<void> {
   const auth = await requireParentWithFamily();
   const session = await enableFamilyMode(getDb(), auth, undefined, await readCookie("parent"));
+  await clearSessionCookie("parent");
+  await setSessionCookie("device", session.token, session.expiresAt);
+  redirect("/kid");
+}
+
+/** Bật thiết bị đang dùng thành máy riêng của một con rồi chuyển sang màn nhập PIN (spec "Máy riêng của con"). */
+export async function enablePersonalDeviceAction(form: FormData): Promise<void> {
+  const auth = await requireParentWithFamily();
+  const session = await enablePersonalDevice(getDb(), auth, int(form, "childId"), undefined, {
+    parentToken: await readCookie("parent"),
+    currentDeviceToken: await readCookie("device"),
+  });
   await clearSessionCookie("parent");
   await setSessionCookie("device", session.token, session.expiresAt);
   redirect("/kid");

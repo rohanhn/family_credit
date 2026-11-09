@@ -51,12 +51,17 @@ async function Settings() {
             <FamilyThemeForm theme={family.defaultTheme} />
           </Card>
         </Section>
-        <Section id="thiet-bi" title="Thiết bị chế độ gia đình">
+        <Section id="thiet-bi" title="Thiết bị của con">
           <Card>
             {devices.length === 0 ? (
-              <p className="font-semibold text-muted">Chưa có thiết bị nào. Bấm “Bật chế độ gia đình” trên thiết bị con dùng.</p>
+              <p className="font-semibold text-muted">Chưa có thiết bị nào. Bấm “Bật chế độ gia đình” trên thiết bị con dùng, chọn máy dùng chung hoặc máy riêng của một con.</p>
             ) : (
-              devices.map((d) => <DeviceRow key={d.id} device={{ id: d.id, createdAt: d.createdAt.toISOString(), expiresAt: d.expiresAt.toISOString() }} />)
+              devices.map((d) => (
+                <DeviceRow
+                  key={d.id}
+                  device={{ id: d.id, kind: d.kind, childName: d.childName, createdAt: d.createdAt.toISOString(), expiresAt: d.expiresAt.toISOString() }}
+                />
+              ))
             )}
           </Card>
         </Section>

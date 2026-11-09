@@ -10,7 +10,7 @@
 - [x] 2.1 Viết `enablePersonalDevice` (design D3): kiểm tra con, xóa phiên bố mẹ và phiên thiết bị cũ của máy, tạo phiên `device` có `device_child_id`, ghi log `device_enabled` kèm kiểu thiết bị. Kiểm tra bằng unit test, gồm cả trường hợp con đã lưu trữ hoặc thuộc gia đình khác thì bị từ chối
 - [x] 2.2 Sửa guard và đăng nhập trên máy riêng: `authenticateDevice` trả `childId`; `authenticateChild` kiểm tra khớp; `listKidsForDevice` chỉ trả con của máy; `loginChildWithPin` từ chối con khác mà không tăng bộ đếm sai PIN của con đó. Kiểm tra bằng unit test cho các scenario "Bật máy riêng" và "Con khác không đăng nhập được trên máy riêng"
 - [x] 2.3 `archiveChild` thu hồi máy riêng của con đó; `listDevices` trả kiểu thiết bị và tên con. Kiểm tra bằng unit test cho scenario "Lưu trữ con có máy riêng" và "Danh sách thiết bị"
-- [ ] 2.4 Sửa giao diện bố mẹ: menu "Bật chế độ gia đình" có hai lựa chọn "Máy dùng chung" và "Máy riêng của…"; danh sách thiết bị trong Cài đặt ghi rõ kiểu. Kiểm tra thủ công: bật máy riêng của Bin rồi màn đăng nhập chỉ có Bin; thu hồi trong cài đặt thì máy về màn "Thiết bị chưa bật chế độ gia đình"
+- [x] 2.4 Sửa giao diện bố mẹ: menu "Bật chế độ gia đình" có hai lựa chọn "Máy dùng chung" và "Máy riêng của…"; danh sách thiết bị trong Cài đặt ghi rõ kiểu. Kiểm tra thủ công: bật máy riêng của Bin rồi màn đăng nhập chỉ có Bin; thu hồi trong cài đặt thì máy về màn "Thiết bị chưa bật chế độ gia đình"
 
 ## 3. PIN mỗi lần mở trên máy riêng
 

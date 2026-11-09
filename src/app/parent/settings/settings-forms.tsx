@@ -109,14 +109,21 @@ export function InviteBox() {
   );
 }
 
-export function DeviceRow({ device }: { device: { id: string; createdAt: string; expiresAt: string } }) {
+export function DeviceRow({
+  device,
+}: {
+  device: { id: string; kind: "shared" | "personal"; childName: string | null; createdAt: string; expiresAt: string };
+}) {
   const [state, action] = useActionState(revokeDeviceAction, undefined);
   return (
     <form action={action} className="flex flex-wrap items-center gap-3 border-b border-black/5 py-2.5 last:border-0">
       <input type="hidden" name="deviceId" value={device.id} />
       <span className="flex flex-1 flex-col">
-        <span className="font-extrabold">Thiết bị bật ngày {new Date(device.createdAt).toLocaleDateString("vi-VN")}</span>
-        <span className="text-sm font-semibold text-muted">Hết hạn {new Date(device.expiresAt).toLocaleDateString("vi-VN")}</span>
+        <span className="font-extrabold">{device.kind === "personal" ? `Máy riêng của ${device.childName}` : "Máy dùng chung"}</span>
+        <span className="text-sm font-semibold text-muted">
+          Bật ngày {new Date(device.createdAt).toLocaleDateString("vi-VN")} ·{" "}
+          {device.kind === "personal" ? "tự gia hạn khi con còn dùng" : `hết hạn ${new Date(device.expiresAt).toLocaleDateString("vi-VN")}`}
+        </span>
       </span>
       <SubmitButton variant="outline">Thu hồi</SubmitButton>
       <FormMessage state={state} />
