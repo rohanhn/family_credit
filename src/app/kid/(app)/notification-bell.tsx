@@ -141,7 +141,7 @@ export function NotificationBell({ variant, currencyName }: { variant: "icon" | 
                         <span className="flex items-start justify-between gap-2">
                           <span className="min-w-0 font-extrabold">{n.title}</span>
                           {shown !== null && shown !== undefined && (
-                            <span className={`shrink-0 font-display text-lg font-extrabold ${shown >= 0 ? "text-plus" : "text-minus"}`}>
+                            <span className={`shrink-0 font-display text-lg font-extrabold ${shown >= 0 ? "text-done-fg" : "text-minus"}`}>
                               {formatPoints(shown)}
                               <span className="sr-only"> {currencyName}</span>
                             </span>

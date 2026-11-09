@@ -138,7 +138,7 @@ function GiftBody({ screen, profile, titleId }: { screen: Extract<FeedbackScreen
         </h2>
         <p className="font-bold opacity-95">Bố mẹ vừa duyệt cho con</p>
       </span>
-      <ul className="relative flex w-full flex-col gap-2 rounded-[22px] bg-white/15 px-4 py-3 text-left">
+      <ul className="relative flex w-full flex-col gap-2 rounded-[22px] bg-black/15 px-4 py-3 text-left">
         {screen.items.map((i) => (
           <li key={i.id} className="flex justify-between gap-3 font-extrabold">
             <span className="min-w-0">{i.title}</span>
