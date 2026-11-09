@@ -111,9 +111,11 @@ In both branches, never create the root as a side effect: do not run `openspec i
    - Before editing, confirm the checkbox at the returned `sourcePath` and `line` still matches the task description; if it does not, rerun the apply instructions and use the refreshed location
    - Mark the task complete at its returned `sourcePath` and `line`: `- [ ]` → `- [x]`
    - Rerun the apply instructions and confirm that task is now done and progress changed
-   - Continue to next task
+   - **Auto-commit (project rule):** once the task's checks pass (lint, typecheck, relevant tests, plus the task's own acceptance checks), commit the task's changes on the current branch without asking. Message style: `Triển khai task <id> (<tóm tắt ngắn>) của change <name>`, add a bullet body when useful, and end with the commit attribution line. Never commit failing checks, secrets, or unrelated changes; never push.
+   - If another pending task remains, continue to it immediately without waiting for the user
 
-   **Pause if:**
+   **Pause if** (stop right away, before committing the unfinished work):
+   - Something is unclear or needs the user's confirmation (a decision, a trade-off, an action outside the repo) → ask
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
    - A task needs work beyond what the spec and tasks describe, or you are tempted to drop, narrow, defer, or accept exceptions to specified behavior to make it fit → surface the added scope and ask; do not absorb it silently
@@ -181,7 +183,8 @@ What would you like to do?
 ```
 
 **Guardrails**
-- Keep going through tasks until done or blocked
+- Keep going through tasks until done or blocked; commit after each completed task and move on to the next one automatically
+- Stop immediately when anything is unclear or needs confirmation - don't guess, don't commit half-done work
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
 - If implementation reveals issues, pause and suggest artifact updates
