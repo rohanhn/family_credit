@@ -1,6 +1,6 @@
 # Sao nhà mình (my-credit)
 
-Ứng dụng web tự host giúp bố mẹ thưởng/phạt con bằng một "đồng tiền" riêng của gia đình: rule thưởng/phạt, nhiệm vụ hằng ngày, cửa hàng đổi thưởng, thông báo cho con. Bố mẹ đăng nhập bằng email và mật khẩu; con đăng nhập bằng avatar và PIN trên thiết bị gia đình.
+Ứng dụng web tự host giúp bố mẹ thưởng/phạt con bằng một "đồng tiền" riêng của gia đình: rule thưởng/phạt, nhiệm vụ hằng ngày, cửa hàng đổi thưởng, thông báo cho con. Bố mẹ đăng nhập bằng email và mật khẩu; con đăng nhập bằng avatar và PIN trên máy dùng chung của gia đình hoặc trên điện thoại riêng của con.
 
 Công nghệ: Next.js 16 (App Router, Cache Components), PostgreSQL 16 qua Drizzle ORM, Playwright và Vitest. Thiết kế chi tiết nằm trong `openspec/changes/add-family-credit-mvp/` (`design.md`, các spec).
 
@@ -10,6 +10,7 @@ Công nghệ: Next.js 16 (App Router, Cache Components), PostgreSQL 16 qua Drizz
 - [Triển khai lần đầu trên VPS](#triển-khai-lần-đầu-trên-vps)
 - [Cập nhật và rollback](#cập-nhật-và-rollback)
 - [Sao lưu và khôi phục](#sao-lưu-và-khôi-phục)
+- [Thiết bị của con](#thiết-bị-của-con)
 - [Đặt lại mật khẩu bố mẹ](#đặt-lại-mật-khẩu-bố-mẹ)
 - [Xem log sự kiện bảo mật](#xem-log-sự-kiện-bảo-mật)
 
@@ -225,6 +226,29 @@ ssh vps 'cd /opt/my-credit && docker compose start app'
 
 Nếu file sao lưu đang nằm trên VPS, chép nó về máy (`scp vps:/var/backups/my-credit/<file> .`) trước. Khôi phục ra một database khác để kiểm tra mà không đụng production: tạo database mới (ví dụ `my_credit_restore`, owner `my_credit`) và trỏ `-d` vào đó.
 
+## Thiết bị của con
+
+Con không có tài khoản riêng; con đăng nhập bằng PIN trên thiết bị bố mẹ đã bật. Bố mẹ đăng nhập trên thiết bị đó, bấm **Bật chế độ gia đình** ở đầu trang rồi chọn một trong hai kiểu. Bật xong, bố mẹ được đăng xuất khỏi thiết bị đó để con không vào được khu vực bố mẹ.
+
+| | Máy dùng chung | Máy riêng của con |
+|---|---|---|
+| Ai đăng nhập được | Mọi con (chọn avatar) | Chỉ con được chọn |
+| Phiên của con | 2 giờ, tự gia hạn khi dùng | Tới khi đóng hẳn trình duyệt hoặc app |
+| Phiên thiết bị | 90 ngày cố định, sau đó bật lại | Tự gia hạn khi con còn dùng |
+
+**Nhập PIN khi mở lại trên máy riêng.** Cookie phiên của con trên máy riêng không có hạn, nên đóng hẳn trình duyệt hoặc app (vuốt tắt khỏi danh sách app đang chạy) thì lần mở sau con phải nhập PIN. Chuyển sang app khác rồi quay lại thì không bị hỏi. Lưu ý: nếu trình duyệt bật "Tiếp tục từ nơi bạn đã dừng" (hoặc khôi phục tab khi mở lại), trình duyệt có thể giữ cookie này và con không bị hỏi PIN; khi đó phiên vẫn hết hạn sau tối đa 30 ngày ở phía server. Trên iPhone, mở từ icon ở màn hình chính thì app bị tắt hẳn là đủ.
+
+**Thêm vào màn hình chính.** Trên điện thoại của con, mở trang của app:
+
+- Android (Chrome): menu ⋮ → **Thêm vào màn hình chính** (hoặc **Cài đặt ứng dụng**).
+- iPhone (Safari): nút Chia sẻ → **Thêm vào MH chính**.
+
+Icon mở app ở chế độ toàn màn hình tại trang gốc, và app tự đưa con tới màn nhập PIN.
+
+**Đổi PIN.** Con tự đổi trong mục **Đổi PIN** (sidebar trên máy tính; trên điện thoại ở cuối màn **Giao diện**, mở bằng avatar trên đầu trang): nhập PIN hiện tại rồi PIN mới hai lần. PIN mới dùng cho mọi thiết bị. Nhập sai PIN hiện tại 5 lần thì đăng nhập của con bị khóa 5 phút như khi đăng nhập. Con quên PIN thì bố mẹ đặt lại trong **Cài đặt → Các con → Sửa**; thẻ của từng con hiện "PIN đổi lần cuối".
+
+**Thu hồi.** **Cài đặt → Thiết bị của con** liệt kê từng thiết bị ("Máy dùng chung" hoặc "Máy riêng của …") kèm nút **Thu hồi**. Lưu trữ hồ sơ một con cũng thu hồi máy riêng của con đó.
+
 ## Đặt lại mật khẩu bố mẹ
 
 App không gửi email, nên người host đặt lại mật khẩu bằng lệnh. Lệnh sinh một mật khẩu tạm ngẫu nhiên, in ra một lần và **xóa mọi phiên đăng nhập** của bố mẹ đó:
@@ -240,7 +264,7 @@ Gửi mật khẩu tạm cho bố mẹ qua kênh riêng và nhắc họ đổi l
 
 ## Xem log sự kiện bảo mật
 
-App ghi log JSON ra stdout (pino); Docker giữ tối đa 5 file × 10 MB. Sự kiện bảo mật có `"kind":"security"` và trường `event`: `login_failed`, `login_locked`, `login_rate_limited`, `signup_limited`, `pin_failed`, `pin_locked`, `device_enabled`, `device_revoked`, `password_changed`, `password_reset`, `invite_created`, `invite_accepted`, `authz_denied`. Log không chứa mật khẩu, PIN, token hay cookie; email chỉ ở dạng SHA-256 (`emailHash`).
+App ghi log JSON ra stdout (pino); Docker giữ tối đa 5 file × 10 MB. Sự kiện bảo mật có `"kind":"security"` và trường `event`: `login_failed`, `login_locked`, `login_rate_limited`, `signup_limited`, `pin_failed`, `pin_locked`, `pin_changed`, `pin_reset`, `device_enabled` (trường `detail` là `shared` hoặc `personal`), `device_revoked`, `password_changed`, `password_reset`, `invite_created`, `invite_accepted`, `authz_denied`. Log không chứa mật khẩu, PIN, token hay cookie; email chỉ ở dạng SHA-256 (`emailHash`).
 
 ```bash
 cd /opt/my-credit
