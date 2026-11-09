@@ -30,7 +30,31 @@ export async function enableFamilyMode(
 ) {
   await deleteSession(db, parentToken);
   const session = await createSession(db, "device", auth.familyId, clock);
-  logSecurityEvent("device_enabled", { familyId: auth.familyId, parentId: auth.parentId });
+  logSecurityEvent("device_enabled", { familyId: auth.familyId, parentId: auth.parentId, detail: "shared" });
+  return session;
+}
+
+/**
+ * Bố mẹ bật thiết bị hiện tại thành máy riêng của một con (spec "Máy riêng của con", design D3):
+ * con phải thuộc gia đình và chưa lưu trữ; kết thúc phiên bố mẹ và phiên thiết bị cũ của chính máy
+ * này, rồi cấp phiên `device` gắn với con đó.
+ */
+export async function enablePersonalDevice(
+  db: DbOrTx,
+  auth: { parentId: number; familyId: number },
+  childId: number,
+  clock: Clock = systemClock,
+  tokens: { parentToken?: string; currentDeviceToken?: string } = {},
+) {
+  const [child] = await db
+    .select({ id: children.id })
+    .from(children)
+    .where(and(eq(children.id, childId), eq(children.familyId, auth.familyId), isNull(children.archivedAt)));
+  if (!child) throw notFound();
+  await deleteSession(db, tokens.parentToken);
+  await deleteSession(db, tokens.currentDeviceToken);
+  const session = await createSession(db, "device", auth.familyId, clock, { deviceChildId: child.id });
+  logSecurityEvent("device_enabled", { familyId: auth.familyId, parentId: auth.parentId, detail: "personal", childId: child.id });
   return session;
 }
 

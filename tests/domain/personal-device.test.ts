@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DAY, HOUR, fixedClock } from "@/server/clock";
 import { authenticateChild, authenticateDevice } from "@/server/auth/guards";
-import { createSession } from "@/server/auth/sessions";
+import { createSession, resolveSession } from "@/server/auth/sessions";
+import { enablePersonalDevice } from "@/server/auth/family-mode";
+import { archiveChild } from "@/server/domain/children";
+import { setSecurityLogSink } from "@/server/log";
 import { PERSONAL_CHILD_TTL_MS } from "@/server/auth/session-cookies";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
@@ -55,5 +58,31 @@ describe("Thời hạn phiên theo kiểu thiết bị", () => {
     const child = await createSession(t.db, "child", kids[0].id, clock);
     clock.advance(2 * HOUR + 1000);
     expect(await authenticateChild(t.db, device.token, child.token, clock)).toBeNull();
+  });
+});
+
+describe("Bật máy riêng", () => {
+  it("Cấp phiên device gắn với con, kết thúc phiên bố mẹ và phiên thiết bị cũ của máy", async () => {
+    const { family, parent, kids } = await seedFamily(t.db, { kids: ["Bin", "Na"] });
+    const auth = { parentId: parent.id, familyId: family.id };
+    const parentSession = await createSession(t.db, "parent", parent.id, clock);
+    const oldDevice = await createSession(t.db, "device", family.id, clock);
+    const events: [string, unknown][] = [];
+    setSecurityLogSink((e, f) => events.push([e, f]));
+    const device = await enablePersonalDevice(t.db, auth, kids[0].id, clock, { parentToken: parentSession.token, currentDeviceToken: oldDevice.token });
+    setSecurityLogSink();
+    expect(await authenticateDevice(t.db, device.token, clock)).toMatchObject({ familyId: family.id, childId: kids[0].id });
+    expect(await resolveSession(t.db, parentSession.token, "parent", clock)).toBeNull();
+    expect(await authenticateDevice(t.db, oldDevice.token, clock)).toBeNull();
+    expect(events).toContainEqual(["device_enabled", expect.objectContaining({ detail: "personal", childId: kids[0].id })]);
+  });
+
+  it("Từ chối con đã lưu trữ hoặc thuộc gia đình khác", async () => {
+    const { family, parent, kids } = await seedFamily(t.db, { kids: ["Bin", "Na"] });
+    const auth = { parentId: parent.id, familyId: family.id };
+    await archiveChild(t.db, family.id, kids[1].id, clock);
+    await expect(enablePersonalDevice(t.db, auth, kids[1].id, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const other = await seedFamily(t.db, { familyName: "Nhà khác", kids: ["Tí"] });
+    await expect(enablePersonalDevice(t.db, auth, other.kids[0].id, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
