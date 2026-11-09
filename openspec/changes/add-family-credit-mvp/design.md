@@ -81,6 +81,8 @@ notifications(id, child_id, kind[gift|penalty|rejected], title, amount?,
               reason?, transaction_id?, ref_type?, ref_id?, read_at?, created_at)
   -- index (child_id, read_at)
 sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
+auth_attempts(key, window_start, count)
+  -- PRIMARY KEY (key, window_start); bộ đếm rate limit, xem D9
 ```
 - **Sổ cái**: `transactions` chỉ có INSERT. Lớp domain không có hàm update hay delete; thêm trigger PostgreSQL `BEFORE UPDATE OR DELETE ON transactions` gọi một hàm PL/pgSQL luôn `RAISE EXCEPTION`, để chặn ở tầng DB.
 - **Số dư** = `SUM(applied_amount)` theo `child_id`, có index `(child_id)`. Ở quy mô này không cần cột số dư cache, nên tránh được sai lệch giữa hai nguồn.
@@ -147,8 +149,24 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 - **Sau proxy**: HTTPS kết thúc ở Traefik, nên cookie luôn đặt `Secure` khi `NODE_ENV=production`. Cấu hình `experimental.serverActions.allowedOrigins` từ host của `APP_URL` để kiểm tra Origin của Server Actions không chặn nhầm request đi qua proxy.
 - **Cập nhật (thủ công)**: đổi tag trong `.env` (`IMAGE_TAG`) rồi `docker compose pull && docker compose up -d`. Rollback: đặt lại tag cũ và `up -d`; nếu bản mới đã chạy migration không tương thích ngược thì khôi phục từ bản sao lưu. Migration nên viết theo kiểu chỉ thêm (thêm cột/bảng, không đổi tên hay xóa trong cùng một bản phát hành) để rollback image không cần khôi phục DB.
 - **Khởi tạo lần đầu** (README): trên Postgres tạo `CREATE ROLE my_credit LOGIN PASSWORD '…'; CREATE DATABASE my_credit OWNER my_credit;`, tạo `.env`, `docker compose up -d`; migration tự tạo bảng.
-- **Sao lưu**: `scripts/backup.sh` chạy trên VPS bằng cron hằng ngày: `docker run --rm --network $POSTGRES_NETWORK postgres:<major>-alpine pg_dump -Fc "$DATABASE_URL"` ghi vào `BACKUP_DIR` (tên file kèm ngày), giữ 14 bản gần nhất. `<major>` phải cùng hoặc mới hơn phiên bản server Postgres. README hướng dẫn khôi phục bằng `pg_restore --clean --if-exists` và khuyên chép thư mục sao lưu ra ngoài VPS.
-- **Công cụ quản trị**: `docker compose exec app node scripts/reset-password.js <email>` để đặt lại mật khẩu bố mẹ.
+- **Sao lưu**: `scripts/backup.sh` chạy trên VPS bằng cron hằng ngày: `docker run --rm --network $POSTGRES_NETWORK postgres:<major>-alpine pg_dump -Fc "$DATABASE_URL"`, mã hóa bằng `age` (D9) rồi ghi vào `BACKUP_DIR` (tên file kèm ngày), giữ 14 bản gần nhất. `<major>` phải cùng hoặc mới hơn phiên bản server Postgres. README hướng dẫn khôi phục bằng `pg_restore --clean --if-exists` và khuyên chép thư mục sao lưu ra ngoài VPS.
+- **Công cụ quản trị**: `docker compose exec app node scripts/reset-password.js <email>` để đặt lại mật khẩu bố mẹ; script xóa mọi session của bố mẹ đó (D9).
+
+### D9. Bảo mật vận hành
+- **Rate limit** (spec family-accounts): bộ đếm cửa sổ cố định trong bảng `auth_attempts`, tăng bằng một câu `INSERT … ON CONFLICT (key, window_start) DO UPDATE SET count = count + 1 RETURNING count`, nên đúng cả khi có nhiều request đồng thời và không cần Redis. Các khóa:
+  - `login:email:<sha256(lower(email))>`: 5 lần sai liên tiếp thì khóa 15 phút; đăng nhập đúng thì xóa bộ đếm. Đếm cả email không tồn tại (vẫn chạy argon2 với một hash giả để thời gian phản hồi như nhau).
+  - `login:ip:<ip>`: 20 lần trong 15 phút. `signup:ip:<ip>`: 5 lần mỗi giờ. `invite:family:<id>`: 10 lần mỗi ngày.
+  - Khóa PIN của con giữ nguyên cơ chế trên dòng `children` (D4).
+  - IP client lấy từ `X-Forwarded-For` do Traefik gắn (phần tử cuối). Chỉ tin header này vì container không publish port, mọi request đều qua Traefik.
+  - Job dọn dẹp lúc khởi động xóa các dòng có cửa sổ đã quá 1 ngày.
+  - Tùy chọn: thêm middleware `ratelimit` của Traefik (theo IP, cho toàn bộ app) làm lớp ngoài chống tràn request.
+- **Header bảo mật**: middleware của Next sinh nonce cho mỗi request và đặt:
+  - `Content-Security-Policy`: `default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. (`style-src 'unsafe-inline'` cần cho style inline của Next/Tailwind; font tự host qua `next/font` nên không cần nguồn ngoài.)
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains` (chưa preload), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+- **Phiên khi đổi mật khẩu**: đổi mật khẩu xóa mọi `sessions` của bố mẹ đó trừ phiên hiện tại; reset bằng CLI xóa tất cả. Mật khẩu hiện tại được kiểm tra bằng argon2 và tính vào bộ đếm `login:email`.
+- **Log sự kiện bảo mật**: `pino` ghi JSON ra stdout. Sự kiện: `login_failed`, `login_locked`, `signup_limited`, `pin_failed`, `pin_locked`, `device_enabled`, `device_revoked`, `password_changed`, `password_reset`, `invite_created`, `invite_accepted`, `authz_denied`. Mỗi dòng có thời điểm, sự kiện, `familyId`/`subjectId` nếu có, IP. Không bao giờ ghi mật khẩu, PIN, token hay cookie; email chỉ ghi dạng SHA-256. Trong compose đặt `logging: json-file` với `max-size: 10m`, `max-file: 5`.
+- **Chuỗi cung ứng**: `.github/dependabot.yml` cho npm, GitHub Actions và Docker (hằng tuần). CI chạy `npm audit --omit=dev --audit-level=high` và Trivy quét image vừa build; có lỗ hổng HIGH/CRITICAL đã có bản vá thì không push image.
+- **Sao lưu mã hóa**: `backup.sh` dẫn đầu ra `pg_dump` qua `age -r "$BACKUP_AGE_RECIPIENT"` (public key trong `.env` của VPS), file có đuôi `.dump.age`; trên đĩa không có bản rõ. Private key giữ ngoài VPS (máy của người quản trị hoặc trình quản lý mật khẩu); khôi phục bằng `age -d -i <key> file | pg_restore …`.
 
 ## Risks / Trade-offs
 
@@ -161,6 +179,11 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 - [Quên mật khẩu mà không có email reset] → Bố mẹ khác trong gia đình vẫn đăng nhập được; thêm lệnh CLI `npm run reset-password` cho người host.
 - [Hình chibi cần tài nguyên đồ họa] → MVP dùng bộ SVG tối giản, tách khỏi code qua thư mục theme để thay thế sau mà không sửa logic.
 - [Người dùng ở múi giờ khác thiết bị] → Ngày luôn tính theo múi giờ của gia đình, không theo múi giờ của trình duyệt.
+- [Dò mật khẩu bố mẹ] → Khóa theo email sau 5 lần sai và giới hạn theo IP (D9); thông báo và thời gian phản hồi như nhau với email có hoặc không tồn tại.
+- [Spam tài khoản và lời mời] → Giới hạn đăng ký theo IP và lời mời theo gia đình (D9).
+- [Kẻ tấn công khóa tài khoản của người khác bằng cách cố ý đăng nhập sai] → Chấp nhận: khóa chỉ 15 phút và bố mẹ khác trong gia đình vẫn đăng nhập được; theo dõi qua log `login_locked`.
+- [CSP chặn nhầm script của Next] → Dùng nonce + `strict-dynamic` theo hướng dẫn của Next; e2e chạy với header thật để phát hiện sớm.
+- [Lộ file sao lưu chứa dữ liệu của trẻ] → Mã hóa bằng `age` trước khi ghi đĩa, private key không nằm trên VPS.
 
 ## Migration Plan
 
