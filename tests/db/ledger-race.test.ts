@@ -57,7 +57,6 @@ describe.skipIf(!url)("Chống race trên Postgres thật", () => {
     const original = await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 10, description: "Thưởng nhầm", actorParentId: parent.id });
     await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 20, description: "Thưởng", actorParentId: parent.id });
     const adjust = () => recordAdjustment(db, { familyId: family.id, originalTransactionId: original.id, reason: "bấm nhầm", actorParentId: parent.id });
-    const run = randomUUID();
     const results = await Promise.allSettled([adjust(), adjust(), adjust()]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await getBalance(db, child.id)).toBe(20);
