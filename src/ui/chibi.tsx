@@ -2,7 +2,8 @@
 
 import { AVATAR_LOOKS, DEFAULT_AVATAR, isAvatarId } from "@/lib/avatars";
 
-export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: string; size?: number; mood?: "happy" | "sad" }) {
+/** happy: mặc định; joy: màn ăn mừng (mắt cười, miệng mở); sad: màn báo bị trừ (lông mày cụp, giọt nước mắt). */
+export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: string; size?: number; mood?: "happy" | "joy" | "sad" }) {
   const look = AVATAR_LOOKS[isAvatarId(avatar) ? avatar : DEFAULT_AVATAR];
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -14,16 +15,31 @@ export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: str
       )}
       <circle cx="32" cy="34" r="22" fill="#FFE3C8" />
       <path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill={look.hair} />
-      <ellipse cx="24" cy="38" rx="3.2" ry="4" fill="#2B2118" />
-      <ellipse cx="40" cy="38" rx="3.2" ry="4" fill="#2B2118" />
-      <circle cx="25.2" cy="36.5" r="1.1" fill="#fff" />
-      <circle cx="41.2" cy="36.5" r="1.1" fill="#fff" />
-      <ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55" />
-      <ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55" />
-      {mood === "happy" ? (
-        <path d="M28.5 46q3.5 3 7 0" fill="none" stroke="#2B2118" strokeWidth={1.8} strokeLinecap="round" />
+      {mood === "joy" ? (
+        <>
+          <path d="M20 38q4-5 8 0M36 38q4-5 8 0" fill="none" stroke="#2B2118" strokeWidth={2.2} strokeLinecap="round" />
+          <ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7" />
+          <ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7" />
+          <path d="M26 44q6 7 12 0z" fill="#B3261E" />
+        </>
       ) : (
-        <path d="M28 48q4-3 8 0" fill="none" stroke="#2B2118" strokeWidth={1.8} strokeLinecap="round" />
+        <>
+          <ellipse cx="24" cy="38" rx="3.2" ry="4" fill="#2B2118" />
+          <ellipse cx="40" cy="38" rx="3.2" ry="4" fill="#2B2118" />
+          <circle cx="25.2" cy="36.5" r="1.1" fill="#fff" />
+          <circle cx="41.2" cy="36.5" r="1.1" fill="#fff" />
+          <ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55" />
+          <ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55" />
+          {mood === "happy" ? (
+            <path d="M28.5 46q3.5 3 7 0" fill="none" stroke="#2B2118" strokeWidth={1.8} strokeLinecap="round" />
+          ) : (
+            <>
+              <path d="M28 48q4-3 8 0" fill="none" stroke="#2B2118" strokeWidth={1.8} strokeLinecap="round" />
+              <path d="M19 33l7-2M45 33l-7-2" stroke="#2B2118" strokeWidth={1.8} strokeLinecap="round" />
+              <path d="M50 22q3 5 0 7-3-2 0-7z" fill="#7DD3FC" />
+            </>
+          )}
+        </>
       )}
     </svg>
   );

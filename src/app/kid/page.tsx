@@ -37,7 +37,7 @@ async function KidPicker() {
       ) : (
         <PinLogin kids={kids.map((k) => ({ id: k.id, name: k.name, avatar: k.avatar, locked: k.locked }))} />
       )}
-      <Link href="/login" className="font-extrabold text-muted underline">
+      <Link href="/login" className="inline-flex min-h-11 items-center px-2 font-extrabold text-muted underline">
         Bố mẹ đăng nhập
       </Link>
     </div>

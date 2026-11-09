@@ -7,6 +7,8 @@ import {
   archiveChildAction,
   createInviteAction,
   revokeDeviceAction,
+  setFamilySoundAction,
+  setFamilyThemeAction,
   updateChildAction,
   updateCurrencyAction,
 } from "@/app/actions/family";
@@ -14,6 +16,7 @@ import { AvatarPicker } from "@/ui/avatar-picker";
 import { ChibiAvatar } from "@/ui/chibi";
 import { Field, FormMessage, SubmitButton } from "@/ui/form";
 import { Button, Card } from "@/ui/primitives";
+import { ThemePicker } from "@/ui/theme-picker";
 
 const CURRENCY_ICON_LABELS: Record<string, string> = {
   star: "Ngôi sao",
@@ -151,6 +154,35 @@ export function CurrencyForm({ name, icon, icons }: { name: string; icon: string
       </label>
       <FormMessage state={state} />
       <SubmitButton>Lưu đơn vị</SubmitButton>
+    </form>
+  );
+}
+
+export function FamilyThemeForm({ theme }: { theme: string }) {
+  const [state, action] = useActionState(setFamilyThemeAction, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <p className="text-sm font-semibold text-muted">Dùng cho màn của bố mẹ, màn chọn avatar và các con chưa tự chọn giao diện.</p>
+      <ThemePicker defaultValue={theme} />
+      <FormMessage state={state} />
+      <SubmitButton className="w-fit">Lưu theme gia đình</SubmitButton>
+    </form>
+  );
+}
+
+export function FamilySoundForm({ enabled }: { enabled: boolean }) {
+  const [state, action] = useActionState(setFamilySoundAction, undefined);
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <input type="hidden" name="enabled" value={enabled ? "0" : "1"} />
+      <p className="font-bold">
+        Âm thanh khi thưởng/phạt đang <strong className="font-extrabold">{enabled ? "bật" : "tắt"}</strong> cho cả gia đình.
+      </p>
+      <p className="text-sm font-semibold text-muted">Mỗi thiết bị vẫn tắt riêng được bằng nút loa ở màn của con. Thông báo bằng chữ và hình luôn hiển thị.</p>
+      <FormMessage state={state} />
+      <SubmitButton variant="outline" className="w-fit">
+        {enabled ? "Tắt âm thanh cả gia đình" : "Bật âm thanh cả gia đình"}
+      </SubmitButton>
     </form>
   );
 }

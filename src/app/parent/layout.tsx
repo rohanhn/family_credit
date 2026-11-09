@@ -6,6 +6,7 @@ import { getFamily } from "@/server/domain/families";
 import { Icon } from "@/ui/icons";
 import { ParentShell } from "@/ui/parent-shell";
 import { Button } from "@/ui/primitives";
+import { SoundProvider } from "@/ui/sound";
 import { effectiveTheme } from "@/ui/themes";
 
 // Khu vực bố mẹ: đọc phiên trong <Suspense> (Cache Components), mọi trang con đều đã qua guard.
@@ -14,20 +15,22 @@ async function ParentFrame({ children }: { children: ReactNode }) {
   const auth = await requireParentWithFamily();
   const family = await getFamily(getDb(), auth.familyId);
   return (
-    <ParentShell
-      theme={effectiveTheme(null, family.defaultTheme)}
-      familyName={family.name}
-      actions={
-        <form action={enableFamilyModeAction}>
-          <Button type="submit">
-            <Icon name="phone" size={18} />
-            Bật chế độ gia đình
-          </Button>
-        </form>
-      }
-    >
-      {children}
-    </ParentShell>
+    <SoundProvider familyEnabled={family.soundEnabled}>
+      <ParentShell
+        theme={effectiveTheme(null, family.defaultTheme)}
+        familyName={family.name}
+        actions={
+          <form action={enableFamilyModeAction}>
+            <Button type="submit">
+              <Icon name="phone" size={18} />
+              Bật chế độ gia đình
+            </Button>
+          </form>
+        }
+      >
+        {children}
+      </ParentShell>
+    </SoundProvider>
   );
 }
 

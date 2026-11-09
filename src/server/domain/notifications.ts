@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { systemClock, type Clock, DAY } from "../clock";
-import { notifications, transactions } from "../db/schema";
+import { notifications, parents, transactions } from "../db/schema";
 import type { DbOrTx, Tx } from "../db/types";
 
 // Thông báo cho con (spec kid-notifications, design D3 "Thông báo").
@@ -54,11 +54,13 @@ export async function notifyRejected(
   return row;
 }
 
-export type NotificationView = Notification & { requestedAmount: number | null };
+/** Thông báo kèm mức gốc của giao dịch và tên bố/mẹ đã thực hiện (màn báo bị trừ cần cả hai). */
+export type NotificationView = Notification & { requestedAmount: number | null; actorName: string | null };
 
 const withRequested = {
   n: notifications,
   requestedAmount: transactions.requestedAmount,
+  actorName: parents.displayName,
 };
 
 /** Số chưa đọc và danh sách thông báo chưa đọc (cũ nhất trước, để màn nhận quà hiện theo thứ tự). */
@@ -67,9 +69,10 @@ export async function getUnreadSummary(db: DbOrTx, childId: number): Promise<{ c
     .select(withRequested)
     .from(notifications)
     .leftJoin(transactions, eq(transactions.id, notifications.transactionId))
+    .leftJoin(parents, eq(parents.id, transactions.actorParentId))
     .where(and(eq(notifications.childId, childId), isNull(notifications.readAt)))
     .orderBy(asc(notifications.id));
-  const items = rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount }));
+  const items = rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount, actorName: r.actorName }));
   return { count: items.length, items };
 }
 
@@ -80,10 +83,11 @@ export async function listNotifications(db: DbOrTx, childId: number, clock: Cloc
     .select(withRequested)
     .from(notifications)
     .leftJoin(transactions, eq(transactions.id, notifications.transactionId))
+    .leftJoin(parents, eq(parents.id, transactions.actorParentId))
     .where(and(eq(notifications.childId, childId), gte(notifications.createdAt, since)))
     .orderBy(desc(notifications.id))
     .limit(200);
-  return rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount }));
+  return rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount, actorName: r.actorName }));
 }
 
 /** Đánh dấu đã đọc; chỉ tác động lên thông báo của chính con đó. Trả về số dòng đã đánh dấu. */

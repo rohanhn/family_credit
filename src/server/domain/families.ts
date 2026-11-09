@@ -38,6 +38,13 @@ export async function getFamily(db: DbOrTx, familyId: number): Promise<Family> {
   return family;
 }
 
+/** Công tắc âm thanh cho cả gia đình (spec ui-theme "Âm thanh phản hồi"; mặc định bật). */
+export async function setFamilySound(db: DbOrTx, familyId: number, enabled: boolean): Promise<boolean> {
+  const rows = await db.update(families).set({ soundEnabled: enabled }).where(eq(families.id, familyId)).returning({ soundEnabled: families.soundEnabled });
+  if (rows.length === 0) throw notFound();
+  return rows[0].soundEnabled;
+}
+
 /** Tạo liên kết mời dùng một lần, hạn 7 ngày; mỗi gia đình tối đa 10 lời mời mỗi ngày. */
 export async function createInvite(
   db: Db,

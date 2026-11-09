@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { applyAction } from "@/app/actions/rules";
 import { signed } from "@/lib/time";
 import { ChibiAvatar } from "@/ui/chibi";
 import { Field, FormMessage, SubmitButton } from "@/ui/form";
 import { Icon } from "@/ui/icons";
 import { Card } from "@/ui/primitives";
+import { useSound } from "@/ui/sound";
 
 type Kid = { id: number; name: string; avatar: string; balance: number };
 type Rule = { id: number; name: string; kind: "reward" | "penalty"; points: number };
@@ -29,6 +30,13 @@ export function ApplyPanel({
   initialKind: "reward" | "penalty";
 }) {
   const [state, action] = useActionState(applyAction, undefined);
+  const { play } = useSound();
+  // Âm phát sau khi Server Action ghi giao dịch thành công (design D6); xác nhận bằng chữ ở FormMessage.
+  const recorded = state?.ok ? state.data?.nonce : undefined;
+  const recordedSign = Number(state?.data?.requested ?? 0);
+  useEffect(() => {
+    if (recorded) play(recordedSign > 0 ? "reward" : "penalty");
+  }, [recorded, recordedSign, play]);
   const [childId, setChildId] = useState<number>(initialChildId ?? kids[0]?.id);
   const [kind, setKind] = useState<"reward" | "penalty">(initialKind);
   const [choice, setChoice] = useState<string>("");

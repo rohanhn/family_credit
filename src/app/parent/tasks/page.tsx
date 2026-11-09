@@ -54,7 +54,7 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
             <Card className="font-semibold text-muted">Chưa có nhiệm vụ nào. Tạo nhiệm vụ ở cột bên cạnh.</Card>
           ) : (
             <div className="overflow-x-auto rounded-[22px] bg-card shadow-flat">
-              <table className="w-full border-collapse text-[15px]">
+              <table className="w-full min-w-[560px] border-collapse text-[15px]">
                 <thead>
                   <tr className="text-left text-xs font-extrabold tracking-wide text-muted">
                     {["NHIỆM VỤ", "ĐIỂM", "NGÀY", "GIAO CHO", "CÁCH LÀM", "TRẠNG THÁI", ""].map((h) => (

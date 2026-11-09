@@ -6,9 +6,9 @@ import { listDevices } from "@/server/auth/family-mode";
 import { requireParentWithFamily } from "@/server/auth/next";
 import { listChildren } from "@/server/domain/children";
 import { CURRENCY_ICONS, getCurrency } from "@/server/domain/currency";
-import { listParents } from "@/server/domain/families";
+import { getFamily, listParents } from "@/server/domain/families";
 import { Button, Card } from "@/ui/primitives";
-import { AddChildForm, ChangePasswordForm, ChildRow, CurrencyForm, DeviceRow, InviteBox } from "./settings-forms";
+import { AddChildForm, ChangePasswordForm, ChildRow, CurrencyForm, DeviceRow, FamilySoundForm, FamilyThemeForm, InviteBox } from "./settings-forms";
 
 export const metadata: Metadata = { title: "Cài đặt · Sao nhà mình" };
 
@@ -26,7 +26,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
 async function Settings() {
   const auth = await requireParentWithFamily();
   const db = getDb();
-  const [kids, devices, parentsList, currency] = await Promise.all([
+  const [family, kids, devices, parentsList, currency] = await Promise.all([
+    getFamily(db, auth.familyId),
     listChildren(db, auth.familyId),
     listDevices(db, auth.familyId),
     listParents(db, auth.familyId),
@@ -43,6 +44,11 @@ async function Settings() {
           ))}
           <Card>
             <AddChildForm />
+          </Card>
+        </Section>
+        <Section id="giao-dien" title="Giao diện gia đình">
+          <Card>
+            <FamilyThemeForm theme={family.defaultTheme} />
           </Card>
         </Section>
         <Section id="thiet-bi" title="Thiết bị chế độ gia đình">
@@ -71,6 +77,11 @@ async function Settings() {
         <Section id="tien-te" title="Đơn vị tiền tệ">
           <Card>
             <CurrencyForm name={currency.name} icon={currency.icon} icons={CURRENCY_ICONS} />
+          </Card>
+        </Section>
+        <Section id="am-thanh" title="Âm thanh">
+          <Card>
+            <FamilySoundForm enabled={family.soundEnabled} />
           </Card>
         </Section>
         <Section id="tai-khoan" title="Tài khoản của bạn">

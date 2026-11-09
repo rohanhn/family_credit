@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChibiAvatar } from "./chibi";
 import { Icon, type IconName } from "./icons";
@@ -70,15 +71,18 @@ export function KidShell({
           {sidebarActions && <div className="flex flex-col gap-2">{sidebarActions}</div>}
         </aside>
 
-        <header className="flex items-center gap-3 px-4 pt-5 md:hidden">
-          <span className="flex size-[52px] shrink-0 items-center justify-center rounded-full border-3 border-halo bg-soft">
+        <header className="flex items-center gap-2.5 px-4 pt-5 md:hidden">
+          <Link href="/kid/theme" aria-label="Đổi giao diện" className="relative flex size-[52px] shrink-0 items-center justify-center rounded-full border-3 border-halo bg-soft">
             <ChibiAvatar avatar={avatar} size={44} />
-          </span>
+            <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-card text-primary shadow-flat">
+              <Icon name="palette" size={16} />
+            </span>
+          </Link>
           <span className="flex min-w-0 flex-1 flex-col">
             {subtitle && <span className="text-sm font-bold text-muted">{subtitle}</span>}
-            <span className="truncate font-display text-[26px] font-extrabold leading-tight">Chào {childName}!</span>
+            <span className="truncate font-display text-[22px] font-extrabold leading-tight min-[400px]:text-[26px]">Chào {childName}!</span>
           </span>
-          {actions && <div className="flex gap-2">{actions}</div>}
+          {actions && <div className="flex shrink-0 gap-1.5">{actions}</div>}
         </header>
 
         <main className="flex min-w-0 flex-1 flex-col gap-4 px-4 pb-28 pt-4 md:p-0">{children}</main>

@@ -7,7 +7,9 @@ import { enableFamilyMode, revokeDevice } from "@/server/auth/family-mode";
 import { requireParentWithFamily, setSessionCookie } from "@/server/auth/next";
 import { archiveChild, createChild, updateChild } from "@/server/domain/children";
 import { updateCurrency } from "@/server/domain/currency";
-import { createInvite } from "@/server/domain/families";
+import { createInvite, setFamilySound } from "@/server/domain/families";
+import { setFamilyTheme } from "@/server/domain/themes";
+import { THEMES } from "@/ui/themes";
 import { fromError, int, str, type ActionState } from "./result";
 
 // Server Actions quản lý gia đình của bố mẹ (task 3.6). familyId luôn lấy từ phiên.
@@ -85,6 +87,30 @@ export async function revokeDeviceAction(_prev: ActionState, form: FormData): Pr
     await revokeDevice(getDb(), auth, str(form, "deviceId"));
     refresh();
     return { ok: true, message: "Đã thu hồi thiết bị" };
+  } catch (err) {
+    return fromError(err);
+  }
+}
+
+/** Theme mặc định của gia đình (spec ui-theme "Theme mặc định của gia đình"). */
+export async function setFamilyThemeAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    const theme = await setFamilyTheme(getDb(), auth.familyId, str(form, "theme"));
+    refresh();
+    return { ok: true, message: `Theme gia đình giờ là "${THEMES[theme].name}"` };
+  } catch (err) {
+    return fromError(err);
+  }
+}
+
+/** Công tắc âm thanh cho cả gia đình. */
+export async function setFamilySoundAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    const enabled = await setFamilySound(getDb(), auth.familyId, str(form, "enabled") === "1");
+    refresh();
+    return { ok: true, message: enabled ? "Đã bật âm thanh cho cả gia đình" : "Đã tắt âm thanh trên mọi thiết bị của gia đình" };
   } catch (err) {
     return fromError(err);
   }

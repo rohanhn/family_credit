@@ -4,6 +4,8 @@
 export const THEME_IDS = ["sunny", "ocean", "candy", "robot", "magic"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 export const DEFAULT_THEME: ThemeId = "sunny";
+/** Giá trị form cho lựa chọn "Dùng theme của gia đình" ở màn con. */
+export const FAMILY_THEME = "family";
 
 export type ThemeTokens = {
   bg: string;
