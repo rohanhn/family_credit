@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, useRandomClientIp } from "./helpers";
+import { uniqueEmail, setRandomClientIp } from "./helpers";
 
 // Task 3.7: header bảo mật có mặt, và các trang chính chạy không có lỗi CSP trong console.
 
@@ -26,7 +26,7 @@ test("trang đăng nhập có header bảo mật và không lỗi CSP", async ({
 
 test("luồng tới màn con chạy không lỗi CSP", async ({ page }) => {
   const cspErrors = collectCspErrors(page);
-  await useRandomClientIp(page);
+  await setRandomClientIp(page);
   const email = uniqueEmail("csp");
 
   await page.goto("/register");

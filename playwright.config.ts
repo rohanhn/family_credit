@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Nạp .env (nếu có) để test e2e đọc được DATABASE_URL (dựng dữ liệu trực tiếp trong DB).
+try {
+  process.loadEnvFile(".env");
+} catch {
+  // Không có .env (ví dụ trong CI): dùng biến môi trường sẵn có.
+}
+
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 
 export default defineConfig({

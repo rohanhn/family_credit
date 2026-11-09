@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
  * Gán một IP client ngẫu nhiên (qua X-Forwarded-For, như Traefik) cho trang, để các lượt test
  * không đụng giới hạn đăng ký/đăng nhập theo IP của nhau (design D9).
  */
-export async function useRandomClientIp(page: Page): Promise<string> {
+export async function setRandomClientIp(page: Page): Promise<string> {
   const ip = `198.51.${Math.floor(Math.random() * 250) + 1}.${Math.floor(Math.random() * 250) + 1}`;
   await page.setExtraHTTPHeaders({ "x-forwarded-for": ip });
   return ip;

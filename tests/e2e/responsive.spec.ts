@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { addChild, enableFamilyMode, kidLogin, registerFamily, useRandomClientIp } from "./helpers";
+import { addChild, enableFamilyMode, kidLogin, registerFamily, setRandomClientIp } from "./helpers";
 
 // Task 7.4 (spec ui-theme "Giao diện responsive"): không có thanh cuộn ngang ở 360px trên các trang chính,
 // khu vực con chuyển giữa thanh tab dưới và sidebar đúng ở 768px, vùng bấm phía con tối thiểu 44x44px.
@@ -32,7 +32,7 @@ test("Các trang chính không cuộn ngang ở 360px; khu vực con đổi bố
   test.skip(testInfo.project.name !== "mobile", "Tự đặt kích thước màn hình, chỉ chạy một lần");
   test.setTimeout(180_000);
   await page.setViewportSize({ width: 360, height: 800 });
-  await useRandomClientIp(page);
+  await setRandomClientIp(page);
 
   await expectNoHorizontalScroll(page, "/login");
   await expectNoHorizontalScroll(page, "/register");
