@@ -25,7 +25,7 @@ async function KidPicker() {
     );
   }
   const db = getDb();
-  const [family, kids] = await Promise.all([getFamily(db, device.familyId), listKidsForDevice(db, device.familyId)]);
+  const [family, kids] = await Promise.all([getFamily(db, device.familyId), listKidsForDevice(db, device)]);
   return (
     <div data-theme={effectiveTheme(null, family.defaultTheme)} className="flex flex-1 flex-col items-center gap-8 bg-bg px-4 py-10 text-ink">
       <div className="flex flex-col items-center gap-1 text-center">

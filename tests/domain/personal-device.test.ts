@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DAY, HOUR, fixedClock } from "@/server/clock";
 import { authenticateChild, authenticateDevice } from "@/server/auth/guards";
 import { createSession, resolveSession } from "@/server/auth/sessions";
-import { enablePersonalDevice } from "@/server/auth/family-mode";
-import { archiveChild } from "@/server/domain/children";
+import { enablePersonalDevice, listKidsForDevice, loginChildWithPin } from "@/server/auth/family-mode";
+import { children } from "@/server/db/schema";
+import { eq } from "drizzle-orm";
+import { archiveChild, createChild } from "@/server/domain/children";
 import { setSecurityLogSink } from "@/server/log";
 import { PERSONAL_CHILD_TTL_MS } from "@/server/auth/session-cookies";
 import { createTestDb, type TestDb } from "../helpers/db";
@@ -84,5 +86,44 @@ describe("Bật máy riêng", () => {
     await expect(enablePersonalDevice(t.db, auth, kids[1].id, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
     const other = await seedFamily(t.db, { familyName: "Nhà khác", kids: ["Tí"] });
     await expect(enablePersonalDevice(t.db, auth, other.kids[0].id, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("Đăng nhập trên máy riêng", () => {
+  async function setupPersonal() {
+    const { family, parent } = await seedFamily(t.db, { kids: [] });
+    const bin = await createChild(t.db, family.id, { name: "Bin", avatar: "boy-brown", pin: "1234" });
+    const na = await createChild(t.db, family.id, { name: "Na", avatar: "girl-brown", pin: "5678" });
+    const device = await enablePersonalDevice(t.db, { parentId: parent.id, familyId: family.id }, bin.id, clock);
+    const deviceAuth = (await authenticateDevice(t.db, device.token, clock))!;
+    return { family, bin, na, device, deviceAuth };
+  }
+
+  it("Bật máy riêng: màn đăng nhập chỉ hiện con sở hữu máy; Bin đăng nhập được, phiên kiểu phiên trình duyệt", async () => {
+    const { family, bin, device, deviceAuth } = await setupPersonal();
+    expect((await listKidsForDevice(t.db, deviceAuth, clock)).map((k) => k.name)).toEqual(["Bin"]);
+    const s = await loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234", deviceChildId: deviceAuth.childId }, clock);
+    expect(s.browserSession).toBe(true);
+    expect(s.expiresAt.getTime() - clock.now().getTime()).toBe(PERSONAL_CHILD_TTL_MS);
+    expect(await authenticateChild(t.db, device.token, s.token, clock)).toMatchObject({ childId: bin.id });
+  });
+
+  it("Con khác không đăng nhập được trên máy riêng, kể cả PIN đúng, và không bị tăng bộ đếm sai PIN", async () => {
+    const { family, na, deviceAuth } = await setupPersonal();
+    for (let i = 0; i < 6; i++) {
+      await expect(loginChildWithPin(t.db, { familyId: family.id, childId: na.id, pin: "5678", deviceChildId: deviceAuth.childId }, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    }
+    const [row] = await t.db.select().from(children).where(eq(children.id, na.id));
+    expect(row.failedPinCount).toBe(0);
+    expect(row.lockedUntil).toBeNull();
+  });
+
+  it("Phiên của con khác không dùng được cùng cookie máy riêng", async () => {
+    const { family, na, device } = await setupPersonal();
+    const shared = await createSession(t.db, "device", family.id, clock);
+    const naSession = await loginChildWithPin(t.db, { familyId: family.id, childId: na.id, pin: "5678", deviceChildId: null }, clock);
+    expect(naSession.browserSession).toBe(false);
+    expect(await authenticateChild(t.db, shared.token, naSession.token, clock)).not.toBeNull();
+    expect(await authenticateChild(t.db, device.token, naSession.token, clock)).toBeNull();
   });
 });

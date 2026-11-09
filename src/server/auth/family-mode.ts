@@ -5,6 +5,7 @@ import type { Db, DbOrTx } from "../db/types";
 import { DomainError, notFound } from "../domain/errors";
 import { logSecurityEvent } from "../log";
 import { verifySecret } from "./crypto";
+import { PERSONAL_CHILD_TTL_MS } from "./session-cookies";
 import { createSession, deleteSession } from "./sessions";
 
 // Chế độ gia đình và đăng nhập con bằng avatar + PIN (spec family-accounts, design D4).
@@ -82,12 +83,17 @@ export async function revokeDevice(db: DbOrTx, auth: { parentId: number; familyI
   logSecurityEvent("device_revoked", { familyId: auth.familyId, parentId: auth.parentId });
 }
 
-/** Avatar các con (chưa lưu trữ) cho màn chọn avatar, kèm trạng thái khóa PIN. */
-export async function listKidsForDevice(db: DbOrTx, familyId: number, clock: Clock = systemClock) {
+/**
+ * Avatar các con (chưa lưu trữ) được đăng nhập trên thiết bị, kèm trạng thái khóa PIN.
+ * Máy riêng (`childId` khác null) chỉ có con sở hữu máy.
+ */
+export async function listKidsForDevice(db: DbOrTx, device: { familyId: number; childId: number | null }, clock: Clock = systemClock) {
+  const conditions = [eq(children.familyId, device.familyId), isNull(children.archivedAt)];
+  if (device.childId !== null) conditions.push(eq(children.id, device.childId));
   const rows = await db
     .select({ id: children.id, name: children.name, avatar: children.avatar, theme: children.theme, lockedUntil: children.lockedUntil })
     .from(children)
-    .where(and(eq(children.familyId, familyId), isNull(children.archivedAt)))
+    .where(and(...conditions))
     .orderBy(asc(children.id));
   const now = clock.now().getTime();
   return rows.map((r) => ({ ...r, locked: !!r.lockedUntil && r.lockedUntil.getTime() > now }));
@@ -99,9 +105,13 @@ export async function listKidsForDevice(db: DbOrTx, familyId: number, clock: Clo
  */
 export async function loginChildWithPin(
   db: Db,
-  input: { familyId: number; childId: number; pin: string },
+  input: { familyId: number; childId: number; pin: string; deviceChildId?: number | null },
   clock: Clock = systemClock,
-): Promise<{ token: string; expiresAt: Date }> {
+): Promise<{ token: string; expiresAt: Date; browserSession: boolean }> {
+  // Máy riêng chỉ cho con sở hữu máy đăng nhập. Từ chối trước khi đụng tới dòng của con kia, nên
+  // không tăng bộ đếm sai PIN của con đó (máy của Bin không làm khóa được Na).
+  const personal = input.deviceChildId !== undefined && input.deviceChildId !== null;
+  if (personal && input.deviceChildId !== input.childId) throw notFound();
   const outcome = await db.transaction(async (tx) => {
     const [child] = await tx
       .select()
@@ -116,7 +126,8 @@ export async function loginChildWithPin(
     }
     if (await verifySecret(child.pinHash, input.pin)) {
       await tx.update(children).set({ failedPinCount: 0, lockedUntil: null }).where(eq(children.id, child.id));
-      return { kind: "ok" as const, session: await createSession(tx, "child", child.id, clock) };
+      const session = await createSession(tx, "child", child.id, clock, personal ? { ttlMs: PERSONAL_CHILD_TTL_MS } : {});
+      return { kind: "ok" as const, session: { ...session, browserSession: personal } };
     }
     const failures = child.failedPinCount + 1;
     if (failures >= PIN_MAX_FAILURES) {

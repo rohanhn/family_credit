@@ -67,5 +67,7 @@ export async function authenticateChild(
     .from(children)
     .where(and(eq(children.id, session.subjectId), eq(children.familyId, device.familyId), isNull(children.archivedAt)));
   if (!c) return null;
+  // Máy riêng: phiên con phải là của con sở hữu máy.
+  if (device.childId !== null && device.childId !== c.id) return null;
   return { kind: "child", childId: c.id, familyId: c.familyId, name: c.name, avatar: c.avatar, theme: c.theme, sessionIdHash: session.idHash };
 }

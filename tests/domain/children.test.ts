@@ -39,7 +39,7 @@ describe("Quản lý hồ sơ con", () => {
     const { family, bin } = await familyWithKid();
     expect(bin.pinHash).toMatch(/^\$argon2id\$/);
     expect(await getBalance(t.db, bin.id)).toBe(0);
-    expect((await listKidsForDevice(t.db, family.id, clock)).map((k) => k.name)).toEqual(["Bin"]);
+    expect((await listKidsForDevice(t.db, { familyId: family.id, childId: null }, clock)).map((k) => k.name)).toEqual(["Bin"]);
   });
 
   it("PIN không hợp lệ", async () => {
@@ -71,7 +71,7 @@ describe("Quản lý hồ sơ con", () => {
     await archiveChild(t.db, family.id, bin.id, clock);
     expect(await authenticateChild(t.db, device.token, session.token, clock)).toBeNull();
     await expect(loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234" }, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(await listKidsForDevice(t.db, family.id, clock)).toEqual([]);
+    expect(await listKidsForDevice(t.db, { familyId: family.id, childId: null }, clock)).toEqual([]);
     expect(await listTransactions(t.db, { familyId: family.id, childId: bin.id })).toHaveLength(1);
     expect(await listChildren(t.db, family.id, { includeArchived: true })).toHaveLength(1);
   });
@@ -106,7 +106,7 @@ describe("Đăng nhập con bằng avatar và PIN", () => {
     for (let i = 0; i < 4; i++) await expect(login("0000")).rejects.toMatchObject({ code: "INVALID_CREDENTIALS", message: PIN_WRONG_MESSAGE });
     await expect(login("0000")).rejects.toMatchObject({ code: "LOCKED", message: expect.stringContaining("Đợi 5 phút") });
     await expect(login("1234")).rejects.toMatchObject({ code: "LOCKED" });
-    expect((await listKidsForDevice(t.db, family.id, clock))[0].locked).toBe(true);
+    expect((await listKidsForDevice(t.db, { familyId: family.id, childId: null }, clock))[0].locked).toBe(true);
     clock.advance(5 * MINUTE);
     await expect(login("1234")).resolves.toBeTruthy();
   });

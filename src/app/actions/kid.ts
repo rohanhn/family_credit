@@ -16,7 +16,12 @@ export async function kidPinLoginAction(_prev: ActionState, form: FormData): Pro
   const device = await getDeviceAuth();
   if (!device) return { error: "Thiết bị này chưa bật chế độ gia đình" };
   try {
-    const session = await loginChildWithPin(getDb(), { familyId: device.familyId, childId: int(form, "childId"), pin: str(form, "pin") });
+    const session = await loginChildWithPin(getDb(), {
+      familyId: device.familyId,
+      childId: int(form, "childId"),
+      pin: str(form, "pin"),
+      deviceChildId: device.childId,
+    });
     await setSessionCookie("child", session.token, session.expiresAt);
   } catch (err) {
     if (err instanceof DomainError && err.code === "LOCKED") return { error: err.message, data: { locked: "1" } };
