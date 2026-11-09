@@ -37,7 +37,10 @@ export async function requestIp(): Promise<string> {
 }
 
 export async function getParentAuth(): Promise<ParentAuth | null> {
-  return authenticateParent(getDb(), await readCookie("parent"));
+  // Đọc cookie trước khi gọi getDb(): lúc prerender, cookies() dừng render trước khi chạm tới DB
+  // (build Docker không có DATABASE_URL).
+  const token = await readCookie("parent");
+  return authenticateParent(getDb(), token);
 }
 
 /** Bố mẹ đã đăng nhập (có thể chưa có gia đình). */
@@ -58,11 +61,13 @@ export async function requireParentWithFamily(): Promise<ParentAuth & { familyId
 }
 
 export async function getDeviceAuth(): Promise<DeviceAuth | null> {
-  return authenticateDevice(getDb(), await readCookie("device"));
+  const token = await readCookie("device");
+  return authenticateDevice(getDb(), token);
 }
 
 export async function getChildAuth(): Promise<ChildAuth | null> {
-  return authenticateChild(getDb(), await readCookie("device"), await readCookie("child"));
+  const [deviceToken, childToken] = [await readCookie("device"), await readCookie("child")];
+  return authenticateChild(getDb(), deviceToken, childToken);
 }
 
 /** Con đã đăng nhập bằng PIN trên thiết bị gia đình. */

@@ -1,0 +1,31 @@
+# Bí mật không bao giờ vào image
+.env
+.env.*
+!.env.example
+
+# Sinh ra khi build hoặc chạy
+node_modules
+.next
+dist
+coverage
+test-results
+playwright-report
+blob-report
+*.tsbuildinfo
+backups
+
+# Không cần để build
+.git
+.github
+.claude
+.agents
+.vscode
+.idea
+openspec
+docs
+tests
+deploy
+Dockerfile
+.dockerignore
+*.md
+!public/**/*.md

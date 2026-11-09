@@ -11,6 +11,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    // Bundle của scripts vận hành (npm run build:scripts):
+    "dist/**",
     "next-env.d.ts",
   ]),
 ]);

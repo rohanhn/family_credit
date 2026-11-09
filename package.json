@@ -5,12 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:scripts": "esbuild src/server/db/migrate.ts scripts/reset-password.ts --bundle --platform=node --target=node22 --format=esm --tsconfig=tsconfig.json --external:@node-rs/argon2 --external:pino --entry-names=[name] --outdir=dist/scripts",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx --env-file=.env src/server/db/migrate.ts"
+    "db:migrate": "tsx --env-file=.env src/server/db/migrate.ts",
+    "reset-password": "tsx --env-file=.env scripts/reset-password.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",
@@ -32,6 +34,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.11",
+    "esbuild": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
