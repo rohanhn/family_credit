@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DAY, HOUR, fixedClock } from "@/server/clock";
 import { authenticateChild, authenticateDevice } from "@/server/auth/guards";
 import { createSession, resolveSession } from "@/server/auth/sessions";
-import { enablePersonalDevice, listKidsForDevice, loginChildWithPin } from "@/server/auth/family-mode";
+import { enableFamilyMode, enablePersonalDevice, listDevices, listKidsForDevice, loginChildWithPin } from "@/server/auth/family-mode";
 import { children } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
 import { archiveChild, createChild } from "@/server/domain/children";
@@ -125,5 +125,32 @@ describe("Đăng nhập trên máy riêng", () => {
     expect(naSession.browserSession).toBe(false);
     expect(await authenticateChild(t.db, shared.token, naSession.token, clock)).not.toBeNull();
     expect(await authenticateChild(t.db, device.token, naSession.token, clock)).toBeNull();
+  });
+});
+
+describe("Danh sách và thu hồi máy riêng", () => {
+  it("Danh sách thiết bị ghi rõ máy dùng chung hay máy riêng của con nào", async () => {
+    const { family, parent, kids } = await seedFamily(t.db, { kids: ["Bin"] });
+    const auth = { parentId: parent.id, familyId: family.id };
+    await enableFamilyMode(t.db, auth, clock);
+    clock.advance(1000);
+    await enablePersonalDevice(t.db, auth, kids[0].id, clock);
+    const devices = await listDevices(t.db, family.id, clock);
+    expect(devices.map((d) => [d.kind, d.childName])).toEqual([
+      ["shared", null],
+      ["personal", "Bin"],
+    ]);
+  });
+
+  it("Lưu trữ con thu hồi máy riêng của con đó, máy dùng chung vẫn còn", async () => {
+    const { family, parent, kids } = await seedFamily(t.db, { kids: ["Bin", "Na"] });
+    const auth = { parentId: parent.id, familyId: family.id };
+    const shared = await enableFamilyMode(t.db, auth, clock);
+    const binPhone = await enablePersonalDevice(t.db, auth, kids[0].id, clock);
+    const naPhone = await enablePersonalDevice(t.db, auth, kids[1].id, clock);
+    await archiveChild(t.db, family.id, kids[0].id, clock);
+    expect(await authenticateDevice(t.db, binPhone.token, clock)).toBeNull();
+    expect(await authenticateDevice(t.db, naPhone.token, clock)).not.toBeNull();
+    expect(await authenticateDevice(t.db, shared.token, clock)).not.toBeNull();
   });
 });

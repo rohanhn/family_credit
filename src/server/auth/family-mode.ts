@@ -59,15 +59,27 @@ export async function enablePersonalDevice(
   return session;
 }
 
-/** Các thiết bị đang bật chế độ gia đình (không trả token, chỉ mã nhận diện ngắn). */
+/**
+ * Các thiết bị đang bật chế độ gia đình hoặc máy riêng (không trả token, chỉ mã nhận diện ngắn).
+ * `childName` có giá trị với máy riêng.
+ */
 export async function listDevices(db: DbOrTx, familyId: number, clock: Clock = systemClock) {
   const rows = await db
-    .select({ idHash: sessions.idHash, createdAt: sessions.createdAt, expiresAt: sessions.expiresAt })
+    .select({ idHash: sessions.idHash, createdAt: sessions.createdAt, expiresAt: sessions.expiresAt, childId: sessions.deviceChildId, childName: children.name })
     .from(sessions)
+    .leftJoin(children, eq(children.id, sessions.deviceChildId))
     .where(and(eq(sessions.subjectType, "device"), eq(sessions.subjectId, familyId)))
     .orderBy(asc(sessions.createdAt));
   const now = clock.now().getTime();
-  return rows.filter((r) => r.expiresAt.getTime() > now).map((r) => ({ id: r.idHash.slice(0, 12), createdAt: r.createdAt, expiresAt: r.expiresAt }));
+  return rows
+    .filter((r) => r.expiresAt.getTime() > now)
+    .map((r) => ({
+      id: r.idHash.slice(0, 12),
+      kind: r.childId === null ? ("shared" as const) : ("personal" as const),
+      childName: r.childName,
+      createdAt: r.createdAt,
+      expiresAt: r.expiresAt,
+    }));
 }
 
 /** Thu hồi một thiết bị theo mã nhận diện ngắn. Phiên con trên thiết bị đó mất hiệu lực vì cần phiên thiết bị. */

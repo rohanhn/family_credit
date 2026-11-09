@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
-import { children } from "../db/schema";
+import { children, sessions } from "../db/schema";
 import type { Db, DbOrTx } from "../db/types";
 import { hashSecret } from "../auth/crypto";
 import { deleteSessionsFor } from "../auth/sessions";
@@ -76,6 +76,8 @@ export async function archiveChild(db: Db, familyId: number, childId: number, cl
       .returning({ id: children.id });
     if (rows.length === 0) throw notFound();
     await deleteSessionsFor(tx, "child", childId);
+    // Thu hồi máy riêng của con (spec "Máy riêng của con").
+    await tx.delete(sessions).where(and(eq(sessions.subjectType, "device"), eq(sessions.deviceChildId, childId)));
   });
 }
 
