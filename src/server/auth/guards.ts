@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
 import { children, families, parents } from "../db/schema";
 import type { DbOrTx } from "../db/types";
+import { PERSONAL_CHILD_TTL_MS } from "./session-cookies";
 import { resolveSession } from "./sessions";
 
 // Lõi của guard (design D4): xác định ai đang thao tác từ token phiên. Mọi truy vấn domain
@@ -15,7 +16,8 @@ export type ParentAuth = {
   sessionIdHash: string;
 };
 
-export type DeviceAuth = { kind: "device"; familyId: number; sessionIdHash: string };
+/** `childId`: con sở hữu máy riêng; null là máy dùng chung của gia đình. */
+export type DeviceAuth = { kind: "device"; familyId: number; childId: number | null; sessionIdHash: string };
 
 export type ChildAuth = {
   kind: "child";
@@ -44,7 +46,7 @@ export async function authenticateDevice(db: DbOrTx, token: string | undefined, 
   if (!session) return null;
   const [f] = await db.select({ id: families.id }).from(families).where(eq(families.id, session.subjectId));
   if (!f) return null;
-  return { kind: "device", familyId: f.id, sessionIdHash: session.idHash };
+  return { kind: "device", familyId: f.id, childId: session.deviceChildId, sessionIdHash: session.idHash };
 }
 
 /**
@@ -58,7 +60,7 @@ export async function authenticateChild(
 ): Promise<ChildAuth | null> {
   const device = await authenticateDevice(db, deviceToken, clock);
   if (!device) return null;
-  const session = await resolveSession(db, childToken, "child", clock);
+  const session = await resolveSession(db, childToken, "child", clock, device.childId !== null ? { ttlMs: PERSONAL_CHILD_TTL_MS } : {});
   if (!session) return null;
   const [c] = await db
     .select({ id: children.id, familyId: children.familyId, name: children.name, avatar: children.avatar, theme: children.theme })

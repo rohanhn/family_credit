@@ -13,7 +13,16 @@ export const SESSION_TTL_MS: Record<SessionSubject, number> = {
   child: 2 * HOUR,
 };
 
-/** Phiên bố mẹ và con được gia hạn khi còn dùng; phiên thiết bị có hạn cố định. */
+/**
+ * Phiên con trên máy riêng: cookie chỉ sống trong phiên trình duyệt, còn DB giữ tối đa 30 ngày
+ * (tự gia hạn) làm chốt chặn phía server (design D2 của change add-kid-personal-device).
+ */
+export const PERSONAL_CHILD_TTL_MS = 30 * DAY;
+
+/**
+ * Phiên bố mẹ và con được gia hạn khi còn dùng. Phiên thiết bị dùng chung có hạn cố định; phiên
+ * thiết bị máy riêng cũng được gia hạn (xử lý trong `resolveSession` theo `device_child_id`).
+ */
 export const SLIDING: Record<SessionSubject, boolean> = { parent: true, device: false, child: true };
 
 export function sessionCookieOptions(expires: Date) {
