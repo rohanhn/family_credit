@@ -14,8 +14,8 @@
 
 ## 3. PIN mỗi lần mở trên máy riêng
 
-- [ ] 3.1 Đăng nhập PIN trên máy riêng đặt `mc_child` và `mc_child_mode=browser` không có `expires`; `src/proxy.ts` bỏ qua gia hạn khi có `mc_child_mode` (design D2). Kiểm tra bằng unit test cho proxy (không đặt lại `mc_child` khi có `mc_child_mode`) và cho action (cookie không có `expires`)
-- [ ] 3.2 Viết e2e: bật máy riêng, con đăng nhập, mở context mới chỉ mang cookie có `expires` (giả lập đóng trình duyệt) thì phải nhập PIN; trong cùng context, đi tới thời điểm hơn 2 giờ sau (đổi đồng hồ DB hoặc đặt `expires_at` trực tiếp) thì vẫn ở màn của con. Kiểm tra `npm run test:e2e` pass
+- [x] 3.1 Đăng nhập PIN trên máy riêng đặt `mc_child` và `mc_child_mode=browser` không có `expires`; `src/proxy.ts` bỏ qua gia hạn khi có `mc_child_mode` (design D2). Kiểm tra bằng unit test cho proxy (không đặt lại `mc_child` khi có `mc_child_mode`) và cho action (cookie không có `expires`)
+- [x] 3.2 Viết e2e: bật máy riêng, con đăng nhập, mở context mới chỉ mang cookie có `expires` (giả lập đóng trình duyệt) thì phải nhập PIN; trong cùng context, đi tới thời điểm hơn 2 giờ sau (đổi đồng hồ DB hoặc đặt `expires_at` trực tiếp) thì vẫn ở màn của con. Kiểm tra `npm run test:e2e` pass
 
 ## 4. Con đổi PIN
 

@@ -5,7 +5,7 @@ import { getDb } from "../db/client";
 import { logSecurityEvent } from "../log";
 import { clientIpFrom } from "./client-ip";
 import { authenticateChild, authenticateDevice, authenticateParent, type ChildAuth, type DeviceAuth, type ParentAuth } from "./guards";
-import { COOKIE, sessionCookieOptions, type SessionSubject } from "./session-cookies";
+import { CHILD_MODE_COOKIE, COOKIE, sessionCookieOptions, type SessionSubject } from "./session-cookies";
 
 // Lớp mỏng cho Next.js: đọc cookie, gọi lõi guard, chuyển hướng khi chưa đăng nhập.
 // Với Cache Components, mọi chỗ gọi các hàm này phải nằm trong <Suspense>.
@@ -17,8 +17,25 @@ export async function setSessionCookie(kind: SessionSubject, token: string, expi
   (await cookies()).set(COOKIE[kind], token, sessionCookieOptions(expiresAt));
 }
 
+/**
+ * Cookie phiên con. Trên máy riêng (`browserSession`) cookie không có hạn, nên mất khi đóng hẳn
+ * trình duyệt; kèm cookie đánh dấu để proxy không gia hạn nó (design D2).
+ */
+export async function setChildSessionCookie(token: string, expiresAt: Date, browserSession: boolean): Promise<void> {
+  const jar = await cookies();
+  if (browserSession) {
+    jar.set(COOKIE.child, token, sessionCookieOptions());
+    jar.set(CHILD_MODE_COOKIE, "browser", sessionCookieOptions());
+  } else {
+    jar.set(COOKIE.child, token, sessionCookieOptions(expiresAt));
+    jar.delete(CHILD_MODE_COOKIE);
+  }
+}
+
 export async function clearSessionCookie(kind: SessionSubject): Promise<void> {
-  (await cookies()).delete(COOKIE[kind]);
+  const jar = await cookies();
+  jar.delete(COOKIE[kind]);
+  if (kind === "child") jar.delete(CHILD_MODE_COOKIE);
 }
 
 export async function readCookie(kind: SessionSubject): Promise<string | undefined> {

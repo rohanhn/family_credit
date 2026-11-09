@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { addChild, enablePersonalDevice, registerFamily, setRandomClientIp } from "./helpers";
+import postgres from "postgres";
+import { addChild, enablePersonalDevice, kidLogin, registerFamily, setRandomClientIp } from "./helpers";
 
 // Change add-kid-personal-device: máy riêng của con (spec family-accounts "Máy riêng của con").
 
@@ -45,4 +46,51 @@ test("Máy riêng chỉ hiện con sở hữu máy; bố mẹ thấy và thu h�
   await expect(devices.getByText("Máy riêng của Bin")).toHaveCount(0);
   await phone.goto("/kid");
   await expect(phone.getByRole("heading", { name: "Thiết bị chưa bật chế độ gia đình" })).toBeVisible();
+});
+
+/** Thời hạn còn lại (giờ) của phiên con mới nhất trong DB cho con `name` của gia đình `familyName`. */
+async function childSessionHoursLeft(familyName: string, name: string): Promise<number> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("Thiếu DATABASE_URL cho test e2e");
+  const sql = postgres(url, { max: 1, onnotice: () => {} });
+  try {
+    const [row] = await sql`
+      select extract(epoch from (s.expires_at - now())) / 3600 as hours
+      from sessions s join children c on c.id = s.subject_id join families f on f.id = c.family_id
+      where s.subject_type = 'child' and c.name = ${name} and f.name = ${familyName}
+      order by s.created_at desc limit 1`;
+    return Number(row.hours);
+  } finally {
+    await sql.end();
+  }
+}
+
+test("Máy riêng: con nhập PIN mỗi lần mở lại trình duyệt; phiên không hết hạn sau 2 giờ", async ({ browser }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Chỉ chạy một lần");
+  test.setTimeout(120_000);
+  const familyName = `Nhà mở lại ${Date.now()}`;
+  const phone = await newPage(browser);
+  await registerFamily(phone, { familyName, prefix: "reopen" });
+  await addChild(phone, "Bin", "1234", 1);
+  await phone.goto("/parent");
+  await enablePersonalDevice(phone, "Bin");
+  await kidLogin(phone, "Bin", "1234");
+
+  // Cookie phiên con là cookie phiên trình duyệt (không có hạn); cookie thiết bị thì có hạn.
+  const cookies = await phone.context().cookies();
+  expect(cookies.find((c) => c.name === "mc_child")?.expires).toBe(-1);
+  expect(cookies.find((c) => c.name === "mc_device")!.expires).toBeGreaterThan(0);
+  // Phiên trong DB sống 30 ngày, không phải 2 giờ.
+  expect(await childSessionHoursLeft(familyName, "Bin")).toBeGreaterThan(29 * 24);
+  await phone.goto("/kid/history");
+  await expect(phone).toHaveURL(/\/kid\/history$/);
+
+  // "Đóng hẳn trình duyệt": chỉ giữ lại các cookie có hạn, như trình duyệt sau khi mở lại.
+  const reopened = await browser.newContext();
+  await reopened.addCookies(cookies.filter((c) => c.expires > 0));
+  const again = await reopened.newPage();
+  await again.goto("/kid/home");
+  await again.waitForURL("**/kid");
+  await expect(again.getByRole("button", { name: /^Bin/ })).toBeVisible();
+  await kidLogin(again, "Bin", "1234");
 });

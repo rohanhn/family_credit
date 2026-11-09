@@ -25,12 +25,20 @@ export const PERSONAL_CHILD_TTL_MS = 30 * DAY;
  */
 export const SLIDING: Record<SessionSubject, boolean> = { parent: true, device: false, child: true };
 
-export function sessionCookieOptions(expires: Date) {
+/**
+ * Đánh dấu `mc_child` là cookie phiên trình duyệt (con đăng nhập trên máy riêng): proxy không đặt
+ * hạn cho `mc_child`, để đóng hẳn trình duyệt thì cookie mất và con phải nhập lại PIN. Cookie này chỉ
+ * quyết định việc gia hạn cookie; quyền vẫn do phiên trong DB quyết định.
+ */
+export const CHILD_MODE_COOKIE = "mc_child_mode";
+
+/** `expires` bỏ trống: cookie phiên trình duyệt, mất khi đóng hẳn trình duyệt. */
+export function sessionCookieOptions(expires?: Date) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    expires,
+    ...(expires ? { expires } : {}),
   };
 }

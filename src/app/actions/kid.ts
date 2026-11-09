@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db/client";
 import { loginChildWithPin, logoutChild } from "@/server/auth/family-mode";
-import { clearSessionCookie, getDeviceAuth, readCookie, requireChild, setSessionCookie } from "@/server/auth/next";
+import { clearSessionCookie, getDeviceAuth, readCookie, requireChild, setChildSessionCookie } from "@/server/auth/next";
 import { DomainError } from "@/server/domain/errors";
 import { setChildTheme } from "@/server/domain/themes";
 import { FAMILY_THEME } from "@/ui/themes";
@@ -22,7 +22,7 @@ export async function kidPinLoginAction(_prev: ActionState, form: FormData): Pro
       pin: str(form, "pin"),
       deviceChildId: device.childId,
     });
-    await setSessionCookie("child", session.token, session.expiresAt);
+    await setChildSessionCookie(session.token, session.expiresAt, session.browserSession);
   } catch (err) {
     if (err instanceof DomainError && err.code === "LOCKED") return { error: err.message, data: { locked: "1" } };
     return fromError(err);
