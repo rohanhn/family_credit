@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Bố mẹ: Giao nhiệm vụ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button,input{font-family:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}; display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 20px 20px; overflow: hidden">
+
+  <div style="display: flex; align-items: center; gap: 8px">
+    <a href="ParentDashboard.dc.html" aria-label="Quay lại" style="width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; text-decoration: none; background: {{t.card}}">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 24px; font-weight: 800">Nhiệm vụ mới</h1>
+  </div>
+
+  <div style="display: flex; gap: 8px">
+    <label style="display: flex; flex-direction: column; gap: 4px; flex: 1; font-size: 13px; font-weight: 800; color: {{t.muted}}">Tên nhiệm vụ
+      <input type="text" value="Dọn phòng chơi" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 12px; font-size: 16px; font-weight: 700; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+    <label style="display: flex; flex-direction: column; gap: 4px; width: 92px; font-size: 13px; font-weight: 800; color: {{t.muted}}">Điểm (Sao)
+      <input type="number" value="20" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 10px; font-size: 16px; font-weight: 800; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Ngày áp dụng</span>
+    <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px">
+      <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+        <button onClick="{{d.toggle}}" aria-pressed="{{d.pressed}}" style="height: 44px; border-radius: 12px; border: none; background: {{d.bg}}; color: {{d.fg}}; font-size: 14px; font-weight: 800">{{d.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Giao cho</span>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <button onClick="{{toggleAll}}" aria-pressed="{{allPressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 99px; border: 2px solid {{allBorder}}; background: {{allBg}}; color: {{t.ink}}; font-size: 15px; font-weight: 800">Tất cả các con</button>
+      <sc-for list="{{kids}}" as="k" hint-placeholder-count="3">
+        <button onClick="{{k.toggle}}" aria-pressed="{{k.pressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 99px; border: 2px solid {{k.border}}; background: {{k.bg}}; color: {{t.ink}}; font-size: 15px; font-weight: 800; opacity: {{k.opacity}}">{{k.name}}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{noneSelected}}" hint-placeholder-val="{{ false }}">
+      <span style="font-size: 13px; font-weight: 800; color: #B91C1C">Chọn ít nhất một con nhé</span>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{multi}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Cách làm</span>
+      <sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+        <button onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="border-radius: 16px; border: 3px solid {{m.border}}; background: {{t.card}}; color: {{t.ink}}; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; text-align: left">
+          <span style="flex: none; margin-top: 2px; width: 20px; height: 20px; border-radius: 50%; border: 3px solid {{t.primary}}; box-sizing: border-box; background: {{m.dot}}"></span>
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-size: 16px; font-weight: 800">{{m.title}}</span>
+            <span style="font-size: 13px; font-weight: 600; color: {{t.muted}}; line-height: 1.35">{{m.desc}}</span>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="flex: 1"></div>
+
+  <div style="display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 700; color: {{t.muted}}">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+    Bắt đầu từ ngày mai (Thứ Ba, 10/11)
+  </div>
+  <button style="min-height: 56px; border: none; border-radius: 18px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.18)">Lưu nhiệm vụ</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"$preview":{"width":390,"height":844}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', soft: '#FFE7A8', ring: '#FFC94D', primary: '#C2410C', onPrimary: '#FFFFFF', accent: '#F59E0B', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', soft: '#C7ECF5', ring: '#7DD3E8', primary: '#0E7490', onPrimary: '#FFFFFF', accent: '#14B8A6', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', soft: '#F8D2E8', ring: '#F0A6D6', primary: '#A21CAF', onPrimary: '#FFFFFF', accent: '#EC4899', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', soft: '#D6E0EE', ring: '#F5C518', primary: '#1D4ED8', onPrimary: '#FFFFFF', accent: '#E11D2E', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', soft: '#FFD9E8', ring: '#F7C948', primary: '#BE185D', onPrimary: '#FFFFFF', accent: '#E9A400', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { days: [true, true, true, true, true, true, true], all: true, picked: { Bin: false, Na: false, Su: false }, mode: 'group' };
+  }
+  renderVals() {
+    var t = THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny;
+    var self = this;
+    var s = this.state;
+    var days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(function (l, i) {
+      var on = s.days[i];
+      return {
+        label: l, pressed: on ? 'true' : 'false', bg: on ? t.primary : t.card, fg: on ? t.onPrimary : t.muted,
+        toggle: function () { var d = s.days.slice(); d[i] = !d[i]; self.setState({ days: d }); }
+      };
+    });
+    var kids = ['Bin', 'Na', 'Su'].map(function (n) {
+      var on = s.all || s.picked[n];
+      return {
+        name: n, pressed: on ? 'true' : 'false',
+        border: on ? t.primary : 'rgba(0,0,0,.15)', bg: on ? t.soft : t.card, opacity: s.all ? '.6' : '1',
+        toggle: function () { var p = Object.assign({}, s.picked); p[n] = !p[n]; self.setState({ all: false, picked: p }); }
+      };
+    });
+    var count = s.all ? 3 : ['Bin', 'Na', 'Su'].filter(function (n) { return s.picked[n]; }).length;
+    var modes = [
+      { id: 'individual', title: 'Mỗi con làm riêng', desc: 'Mỗi con tự báo xong và được cộng điểm riêng.' },
+      { id: 'group', title: 'Cả nhóm làm chung', desc: 'Một con báo xong cho cả nhóm. Khi duyệt, mỗi con tham gia nhận đủ điểm.' }
+    ].map(function (m) {
+      var on = m.id === s.mode;
+      return Object.assign({}, m, { pressed: on ? 'true' : 'false', border: on ? t.primary : 'transparent', dot: on ? t.primary : 'transparent', pick: function () { self.setState({ mode: m.id }); } });
+    });
+    return {
+      t: t, days: days, kids: kids, modes: modes,
+      allPressed: s.all ? 'true' : 'false', allBorder: s.all ? t.primary : 'rgba(0,0,0,.15)', allBg: s.all ? t.soft : t.card,
+      toggleAll: function () { self.setState({ all: !s.all }); },
+      noneSelected: count === 0, multi: count > 1
+    };
+  }
+}
+</script>
+</body>
+</html>

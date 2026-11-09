@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Trang chính của con</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}; display: flex; flex-direction: column; overflow: hidden; position: relative">
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 20px 20px 0 20px; flex: 1; overflow: hidden">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: {{t.soft}}; display: flex; align-items: center; justify-content: center; border: 3px solid {{t.ring}}">
+        <svg width="44" height="44" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="22" fill="#FFE3C8"/><path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill="#3B2A20"/><ellipse cx="24" cy="38" rx="3.2" ry="4" fill="#2B2118"/><ellipse cx="40" cy="38" rx="3.2" ry="4" fill="#2B2118"/><circle cx="25.2" cy="36.5" r="1.1" fill="#fff"/><circle cx="41.2" cy="36.5" r="1.1" fill="#fff"/><ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55"/><ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55"/><path d="M28.5 46q3.5 3 7 0" fill="none" stroke="#2B2118" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </div>
+      <div style="flex: 1; display: flex; flex-direction: column">
+        <span style="font-size: 14px; font-weight: 700; color: {{t.muted}}">Thứ Hai, 9/11</span>
+        <span style="font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800; line-height: 1.1">Chào Bin!</span>
+      </div>
+      <button onClick="{{toggleMute}}" aria-label="{{muteLabel}}" aria-pressed="{{mutedStr}}" style="width: 44px; height: 44px; border: none; border-radius: 14px; background: {{t.card}}; color: {{t.muted}}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 rgba(0,0,0,.06)">
+        <sc-if value="{{soundOn}}" hint-placeholder-val="{{ true }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>
+        </sc-if>
+        <sc-if value="{{muted}}" hint-placeholder-val="{{ false }}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>
+        </sc-if>
+      </button>
+      <a href="KidLogin.dc.html" aria-label="Thoát" style="width: 44px; height: 44px; border-radius: 14px; background: {{t.card}}; display: flex; align-items: center; justify-content: center; color: {{t.muted}}; text-decoration: none; box-shadow: 0 2px 0 rgba(0,0,0,.06)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
+      </a>
+    </div>
+
+    <div style="background: {{t.primary}}; color: {{t.onPrimary}}; border-radius: 28px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; position: relative; overflow: hidden">
+      <svg width="64" height="64" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="#FFC531" stroke="#8A5A00" stroke-width="1" stroke-linejoin="round"/><circle cx="10" cy="11.5" r=".9" fill="#5A3A00"/><circle cx="14" cy="11.5" r=".9" fill="#5A3A00"/><path d="M10.6 13.6q1.4 1 2.8 0" fill="none" stroke="#5A3A00" stroke-width=".8" stroke-linecap="round"/></svg>
+      <div style="display: flex; flex-direction: column">
+        <span style="font-size: 15px; font-weight: 700; opacity: .92">Con đang có</span>
+        <span style="font-family: 'Baloo 2', sans-serif; font-size: 52px; font-weight: 800; line-height: 1">120 <span style="font-size: 24px">Sao</span></span>
+      </div>
+      <div style="position: absolute; right: -20px; top: -20px; width: 90px; height: 90px; border-radius: 50%; background: rgba(255,255,255,.12)"></div>
+      <sc-if value="{{isRobot}}" hint-placeholder-val="{{ false }}">
+        <svg width="84" height="84" viewBox="0 0 64 64" aria-hidden="true" style="position: absolute; right: 14px; top: 50%; margin-top: -42px"><path d="M32 16V8" stroke="#1E3A8A" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="7" r="4" fill="#F5C518" stroke="#1E3A8A" stroke-width="2"/><rect x="6" y="28" width="6" height="12" rx="3" fill="#E11D2E"/><rect x="52" y="28" width="6" height="12" rx="3" fill="#E11D2E"/><rect x="12" y="16" width="40" height="34" rx="12" fill="#FFFFFF" stroke="#1E3A8A" stroke-width="3"/><rect x="18" y="25" width="28" height="15" rx="7" fill="#0F172A"/><circle cx="26" cy="32.5" r="3.5" fill="#5EEAD4"/><circle cx="38" cy="32.5" r="3.5" fill="#5EEAD4"/><path d="M27 45h10" stroke="#1E3A8A" stroke-width="2.5" stroke-linecap="round"/></svg>
+      </sc-if>
+      <sc-if value="{{isMagic}}" hint-placeholder-val="{{ false }}">
+        <svg width="84" height="84" viewBox="0 0 64 64" aria-hidden="true" style="position: absolute; right: 14px; top: 50%; margin-top: -42px"><path d="M16 56L36 30" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/><path d="M40 14c-3-5-11-4-11 3 0 6 11 12 11 12s11-6 11-12c0-7-8-8-11-3z" fill="#F9A8D4" stroke="#FFFFFF" stroke-width="2"/><path d="M58 44a8 8 0 1 1-7-13 6.5 6.5 0 0 0 7 13z" fill="#F7C948"/><path d="M14 14l1.5 3.5L19 19l-3.5 1.5L14 24l-1.5-3.5L9 19l3.5-1.5z" fill="#F7C948"/><path d="M52 8l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" fill="#FFFFFF"/></svg>
+      </sc-if>
+    </div>
+
+    <div style="background: {{t.card}}; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 3px 0 rgba(0,0,0,.05)">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <div style="width: 48px; height: 48px; border-radius: 16px; background: {{t.soft}}; display: flex; align-items: center; justify-content: center">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="{{t.primary}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-3 0-5 2.2-5 5 0 3.5 5 8 5 8s5-4.5 5-8c0-2.8-2-5-5-5z"/><path d="M12 16v5"/><path d="M8 21h8"/></svg>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">MỤC TIÊU CỦA CON</span>
+          <span style="font-size: 18px; font-weight: 800">Đi công viên</span>
+        </div>
+        <span style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800; color: {{t.primary}}">60%</span>
+      </div>
+      <div style="height: 16px; border-radius: 99px; background: {{t.soft}}; overflow: hidden">
+        <div style="width: 60%; height: 100%; border-radius: 99px; background: {{t.accent}}"></div>
+      </div>
+      <span style="font-size: 14px; font-weight: 700; color: {{t.muted}}">120 / 200 Sao · Còn 80 nữa</span>
+    </div>
+
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <h2 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800">Nhiệm vụ hôm nay</h2>
+      <span style="font-size: 14px; font-weight: 700; color: {{t.muted}}">{{doneCount}}/4 xong</span>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{tasks}}" as="task" hint-placeholder-count="4">
+        <div style="background: {{t.card}}; border-radius: 20px; padding: 12px 12px 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 3px 0 rgba(0,0,0,.05)">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <sc-if value="{{task.group}}" hint-placeholder-val="{{ false }}">
+              <span style="align-self: flex-start; font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 99px; background: {{t.soft}}; color: {{t.ink}}">Nhiệm vụ nhóm · Bin, Na, Su</span>
+            </sc-if>
+            <span style="font-size: 16px; font-weight: 800">{{task.name}}</span>
+            <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">{{task.sub}}</span>
+          </div>
+          <sc-if value="{{task.isDone}}" hint-placeholder-val="{{ false }}">
+            <span style="display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 800; padding: 8px 12px; border-radius: 14px; background: #DCF5E3; color: #166534">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Xong
+            </span>
+          </sc-if>
+          <sc-if value="{{task.isPending}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+              <span style="font-size: 13px; font-weight: 800; padding: 6px 10px; border-radius: 12px; background: #FFF1C2; color: #7A4A00">Chờ duyệt</span>
+              <button onClick="{{task.undo}}" style="border: none; background: none; font-size: 13px; font-weight: 700; color: {{t.muted}}; text-decoration: underline; padding: 4px; min-height: 28px">Hủy báo</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{task.isTodo}}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{task.report}}" style="min-height: 48px; padding: 0 14px; border: none; border-radius: 16px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 800; box-shadow: 0 3px 0 rgba(0,0,0,.18)">Con xong rồi</button>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <nav style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: {{t.card}}; padding: 8px 8px 14px 8px; border-top: 1px solid rgba(0,0,0,.06)">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; text-decoration: none; color: {{t.primary}}; font-size: 12px; font-weight: 800">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Trang chính</a>
+    <a href="KidShop.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; text-decoration: none; color: {{t.muted}}; font-size: 12px; font-weight: 700">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M12 9v12"/><path d="M3 13h18"/><path d="M12 9C10 4 6 5 7.5 8c.6 1 4.5 1 4.5 1s3.9 0 4.5-1C18 5 14 4 12 9z"/></svg>Cửa hàng</a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; text-decoration: none; color: {{t.muted}}; font-size: 12px; font-weight: 700">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Lịch sử</a>
+    <a href="#" style="display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; text-decoration: none; color: {{t.muted}}; font-size: 12px; font-weight: 700">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12"/><path d="M8 12h12"/><path d="M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Rule</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"$preview":{"width":390,"height":844}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', soft: '#FFE7A8', ring: '#FFC94D', primary: '#C2410C', onPrimary: '#FFFFFF', accent: '#F59E0B', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', soft: '#C7ECF5', ring: '#7DD3E8', primary: '#0E7490', onPrimary: '#FFFFFF', accent: '#14B8A6', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', soft: '#F8D2E8', ring: '#F0A6D6', primary: '#A21CAF', onPrimary: '#FFFFFF', accent: '#EC4899', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', soft: '#D6E0EE', ring: '#F5C518', primary: '#1D4ED8', onPrimary: '#FFFFFF', accent: '#E11D2E', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', soft: '#FFD9E8', ring: '#F7C948', primary: '#BE185D', onPrimary: '#FFFFFF', accent: '#E9A400', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+var SFX_CTX = null;
+var SFX = {
+  reward: { type: 'triangle', gain: 0.18, notes: [[523.25, 0, 0.16], [659.25, 0.09, 0.16], [783.99, 0.18, 0.16], [1046.5, 0.27, 0.4]] },
+  penalty: { type: 'sine', gain: 0.16, notes: [[392, 0, 0.28], [293.66, 0.22, 0.45]] },
+  pop: { type: 'sine', gain: 0.14, notes: [[660, 0, 0.07], [990, 0.06, 0.09]] },
+  coin: { type: 'square', gain: 0.06, notes: [[987.77, 0, 0.08], [1318.51, 0.08, 0.3]] }
+};
+function playSfx(name) {
+  try {
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    if (!SFX_CTX) SFX_CTX = new C();
+    if (SFX_CTX.state === 'suspended') SFX_CTX.resume();
+    var s = SFX[name], now = SFX_CTX.currentTime;
+    s.notes.forEach(function (n) {
+      var o = SFX_CTX.createOscillator(), g = SFX_CTX.createGain();
+      o.type = s.type; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, now + n[1]);
+      g.gain.exponentialRampToValueAtTime(s.gain, now + n[1] + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + n[1] + n[2]);
+      o.connect(g); g.connect(SFX_CTX.destination);
+      o.start(now + n[1]); o.stop(now + n[1] + n[2] + 0.05);
+    });
+  } catch (e) {}
+}
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { muted: false, status: { a: 'done', b: 'todo', c: 'pending', d: 'todo' } };
+  }
+  setStatus(id, s) {
+    var next = Object.assign({}, this.state.status);
+    next[id] = s;
+    this.setState({ status: next });
+  }
+  renderVals() {
+    var t = THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny;
+    var st = this.state.status;
+    var self = this;
+    var base = [
+      { id: 'a', name: 'Đánh răng buổi sáng', pts: 5, group: false },
+      { id: 'b', name: 'Làm bài tập', pts: 15, group: false },
+      { id: 'c', name: 'Dọn phòng chơi', pts: 20, group: true },
+      { id: 'd', name: 'Đọc sách 15 phút', pts: 10, group: false, reason: 'Bố: Chưa đọc đủ 15 phút nhé' }
+    ];
+    var done = 0;
+    var tasks = base.map(function (x) {
+      var s = st[x.id];
+      if (s === 'done') done++;
+      var sub = '+' + x.pts + ' Sao';
+      if (x.group && s === 'pending') sub += ' · Na đã báo xong';
+      if (x.reason && s === 'todo') sub += ' · ' + x.reason;
+      return Object.assign({}, x, {
+        sub: sub,
+        isDone: s === 'done', isPending: s === 'pending', isTodo: s === 'todo',
+        report: function () { if (!self.state.muted) playSfx('pop'); self.setStatus(x.id, 'pending'); },
+        undo: function () { self.setStatus(x.id, 'todo'); }
+      });
+    });
+    var muted = this.state.muted;
+    return {
+      t: t, tasks: tasks, doneCount: done, isRobot: this.props.theme === 'robot', isMagic: this.props.theme === 'magic',
+      muted: muted, soundOn: !muted, mutedStr: muted ? 'true' : 'false', muteLabel: muted ? 'Bật âm thanh' : 'Tắt âm thanh',
+      toggleMute: function () { if (muted) playSfx('pop'); self.setState({ muted: !muted }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

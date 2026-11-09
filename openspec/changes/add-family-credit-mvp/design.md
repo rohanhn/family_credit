@@ -16,7 +16,8 @@ Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lư�
 **Non-Goals:**
 - Chạy nhiều instance hoặc scale ngang.
 - Đăng nhập OAuth, quên mật khẩu qua email (MVP chưa gửi email; bố mẹ khác trong gia đình hoặc admin reset bằng CLI).
-- Đồng bộ thời gian thực giữa các thiết bị (dữ liệu được làm mới khi chuyển trang hoặc khi người dùng thao tác).
+- Đồng bộ thời gian thực giữa các thiết bị (dữ liệu được làm mới khi chuyển trang hoặc khi người dùng thao tác). Ngoại lệ duy nhất: màn hình con hỏi lại số thông báo chưa đọc mỗi 30 giây (xem D3, "Thông báo").
+- Push notification và email.
 - Đa ngôn ngữ: giao diện chỉ có tiếng Việt.
 
 ## Decisions
@@ -49,12 +50,16 @@ Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lư�
 
 ### D3. Mô hình dữ liệu chính
 ```
-families(id, name, currency_name, currency_icon, timezone, default_theme)
+families(id, name, currency_name, currency_icon, timezone, default_theme,
+         sound_enabled DEFAULT 1)
 parents(id, family_id?, email UNIQUE, password_hash)
 invites(id, family_id, token_hash, expires_at, used_at)
 children(id, family_id, name, avatar, pin_hash, theme?, goal_reward_id?,
-         last_seen_txn_id, archived_at, failed_pin_count, locked_until)
+         archived_at, failed_pin_count, locked_until)
 rules(id, family_id, name, kind[reward|penalty], points, icon, hidden)
+rule_claims(id, child_id, rule_id, name_snapshot, points_snapshot, note?,
+            status[pending|approved|rejected|cancelled], reason?,
+            decided_by_parent_id?, created_at, decided_at?)
 tasks(id, family_id, name, points, mode[individual|group], assign_all,
       weekdays_mask, effective_from, paused_from?)
 task_assignees(task_id, child_id, effective_from, removed_from?)
@@ -68,6 +73,9 @@ redemptions(id, child_id, reward_id, price_snapshot,
 transactions(id, family_id, child_id, kind[rule|task|adhoc|redeem|adjust],
              requested_amount, applied_amount, description,
              actor_parent_id, ref_type?, ref_id?, created_at)
+notifications(id, child_id, kind[gift|penalty|rejected], title, amount?,
+              reason?, transaction_id?, ref_type?, ref_id?, read_at?, created_at)
+  -- index (child_id, read_at)
 sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 ```
 - **Sổ cái**: `transactions` chỉ có INSERT. Lớp domain không có hàm update hay delete; thêm trigger SQLite `BEFORE UPDATE/DELETE` để chặn ở tầng DB.
@@ -81,6 +89,9 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 - **Con được giao trong một ngày** = nếu `assign_all` thì mọi con chưa lưu trữ, ngược lại thì các dòng `task_assignees` còn hiệu lực trong ngày đó (`effective_from <= date < removed_from`), sau đó loại các con đã lưu trữ. Đổi danh sách con được giao chỉ ghi `removed_from` hoặc thêm dòng mới với `effective_from` là ngày hôm sau, nên lịch sử các ngày cũ không đổi.
 - **Mỗi nhiệm vụ mỗi ngày chỉ cộng một lần**: bảo đảm bằng các unique index trên, cộng với chuyển trạng thái `pending/todo → done` có điều kiện trong cùng transaction với việc ghi giao dịch.
 - **Duyệt nhiệm vụ nhóm**: trong một transaction, chuyển dòng `task_days` của nhóm sang `done`, rồi ghi một giao dịch `+points` loại `task` cho mỗi con bố mẹ chọn, với `ref_type=task_day`. Danh sách con được chọn phải là tập con của danh sách được giao trong ngày đó và không được rỗng.
+- **Khai rule thưởng** (`rule_claims`): con chỉ tạo được claim cho rule `kind=reward` đang hiện; tên và điểm được chụp lại lúc khai. Duyệt là chuyển trạng thái có điều kiện `pending → approved` (`UPDATE … WHERE status='pending'`, kiểm tra số dòng bị ảnh hưởng), ghi giao dịch `kind=rule` theo `points_snapshot` với `ref_type=rule_claim`, tất cả trong một transaction, nên không duyệt hai lần được. Hàng chờ duyệt của bố mẹ gộp ba nguồn: `task_days` đang chờ, `rule_claims` đang chờ, `redemptions` đang chờ.
+- **Thông báo**: một hàm domain `notifyChild(tx, …)` được gọi **trong cùng transaction** với mọi thao tác ghi giao dịch (`kind` theo dấu của `applied_amount`: dương thì `gift`, âm hoặc phạt có mức thực trừ 0 thì `penalty`) và với mọi thao tác từ chối (`rejected`, kèm lý do). Riêng duyệt đổi thưởng tạo thông báo `gift` ("nhận quà") dù số điểm là âm. Nhờ vậy không có giao dịch nào thiếu thông báo. Thông báo không phải sổ cái: được đánh dấu đọc, và job dọn dẹp lúc khởi động xóa thông báo đã đọc quá 30 ngày.
+- **Cập nhật khi đang mở app**: layout khu vực con có client component gọi Server Action `getUnreadSummary()` mỗi 30 giây (dừng khi tab ẩn, gọi lại khi tab hiện), trả về số chưa đọc và danh sách thông báo chưa đọc. Ở quy mô gia đình, cách hỏi định kỳ này đủ dùng mà không cần WebSocket hay SSE.
 - **`task_days` tạo lười**: dòng được tạo khi con báo xong hoặc bố mẹ đánh dấu. Danh sách "hôm nay" được tính từ `tasks` (theo weekdays_mask, effective_from, paused_from và danh sách con được giao) rồi ghép với `task_days`, nên không cần cron.
 
 ### D4. Auth tự làm
@@ -95,11 +106,18 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 - Lưu thời điểm theo UTC. Ngày của nhiệm vụ là chuỗi `YYYY-MM-DD` tính theo `families.timezone` bằng `Intl.DateTimeFormat`, gom trong một hàm `familyToday(family, now)`. Đồng hồ được inject để test được.
 
 ### D6. Theme và UI
-- Tailwind CSS. Màu theme là các CSS variable trên `[data-theme="<id>"]`. Ba theme khởi đầu: `sunny` (vàng/cam), `ocean` (xanh dương/ngọc), `candy` (hồng/tím).
-- Hình chibi (avatar, icon tiền tệ, icon phần thưởng, nhân vật theo theme) là SVG trong `public/themes/<id>/` và `public/avatars/`. MVP dùng bộ SVG đơn giản tự vẽ hoặc bộ có giấy phép CC0; tác giả và giấy phép ghi trong `public/CREDITS.md`.
-- Theme hiệu lực = `child.theme ?? family.default_theme`.
-- **Hiệu ứng ăn mừng**: khi màn hình con mở, so sánh `last_seen_txn_id` với giao dịch dương mới nhất. Nếu có điểm mới thì hiện overlay confetti (`canvas-confetti`, bỏ qua khi `prefers-reduced-motion`), sau đó cập nhật `last_seen_txn_id`.
-- Màu được chọn để đạt tương phản 4.5:1; có unit test kiểm tra tương phản trên token màu của từng theme.
+- **Nguồn chuẩn về giao diện**: `docs/design/README.md` (giá trị màu, chữ, bo góc, trạng thái thành phần) và mockup trong `docs/design/mockup/` (bố cục từng màn). Khi code và tài liệu lệch nhau, sửa theo tài liệu hoặc cập nhật tài liệu trước.
+- Tailwind CSS. Màu theme là các CSS variable trên `[data-theme="<id>"]`, gồm 9 token: `bg`, `card`, `soft`, `ring`, `primary`, `on-primary`, `accent`, `ink`, `muted`; Tailwind map các token này thành màu (`bg-primary`, `text-muted`…). Năm theme: `sunny` (vàng/cam), `ocean` (xanh dương/ngọc), `candy` (hồng/tím), `robot` (trắng/xanh/đỏ/vàng, gợi ý cho bé trai), `magic` (hồng đậm/vàng kim, gợi ý cho bé gái). Con nào cũng chọn được mọi theme. Màu trạng thái (hoàn thành, chờ duyệt, thưởng, phạt) cố định, không đổi theo theme.
+- Font: Baloo 2 cho tiêu đề và con số, Nunito cho nội dung; cả hai hỗ trợ tiếng Việt, tải bằng `next/font/google` (tự host khi build, không gọi Google lúc chạy).
+- Hình chibi (avatar, icon tiền tệ, icon phần thưởng, linh vật theo theme) là SVG trong `public/themes/<id>/` và `public/avatars/`. MVP dùng bộ SVG tự vẽ trong `docs/design/assets/`; theme `robot` và `magic` có linh vật hiện trên thẻ số dư và màn ăn mừng. Đây là thiết kế gốc, không dùng nhân vật, tên hay biểu tượng của thương hiệu có bản quyền. Tác giả và giấy phép ghi trong `public/CREDITS.md`. Icon giao diện là SVG nét, không dùng emoji.
+- Theme hiệu lực = `child.theme ?? family.default_theme`. Con chọn theme ở màn riêng có ảnh xem trước từng theme và lựa chọn "Dùng theme của gia đình".
+- **Layout responsive** (mỗi màn là một trang, không tách bản điện thoại/web):
+  - Khu vực con: dưới 768px dùng thanh tab dưới (Trang chính, Cửa hàng, Lịch sử, Rule); từ 768px dùng sidebar trái (thêm "Giao diện" và nút Thoát).
+  - Khu vực bố mẹ: thanh menu trên cùng tự xuống dòng; nội dung chính và cột phụ (xem trước, giao dịch gần đây, form) nằm cạnh nhau trên màn rộng, xếp chồng trên màn hẹp.
+  - Nội dung rộng tối đa khoảng 1200px, căn giữa. Bảng rộng cuộn ngang trong khung riêng.
+- **Thông báo điểm mới**: khi màn hình con mở, hoặc khi lần hỏi định kỳ trả về thông báo mới, lấy các thông báo chưa đọc của con (D3). Nếu có thông báo `gift` thì hiện màn ăn mừng (tổng và danh sách từng khoản, confetti bằng `canvas-confetti`, bỏ qua khi `prefers-reduced-motion`); nếu có thông báo `penalty` (kể cả mức thực trừ 0 vẫn hiện mức gốc) thì hiện màn báo bị trừ, dùng nền theme, không confetti, kèm lời động viên. Thứ tự: cộng trước, trừ sau. Cả hai đều toàn màn hình dưới 768px, popup từ 768px. Thông báo `rejected` hiện sau cùng, kèm lý do, không có âm thưởng. Đóng màn nào thì đánh dấu đã đọc các thông báo của màn đó. Chuông ở thanh trên hiển thị số chưa đọc, mở ra là danh sách 30 ngày gần nhất.
+- **Âm thanh**: module `src/ui/sfx.ts` tổng hợp 4 âm (`reward`, `penalty`, `pop`, `coin`) bằng Web Audio API, thông số theo `docs/design/README.md` §5; không dùng file âm thanh nên không cần giấy phép. Âm thanh phát khi `families.sound_enabled` bật **và** thiết bị không tắt (cờ trong `localStorage`, nút loa ở màn con). Một `AudioContext` dùng chung, tạo lười ở lần phát đầu; nếu trình duyệt chặn (chưa có thao tác người dùng) thì bỏ qua lặng lẽ và gọi `resume()` ở lần chạm sau. Mọi lỗi Web Audio đều được nuốt, không ảnh hưởng luồng nghiệp vụ. Phía bố mẹ, âm phát ở client sau khi Server Action ghi giao dịch thành công.
+- **Tương phản**: mọi cặp chữ/nền đạt 4.5:1. Đã đo trên mockup: tất cả đạt, trừ chữ `primary` trên nền `soft` ở sunny (4.25) và ocean (4.27). Quy tắc: trên nền `soft`, `primary` chỉ dùng cho icon/viền (cần ≥ 3:1), chữ dùng `ink`. Unit test kiểm tra danh sách cặp chữ/nền được phép trong `docs/design/README.md` §2 cho từng theme.
 
 ### D7. Test
 - **Vitest** cho lớp domain, dùng SQLite in-memory: số dư không âm, sổ cái chỉ ghi thêm, chỉ cộng một lần mỗi nhiệm vụ mỗi ngày, duyệt đổi thưởng khi số dư đã giảm, phân quyền theo gia đình. Mỗi scenario trong specs nên ứng với ít nhất một test domain hoặc e2e.
@@ -125,5 +143,6 @@ Project mới nên không có dữ liệu cũ. Khởi chạy lần đầu sẽ t
 
 ## Open Questions
 
-- Bộ hình chibi cụ thể (tự vẽ, đặt vẽ hay dùng bộ CC0 nào). Chỉ thay tài nguyên trong `public/`, không ảnh hưởng spec hay kiến trúc.
+- Bộ hình chibi chính thức. MVP dùng bộ SVG tự vẽ trong `docs/design/assets/`; có thể đặt vẽ bộ đẹp hơn sau và chỉ thay tài nguyên trong `public/`, không ảnh hưởng spec hay kiến trúc.
+- Các màn chưa có mockup (lịch sử, danh sách rule, quản lý rule và cửa hàng, cài đặt, đăng ký/đăng nhập bố mẹ, màn khóa PIN) làm theo hệ thống trong `docs/design/README.md`; có thể bổ sung mockup trước khi code nếu cần chốt.
 - Tên miền và máy chủ để host. Chỉ ảnh hưởng cấu hình deploy.

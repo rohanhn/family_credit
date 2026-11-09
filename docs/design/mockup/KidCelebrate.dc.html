@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Thông báo điểm mới</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<sc-if value="{{isReward}}" hint-placeholder-val="{{ true }}">
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: {{t.primary}}; color: {{t.onPrimary}}; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px">
+
+  <svg width="390" height="844" viewBox="0 0 390 844" style="position: absolute; inset: 0" aria-hidden="true">
+    <rect x="40" y="90" width="14" height="8" rx="2" fill="#FFC531" transform="rotate(25 47 94)"/>
+    <rect x="300" y="70" width="14" height="8" rx="2" fill="#7EE0C8" transform="rotate(-30 307 74)"/>
+    <circle cx="110" cy="160" r="6" fill="#FFFFFF" opacity=".8"/>
+    <rect x="250" y="170" width="12" height="7" rx="2" fill="#FF9EC7" transform="rotate(50 256 173)"/>
+    <circle cx="340" cy="230" r="5" fill="#FFC531"/>
+    <rect x="30" y="300" width="12" height="7" rx="2" fill="#FF9EC7" transform="rotate(-20 36 303)"/>
+    <circle cx="60" cy="560" r="6" fill="#7EE0C8"/>
+    <rect x="320" y="520" width="14" height="8" rx="2" fill="#FFC531" transform="rotate(35 327 524)"/>
+    <circle cx="300" cy="650" r="5" fill="#FFFFFF" opacity=".8"/>
+    <rect x="80" y="700" width="12" height="7" rx="2" fill="#FFC531" transform="rotate(-40 86 703)"/>
+    <circle cx="180" cy="760" r="6" fill="#FF9EC7"/>
+    <path d="M70 230l4 9 9 1-7 6 2 9-8-5-8 5 2-9-7-6 9-1z" fill="#FFC531"/>
+    <path d="M320 380l3 7 7 1-5 5 1 7-6-4-6 4 1-7-5-5 7-1z" fill="#FFFFFF" opacity=".85"/>
+  </svg>
+
+  <svg width="180" height="180" viewBox="0 0 64 64" aria-hidden="true" style="position: relative"><circle cx="32" cy="34" r="22" fill="#FFE3C8"/><path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill="#3B2A20"/><path d="M20 38q4-5 8 0" fill="none" stroke="#2B2118" stroke-width="2.2" stroke-linecap="round"/><path d="M36 38q4-5 8 0" fill="none" stroke="#2B2118" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7"/><ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7"/><path d="M26 44q6 7 12 0z" fill="#B3261E"/><path d="M8 26l-4-6M56 26l4-6M6 34H1M58 34h5" stroke="#FFC531" stroke-width="2" stroke-linecap="round"/></svg>
+
+  <sc-if value="{{isRobot}}" hint-placeholder-val="{{ false }}">
+    <svg width="96" height="96" viewBox="0 0 64 64" aria-hidden="true" style="position: absolute; right: 28px; top: 150px; transform: rotate(12deg)"><path d="M32 16V8" stroke="#1E3A8A" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="7" r="4" fill="#F5C518" stroke="#1E3A8A" stroke-width="2"/><rect x="6" y="28" width="6" height="12" rx="3" fill="#E11D2E"/><rect x="52" y="28" width="6" height="12" rx="3" fill="#E11D2E"/><rect x="12" y="16" width="40" height="34" rx="12" fill="#FFFFFF" stroke="#1E3A8A" stroke-width="3"/><rect x="18" y="25" width="28" height="15" rx="7" fill="#0F172A"/><path d="M23 33q3-4 6 0M35 33q3-4 6 0" fill="none" stroke="#5EEAD4" stroke-width="2.5" stroke-linecap="round"/><path d="M27 44q5 4 10 0" fill="none" stroke="#1E3A8A" stroke-width="2.5" stroke-linecap="round"/></svg>
+  </sc-if>
+  <sc-if value="{{isMagic}}" hint-placeholder-val="{{ false }}">
+    <svg width="96" height="96" viewBox="0 0 64 64" aria-hidden="true" style="position: absolute; right: 28px; top: 150px"><path d="M16 56L36 30" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/><path d="M40 14c-3-5-11-4-11 3 0 6 11 12 11 12s11-6 11-12c0-7-8-8-11-3z" fill="#F9A8D4" stroke="#FFFFFF" stroke-width="2"/><path d="M58 44a8 8 0 1 1-7-13 6.5 6.5 0 0 0 7 13z" fill="#F7C948"/><path d="M14 14l1.5 3.5L19 19l-3.5 1.5L14 24l-1.5-3.5L9 19l3.5-1.5z" fill="#F7C948"/><path d="M52 8l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" fill="#FFFFFF"/></svg>
+  </sc-if>
+
+  <div style="position: relative; display: flex; align-items: center; gap: 8px">
+    <svg width="64" height="64" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="#FFC531" stroke="#8A5A00" stroke-width="1" stroke-linejoin="round"/></svg>
+    <span style="font-family: 'Baloo 2', sans-serif; font-size: 80px; font-weight: 800; line-height: 1">+25</span>
+  </div>
+
+  <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 30px; font-weight: 800; line-height: 1.15">Giỏi quá, Bin ơi!</h1>
+    <p style="margin: 0; font-size: 16px; font-weight: 700; opacity: .95">Bố mẹ vừa duyệt cho con</p>
+  </div>
+
+  <div style="position: relative; width: 100%; background: rgba(255,255,255,.16); border-radius: 22px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box">
+    <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800"><span>Làm bài tập</span><span>+15</span></div>
+    <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800"><span>Giúp bà dọn nhà</span><span>+10</span></div>
+  </div>
+
+  <a href="Main.dc.html" style="position: relative; width: 100%; box-sizing: border-box; text-align: center; padding: 16px; border-radius: 20px; background: #FFFFFF; color: {{t.primary}}; text-decoration: none; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.18)">Vào trang chính</a>
+  <button onClick="{{play}}" style="position: relative; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 2px solid rgba(255,255,255,.6); border-radius: 99px; background: transparent; color: {{t.onPrimary}}; font-size: 14px; font-weight: 800">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>Nghe âm thanh (bản thật tự phát)</button>
+</div>
+</sc-if>
+
+<sc-if value="{{isPenalty}}" hint-placeholder-val="{{ false }}">
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px">
+
+  <svg width="160" height="160" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="22" fill="#FFE3C8"/><path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill="#3B2A20"/><ellipse cx="24" cy="39" rx="3" ry="3.4" fill="#2B2118"/><ellipse cx="40" cy="39" rx="3" ry="3.4" fill="#2B2118"/><path d="M20 33l7 2M44 33l-7 2" stroke="#2B2118" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".45"/><ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".45"/><path d="M28 48q4-3 8 0" fill="none" stroke="#2B2118" stroke-width="1.8" stroke-linecap="round"/><path d="M50 22q3 5 0 7-3-2 0-7z" fill="#7DD3FC"/></svg>
+
+  <span style="font-family: 'Baloo 2', sans-serif; font-size: 64px; font-weight: 800; line-height: 1">−10 <span style="font-size: 28px">Sao</span></span>
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; line-height: 1.15">Ôi, Bin bị trừ Sao rồi</h1>
+    <p style="margin: 0; font-size: 16px; font-weight: 700; color: {{t.muted}}">Không sao, lần sau mình sửa nhé!</p>
+  </div>
+
+  <div style="width: 100%; background: {{t.card}}; border-radius: 22px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; box-shadow: 0 3px 0 rgba(0,0,0,.05)">
+    <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 800"><span>Nói dối</span><span style="color: #B91C1C">−10</span></div>
+    <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">Bố · hôm nay 16:05</span>
+  </div>
+
+  <span style="font-size: 15px; font-weight: 800; color: {{t.muted}}">Con vẫn còn 110 Sao</span>
+
+  <a href="Main.dc.html" style="width: 100%; box-sizing: border-box; text-align: center; padding: 16px; border-radius: 20px; background: {{t.primary}}; color: {{t.onPrimary}}; text-decoration: none; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.18)">Con hiểu rồi</a>
+  <button onClick="{{play}}" style="display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 2px solid rgba(0,0,0,.15); border-radius: 99px; background: transparent; color: {{t.muted}}; font-size: 14px; font-weight: 800">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>Nghe âm thanh (bản thật tự phát)</button>
+</div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"kind":{"editor":"enum","options":["reward","penalty"],"default":"reward"},"$preview":{"width":390,"height":844}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', primary: '#C2410C', onPrimary: '#FFFFFF', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', primary: '#0E7490', onPrimary: '#FFFFFF', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', primary: '#A21CAF', onPrimary: '#FFFFFF', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', primary: '#1D4ED8', onPrimary: '#FFFFFF', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', primary: '#BE185D', onPrimary: '#FFFFFF', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+var SFX_CTX = null;
+var SFX = {
+  reward: { type: 'triangle', gain: 0.18, notes: [[523.25, 0, 0.16], [659.25, 0.09, 0.16], [783.99, 0.18, 0.16], [1046.5, 0.27, 0.4]] },
+  penalty: { type: 'sine', gain: 0.16, notes: [[392, 0, 0.28], [293.66, 0.22, 0.45]] },
+  pop: { type: 'sine', gain: 0.14, notes: [[660, 0, 0.07], [990, 0.06, 0.09]] },
+  coin: { type: 'square', gain: 0.06, notes: [[987.77, 0, 0.08], [1318.51, 0.08, 0.3]] }
+};
+function playSfx(name) {
+  try {
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    if (!SFX_CTX) SFX_CTX = new C();
+    if (SFX_CTX.state === 'suspended') SFX_CTX.resume();
+    var s = SFX[name], now = SFX_CTX.currentTime;
+    s.notes.forEach(function (n) {
+      var o = SFX_CTX.createOscillator(), g = SFX_CTX.createGain();
+      o.type = s.type; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, now + n[1]);
+      g.gain.exponentialRampToValueAtTime(s.gain, now + n[1] + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + n[1] + n[2]);
+      o.connect(g); g.connect(SFX_CTX.destination);
+      o.start(now + n[1]); o.stop(now + n[1] + n[2] + 0.05);
+    });
+  } catch (e) {}
+}
+class Component extends DCLogic {
+  renderVals() {
+    var kind = this.props.kind ?? 'reward';
+    return {
+      t: THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny,
+      isRobot: this.props.theme === 'robot', isMagic: this.props.theme === 'magic',
+      isReward: kind === 'reward', isPenalty: kind === 'penalty',
+      play: function () { playSfx(kind); }
+    };
+  }
+}
+</script>
+</body>
+</html>

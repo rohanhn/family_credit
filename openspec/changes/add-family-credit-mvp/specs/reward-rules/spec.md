@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Cho phép gia đình định nghĩa trước các hành động được thưởng hoặc bị phạt kèm số điểm, áp dụng nhanh cho từng con, và vẫn thưởng/phạt được những tình huống đột xuất ngoài danh sách.
+Cho phép gia đình định nghĩa trước các hành động được thưởng hoặc bị phạt kèm số điểm, để bố mẹ áp dụng nhanh cho từng con hoặc con tự khai rồi bố mẹ duyệt, và vẫn thưởng/phạt được những tình huống đột xuất ngoài danh sách.
 
 ## ADDED Requirements
 
@@ -51,8 +51,46 @@ Bố mẹ SHALL thưởng hoặc phạt một con với số điểm nguyên dư
 - **THEN** hệ thống từ chối và yêu cầu nhập lý do
 
 ### Requirement: Con xem danh sách rule
-Con SHALL xem được các rule đang hiện của gia đình kèm số điểm, để biết hành động nào được thưởng hoặc bị phạt. Con MUST NOT tạo, sửa hoặc áp dụng rule.
+Con SHALL xem được các rule đang hiện của gia đình kèm số điểm, để biết hành động nào được thưởng hoặc bị phạt. Con MUST NOT tạo, sửa hoặc trực tiếp áp dụng rule.
 
 #### Scenario: Con mở danh sách rule
 - **WHEN** con mở màn hình rule
-- **THEN** con thấy các rule thưởng và phạt đang hiện, kèm số điểm, và không có nút sửa hay áp dụng
+- **THEN** con thấy các rule thưởng và phạt đang hiện kèm số điểm, rule thưởng có nút "Con đã làm", còn rule phạt không có nút nào
+
+### Requirement: Con khai rule thưởng
+Con SHALL khai đã làm một rule thưởng đang hiện, kèm ghi chú tùy chọn, tạo một yêu cầu "chờ duyệt" lưu lại tên và số điểm của rule lúc khai. Con MUST NOT khai rule phạt. Khai rule MUST NOT cộng điểm. Con SHALL hủy được yêu cầu còn chờ duyệt.
+
+#### Scenario: Khai rule thưởng
+- **WHEN** con bấm "Con đã làm" trên rule "Đánh răng tối" 5 điểm
+- **THEN** một yêu cầu "chờ duyệt" được tạo với tên và số điểm đó, và số dư của con chưa thay đổi
+
+#### Scenario: Khai nhiều lần
+- **WHEN** con khai cùng một rule hai lần trong ngày
+- **THEN** hai yêu cầu riêng được tạo và bố mẹ quyết định từng yêu cầu
+
+#### Scenario: Hủy yêu cầu
+- **WHEN** con hủy một yêu cầu khai rule đang chờ duyệt
+- **THEN** yêu cầu chuyển sang "đã hủy" và không có giao dịch nào được ghi
+
+#### Scenario: Khai rule phạt
+- **WHEN** phiên của con gửi yêu cầu khai một rule phạt
+- **THEN** hệ thống từ chối
+
+### Requirement: Bố mẹ duyệt khai rule
+Bố mẹ SHALL thấy các yêu cầu khai rule đang chờ duyệt trong hàng chờ duyệt chung của gia đình, và duyệt hoặc từ chối (kèm lý do tùy chọn) từng yêu cầu. Khi duyệt, hệ thống SHALL ghi giao dịch loại "rule" theo đúng tên và số điểm đã lưu trong yêu cầu. Mỗi yêu cầu MUST được xử lý tối đa một lần.
+
+#### Scenario: Duyệt khai rule
+- **WHEN** bố mẹ duyệt yêu cầu khai "Đánh răng tối" 5 điểm
+- **THEN** yêu cầu chuyển sang "đã duyệt" và sổ cái của con có thêm giao dịch +5 mang tên rule
+
+#### Scenario: Rule bị sửa trong lúc chờ duyệt
+- **WHEN** rule đổi từ 5 lên 8 điểm sau khi con đã khai, rồi bố mẹ duyệt yêu cầu đó
+- **THEN** giao dịch ghi +5, đúng số điểm lúc con khai
+
+#### Scenario: Từ chối khai rule
+- **WHEN** bố mẹ từ chối yêu cầu với lý do "Con chưa đánh răng"
+- **THEN** yêu cầu chuyển sang "bị từ chối", con thấy lý do, và không có giao dịch nào được ghi
+
+#### Scenario: Duyệt lần hai
+- **WHEN** một yêu cầu đã được duyệt hoặc từ chối và có thao tác duyệt lần nữa
+- **THEN** hệ thống từ chối và không ghi thêm giao dịch

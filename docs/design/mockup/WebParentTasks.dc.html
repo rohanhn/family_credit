@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web: Bố mẹ quản lý nhiệm vụ</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button,input{font-family:inherit}
+button{cursor:pointer}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid rgba(0,0,0,.06);white-space:nowrap}
+th{font-size:12px;letter-spacing:.04em}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}">
+
+  <header style="background: {{t.card}}; border-bottom: 1px solid rgba(0,0,0,.06)">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="#FFC531" stroke="#8A5A00" stroke-width="1" stroke-linejoin="round"/></svg>
+        <span style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800">Nhà Bin &amp; Na</span>
+      </div>
+      <nav style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1">
+        <a href="ParentDashboard.dc.html" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Tổng quan</a>
+        <a href="WebParentTasks.dc.html" style="padding: 10px 14px; border-radius: 12px; background: {{t.soft}}; text-decoration: none; font-weight: 800; font-size: 15px">Nhiệm vụ</a>
+        <a href="WebParentApply.dc.html" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Thưởng / Phạt</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Cửa hàng</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Lịch sử</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Cài đặt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <section style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 14px">
+      <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 32px; font-weight: 800">Nhiệm vụ hằng ngày</h1>
+      <div style="background: {{t.card}}; border-radius: 22px; box-shadow: 0 3px 0 rgba(0,0,0,.05); overflow-x: auto">
+        <table style="width: 100%; border-collapse: collapse; font-size: 15px">
+          <thead>
+            <tr style="color: {{t.muted}}"><th>NHIỆM VỤ</th><th>ĐIỂM</th><th>NGÀY</th><th>GIAO CHO</th><th>CÁCH LÀM</th><th>TRẠNG THÁI</th></tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+              <tr>
+                <td style="font-weight: 800">{{r.name}}</td>
+                <td style="font-family: 'Baloo 2', sans-serif; font-size: 18px; font-weight: 800; color: {{t.primary}}">+{{r.pts}}</td>
+                <td style="font-weight: 700; color: {{t.muted}}">{{r.days}}</td>
+                <td style="font-weight: 700">{{r.who}}</td>
+                <td><span style="font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 99px; background: {{t.soft}}">{{r.mode}}</span></td>
+                <td><span style="font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 99px; background: {{r.stBg}}; color: {{r.stFg}}">{{r.status}}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+      <span style="font-size: 13px; font-weight: 600; color: {{t.muted}}">Mọi thay đổi (sửa điểm, tạm dừng, đổi người được giao) có hiệu lực từ ngày hôm sau.</span>
+    </section>
+
+    <aside style="flex: 1 1 340px; min-width: 0; background: {{t.card}}; border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 3px 0 rgba(0,0,0,.05)">
+      <h2 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800">Nhiệm vụ mới</h2>
+      <div style="display: flex; gap: 8px">
+        <label style="display: flex; flex-direction: column; gap: 4px; flex: 1; font-size: 13px; font-weight: 800; color: {{t.muted}}">Tên nhiệm vụ
+          <input type="text" value="Dọn phòng chơi" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 12px; font-size: 16px; font-weight: 700; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; width: 92px; font-size: 13px; font-weight: 800; color: {{t.muted}}">Điểm
+          <input type="number" value="20" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 10px; font-size: 16px; font-weight: 800; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Ngày áp dụng</span>
+        <div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px">
+          <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+            <button onClick="{{d.toggle}}" aria-pressed="{{d.pressed}}" style="height: 44px; border-radius: 12px; border: none; background: {{d.bg}}; color: {{d.fg}}; font-size: 14px; font-weight: 800">{{d.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Giao cho</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button onClick="{{toggleAll}}" aria-pressed="{{allPressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 99px; border: 2px solid {{allBorder}}; background: {{allBg}}; color: {{t.ink}}; font-size: 15px; font-weight: 800">Tất cả các con</button>
+          <sc-for list="{{kids}}" as="k" hint-placeholder-count="3">
+            <button onClick="{{k.toggle}}" aria-pressed="{{k.pressed}}" style="min-height: 44px; padding: 0 14px; border-radius: 99px; border: 2px solid {{k.border}}; background: {{k.bg}}; color: {{t.ink}}; font-size: 15px; font-weight: 800; opacity: {{k.opacity}}">{{k.name}}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{noneSelected}}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 13px; font-weight: 800; color: #B91C1C">Chọn ít nhất một con nhé</span>
+        </sc-if>
+      </div>
+      <sc-if value="{{multi}}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}">Cách làm</span>
+          <sc-for list="{{modes}}" as="m" hint-placeholder-count="2">
+            <button onClick="{{m.pick}}" aria-pressed="{{m.pressed}}" style="border-radius: 16px; border: 3px solid {{m.border}}; background: {{t.bg}}; color: {{t.ink}}; display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; text-align: left">
+              <span style="flex: none; margin-top: 2px; width: 20px; height: 20px; border-radius: 50%; border: 3px solid {{t.primary}}; box-sizing: border-box; background: {{m.dot}}"></span>
+              <span style="display: flex; flex-direction: column; gap: 2px">
+                <span style="font-size: 15px; font-weight: 800">{{m.title}}</span>
+                <span style="font-size: 13px; font-weight: 600; color: {{t.muted}}; line-height: 1.35">{{m.desc}}</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+      <button style="min-height: 52px; border: none; border-radius: 16px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 17px; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.18)">Lưu (bắt đầu từ 10/11)</button>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"$preview":{"width":1280,"height":900}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', soft: '#FFE7A8', ring: '#FFC94D', primary: '#C2410C', onPrimary: '#FFFFFF', accent: '#F59E0B', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', soft: '#C7ECF5', ring: '#7DD3E8', primary: '#0E7490', onPrimary: '#FFFFFF', accent: '#14B8A6', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', soft: '#F8D2E8', ring: '#F0A6D6', primary: '#A21CAF', onPrimary: '#FFFFFF', accent: '#EC4899', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', soft: '#D6E0EE', ring: '#F5C518', primary: '#1D4ED8', onPrimary: '#FFFFFF', accent: '#E11D2E', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', soft: '#FFD9E8', ring: '#F7C948', primary: '#BE185D', onPrimary: '#FFFFFF', accent: '#E9A400', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { days: [true, true, true, true, true, true, true], all: true, picked: { Bin: false, Na: false, Su: false }, mode: 'group' };
+  }
+  renderVals() {
+    var t = THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny;
+    var self = this;
+    var s = this.state;
+    var active = { stBg: '#DCF5E3', stFg: '#166534', status: 'Đang chạy' };
+    var paused = { stBg: '#ECE7E2', stFg: '#4A4038', status: 'Tạm dừng' };
+    var rows = [
+      Object.assign({ name: 'Đánh răng buổi sáng', pts: 5, days: 'Hằng ngày', who: 'Tất cả các con', mode: 'Mỗi con làm riêng' }, active),
+      Object.assign({ name: 'Làm bài tập', pts: 15, days: 'T2 – T6', who: 'Bin, Na', mode: 'Mỗi con làm riêng' }, active),
+      Object.assign({ name: 'Dọn phòng chơi', pts: 20, days: 'Hằng ngày', who: 'Tất cả các con', mode: 'Cả nhóm làm chung' }, active),
+      Object.assign({ name: 'Đọc sách 15 phút', pts: 10, days: 'Hằng ngày', who: 'Bin', mode: 'Riêng một con' }, active),
+      Object.assign({ name: 'Tưới cây', pts: 5, days: 'T7, CN', who: 'Su', mode: 'Riêng một con' }, paused)
+    ];
+    var days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(function (l, i) {
+      var on = s.days[i];
+      return {
+        label: l, pressed: on ? 'true' : 'false', bg: on ? t.primary : t.bg, fg: on ? t.onPrimary : t.muted,
+        toggle: function () { var d = s.days.slice(); d[i] = !d[i]; self.setState({ days: d }); }
+      };
+    });
+    var kids = ['Bin', 'Na', 'Su'].map(function (n) {
+      var on = s.all || s.picked[n];
+      return {
+        name: n, pressed: on ? 'true' : 'false',
+        border: on ? t.primary : 'rgba(0,0,0,.15)', bg: on ? t.soft : t.card, opacity: s.all ? '.6' : '1',
+        toggle: function () { var p = Object.assign({}, s.picked); p[n] = !p[n]; self.setState({ all: false, picked: p }); }
+      };
+    });
+    var count = s.all ? 3 : ['Bin', 'Na', 'Su'].filter(function (n) { return s.picked[n]; }).length;
+    var modes = [
+      { id: 'individual', title: 'Mỗi con làm riêng', desc: 'Mỗi con tự báo xong và được cộng điểm riêng.' },
+      { id: 'group', title: 'Cả nhóm làm chung', desc: 'Một con báo xong cho cả nhóm. Khi duyệt, mỗi con tham gia nhận đủ điểm.' }
+    ].map(function (m) {
+      var on = m.id === s.mode;
+      return Object.assign({}, m, { pressed: on ? 'true' : 'false', border: on ? t.primary : 'transparent', dot: on ? t.primary : 'transparent', pick: function () { self.setState({ mode: m.id }); } });
+    });
+    return {
+      t: t, rows: rows, days: days, kids: kids, modes: modes,
+      allPressed: s.all ? 'true' : 'false', allBorder: s.all ? t.primary : 'rgba(0,0,0,.15)', allBg: s.all ? t.soft : t.card,
+      toggleAll: function () { self.setState({ all: !s.all }); },
+      noneSelected: count === 0, multi: count > 1
+    };
+  }
+}
+</script>
+</body>
+</html>

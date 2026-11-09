@@ -85,7 +85,7 @@ Trên thiết bị đã được bố mẹ kích hoạt "chế độ gia đình"
 - **THEN** đăng nhập của con đó bị khóa 5 phút và màn hình hiển thị thông báo thân thiện
 
 ### Requirement: Phân quyền bố mẹ và con
-Hệ thống MUST giới hạn mọi dữ liệu trong phạm vi gia đình của người dùng. Phiên của con MUST chỉ xem được dữ liệu của chính con đó và chỉ tạo được yêu cầu (báo xong nhiệm vụ, xin đổi thưởng, chọn mục tiêu, chọn theme).
+Hệ thống MUST giới hạn mọi dữ liệu trong phạm vi gia đình của người dùng. Phiên của con MUST chỉ xem được dữ liệu của chính con đó và chỉ thực hiện được các thao tác của con (báo xong nhiệm vụ, khai rule thưởng, xin đổi thưởng, chọn mục tiêu, chọn theme, đọc thông báo).
 
 #### Scenario: Truy cập dữ liệu gia đình khác
 - **WHEN** một người dùng yêu cầu dữ liệu thuộc gia đình khác

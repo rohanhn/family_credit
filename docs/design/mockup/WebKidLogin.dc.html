@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web: Con chọn avatar và nhập PIN</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button{font-family:inherit;cursor:pointer}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 32px">
+
+  <div style="display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center">
+    <span style="font-size: 15px; font-weight: 800; color: {{t.muted}}; letter-spacing: .05em">NHÀ BIN &amp; NA</span>
+    <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 44px; font-weight: 800; line-height: 1.1">Ai đang dùng máy?</h1>
+  </div>
+
+  <div style="width: 100%; max-width: 1000px; display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch">
+
+    <section aria-label="Chọn con" style="flex: 999 1 460px; min-width: 0; background: {{t.card}}; border-radius: 32px; padding: 28px; box-sizing: border-box; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; align-content: center; box-shadow: 0 4px 0 rgba(0,0,0,.05)">
+      <sc-for list="{{kids}}" as="kid" hint-placeholder-count="3">
+        <button onClick="{{kid.pick}}" aria-pressed="{{kid.pressed}}" style="border: 4px solid {{kid.border}}; background: {{kid.bg}}; border-radius: 28px; padding: 18px 8px 14px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: {{t.ink}}">
+          <svg width="120" height="120" viewBox="0 0 64 64" aria-hidden="true"><circle cx="13" cy="20" r="7" fill="{{kid.hair}}" opacity="{{kid.bun}}"/><circle cx="51" cy="20" r="7" fill="{{kid.hair}}" opacity="{{kid.bun}}"/><circle cx="32" cy="34" r="22" fill="#FFE3C8"/><path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill="{{kid.hair}}"/><ellipse cx="24" cy="38" rx="3.2" ry="4" fill="#2B2118"/><ellipse cx="40" cy="38" rx="3.2" ry="4" fill="#2B2118"/><circle cx="25.2" cy="36.5" r="1.1" fill="#fff"/><circle cx="41.2" cy="36.5" r="1.1" fill="#fff"/><ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55"/><ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".55"/><path d="M28.5 46q3.5 3 7 0" fill="none" stroke="#2B2118" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span style="font-family: 'Baloo 2', sans-serif; font-size: 26px; font-weight: 800">{{kid.name}}</span>
+        </button>
+      </sc-for>
+    </section>
+
+    <section aria-label="Nhập mã PIN" style="flex: 1 1 320px; background: {{t.card}}; border-radius: 32px; padding: 28px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 16px; box-shadow: 0 4px 0 rgba(0,0,0,.05)">
+      <span style="font-size: 19px; font-weight: 800; text-align: center">{{name}} ơi, nhập mã bí mật nhé</span>
+      <div style="display: flex; gap: 16px" aria-label="Đã nhập {{len}} trên 4 số">
+        <sc-for list="{{dots}}" as="d" hint-placeholder-count="4">
+          <span style="width: 22px; height: 22px; border-radius: 50%; border: 3px solid {{t.primary}}; background: {{d.fill}}"></span>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; max-width: 280px">
+        <sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+          <button onClick="{{k.press}}" aria-label="{{k.label}}" style="height: 60px; border: none; border-radius: 18px; background: {{k.bg}}; color: {{t.ink}}; font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; box-shadow: {{k.shadow}}">{{k.text}}</button>
+        </sc-for>
+      </div>
+      <sc-if value="{{full}}" hint-placeholder-val="{{ false }}">
+        <a href="WebKidHome.dc.html" style="width: 100%; max-width: 280px; box-sizing: border-box; text-align: center; padding: 14px; border-radius: 18px; background: {{t.primary}}; color: {{t.onPrimary}}; text-decoration: none; font-weight: 800; font-size: 18px">Vào thôi!</a>
+      </sc-if>
+      <sc-if value="{{notFull}}" hint-placeholder-val="{{ true }}">
+        <span style="font-size: 14px; font-weight: 700; color: {{t.muted}}; min-height: 50px; display: flex; align-items: center">Gõ bằng bàn phím máy tính cũng được</span>
+      </sc-if>
+    </section>
+  </div>
+
+  <a href="ParentDashboard.dc.html" style="font-size: 15px; font-weight: 800; color: {{t.muted}}">Bố mẹ đăng nhập</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"$preview":{"width":1280,"height":900}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', soft: '#FFE7A8', ring: '#FFC94D', primary: '#C2410C', onPrimary: '#FFFFFF', accent: '#F59E0B', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', soft: '#C7ECF5', ring: '#7DD3E8', primary: '#0E7490', onPrimary: '#FFFFFF', accent: '#14B8A6', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', soft: '#F8D2E8', ring: '#F0A6D6', primary: '#A21CAF', onPrimary: '#FFFFFF', accent: '#EC4899', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', soft: '#D6E0EE', ring: '#F5C518', primary: '#1D4ED8', onPrimary: '#FFFFFF', accent: '#E11D2E', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', soft: '#FFD9E8', ring: '#F7C948', primary: '#BE185D', onPrimary: '#FFFFFF', accent: '#E9A400', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { picked: 'bin', pin: '' };
+  }
+  renderVals() {
+    var t = THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny;
+    var self = this;
+    var list = [
+      { id: 'bin', name: 'Bin', hair: '#3B2A20', bun: 0 },
+      { id: 'na', name: 'Na', hair: '#6B3A1E', bun: 1 },
+      { id: 'su', name: 'Su', hair: '#1F1A17', bun: 0 }
+    ];
+    var picked = list.filter(function (k) { return k.id === self.state.picked; })[0];
+    var kids = list.map(function (k) {
+      var on = k.id === self.state.picked;
+      return Object.assign({}, k, {
+        border: on ? t.primary : 'transparent', bg: on ? t.soft : t.bg, pressed: on ? 'true' : 'false',
+        pick: function () { self.setState({ picked: k.id, pin: '' }); }
+      });
+    });
+    var pin = this.state.pin;
+    var dots = [0, 1, 2, 3].map(function (i) { return { fill: i < pin.length ? t.primary : 'transparent' }; });
+    var labels = ['1','2','3','4','5','6','7','8','9','','0','del'];
+    var keys = labels.map(function (l) {
+      if (l === '') return { text: '', label: 'Trống', bg: 'transparent', shadow: 'none', press: function () {} };
+      if (l === 'del') return { text: '⌫', label: 'Xóa', bg: t.soft, shadow: 'none', press: function () { self.setState({ pin: pin.slice(0, -1) }); } };
+      return { text: l, label: 'Số ' + l, bg: t.bg, shadow: '0 3px 0 rgba(0,0,0,.08)', press: function () { if (pin.length < 4) self.setState({ pin: pin + l }); } };
+    });
+    return { t: t, kids: kids, name: picked.name, dots: dots, keys: keys, len: pin.length, full: pin.length === 4, notFull: pin.length < 4 };
+  }
+}
+</script>
+</body>
+</html>

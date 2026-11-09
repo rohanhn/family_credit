@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Web: Bố mẹ thưởng hoặc phạt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&amp;family=Nunito:wght@500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Nunito',system-ui,sans-serif}
+a{color:inherit}a:hover{color:inherit}
+button,input{font-family:inherit}
+button{cursor:pointer}
+</style>
+</helmet>
+<div style="min-height: 900px; box-sizing: border-box; background: {{t.bg}}; color: {{t.ink}}">
+
+  <header style="background: {{t.card}}; border-bottom: 1px solid rgba(0,0,0,.06)">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px">
+      <div style="display: flex; align-items: center; gap: 10px">
+        <svg width="36" height="36" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="#FFC531" stroke="#8A5A00" stroke-width="1" stroke-linejoin="round"/></svg>
+        <span style="font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800">Nhà Bin &amp; Na</span>
+      </div>
+      <nav style="display: flex; flex-wrap: wrap; gap: 4px; flex: 1">
+        <a href="ParentDashboard.dc.html" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Tổng quan</a>
+        <a href="WebParentTasks.dc.html" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Nhiệm vụ</a>
+        <a href="WebParentApply.dc.html" style="padding: 10px 14px; border-radius: 12px; background: {{t.soft}}; text-decoration: none; font-weight: 800; font-size: 15px">Thưởng / Phạt</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Cửa hàng</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Lịch sử</a>
+        <a href="#" style="padding: 10px 14px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 15px; color: {{t.muted}}">Cài đặt</a>
+      </nav>
+    </div>
+  </header>
+
+  <main style="max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <section style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px">
+        <h1 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 32px; font-weight: 800">Thưởng / Phạt</h1>
+        <a href="#" style="font-size: 15px; font-weight: 800; color: {{t.primary}}">Quản lý danh mục rule</a>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}; letter-spacing: .04em">1. CHỌN CON</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px">
+          <sc-for list="{{kids}}" as="k" hint-placeholder-count="3">
+            <button onClick="{{k.pick}}" aria-pressed="{{k.pressed}}" style="min-height: 64px; border-radius: 18px; border: 3px solid {{k.border}}; background: {{t.card}}; color: {{t.ink}}; display: flex; align-items: center; gap: 10px; padding: 8px 14px; text-align: left">
+              <svg width="44" height="44" viewBox="0 0 64 64" aria-hidden="true"><circle cx="13" cy="20" r="7" fill="{{k.hair}}" opacity="{{k.bun}}"/><circle cx="51" cy="20" r="7" fill="{{k.hair}}" opacity="{{k.bun}}"/><circle cx="32" cy="34" r="22" fill="#FFE3C8"/><path d="M9 34C8 16 20 8 32 8s24 8 23 26c-3-8-9-12-15-12-3 4-9 6-14 6-6 0-11 2-17 6z" fill="{{k.hair}}"/><ellipse cx="24" cy="38" rx="3.2" ry="4" fill="#2B2118"/><ellipse cx="40" cy="38" rx="3.2" ry="4" fill="#2B2118"/><path d="M28.5 46q3.5 3 7 0" fill="none" stroke="#2B2118" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span style="display: flex; flex-direction: column">
+                <span style="font-size: 17px; font-weight: 800">{{k.name}}</span>
+                <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">{{k.balance}} Sao</span>
+              </span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}; letter-spacing: .04em">2. THƯỞNG HAY PHẠT</span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px; background: {{t.soft}}; max-width: 420px">
+          <button onClick="{{setReward}}" aria-pressed="{{rewardPressed}}" style="min-height: 44px; border: none; border-radius: 12px; background: {{rewardBg}}; color: {{rewardFg}}; font-size: 16px; font-weight: 800">+ Thưởng</button>
+          <button onClick="{{setPenalty}}" aria-pressed="{{penaltyPressed}}" style="min-height: 44px; border: none; border-radius: 12px; background: {{penaltyBg}}; color: {{penaltyFg}}; font-size: 16px; font-weight: 800">− Phạt</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font-size: 13px; font-weight: 800; color: {{t.muted}}; letter-spacing: .04em">3. CHỌN RULE</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px">
+          <sc-for list="{{rules}}" as="r" hint-placeholder-count="4">
+            <button onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="min-height: 60px; border-radius: 18px; border: 3px solid {{r.border}}; background: {{t.card}}; color: {{t.ink}}; display: flex; align-items: center; gap: 10px; padding: 0 16px; text-align: left">
+              <span style="width: 20px; height: 20px; border-radius: 50%; border: 3px solid {{t.primary}}; box-sizing: border-box; background: {{r.dot}}; flex: none"></span>
+              <span style="flex: 1; font-size: 16px; font-weight: 800">{{r.name}}</span>
+              <span style="font-family: 'Baloo 2', sans-serif; font-size: 20px; font-weight: 800; color: {{r.color}}">{{r.label}}</span>
+            </button>
+          </sc-for>
+          <button onClick="{{pickAdhoc}}" aria-pressed="{{adhocPressed}}" style="min-height: 60px; border-radius: 18px; border: 3px dashed {{adhocBorder}}; background: transparent; color: {{t.ink}}; display: flex; align-items: center; gap: 10px; padding: 0 16px; text-align: left; font-size: 16px; font-weight: 800">
+            <span style="width: 20px; height: 20px; border-radius: 50%; border: 3px solid {{t.primary}}; box-sizing: border-box; background: {{adhocDot}}; flex: none"></span>Đột xuất (ngoài rule)</button>
+        </div>
+      </div>
+    </section>
+
+    <aside style="flex: 1 1 320px; min-width: 0; background: {{t.card}}; border-radius: 28px; padding: 22px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 3px 0 rgba(0,0,0,.05)">
+      <h2 style="margin: 0; font-family: 'Baloo 2', sans-serif; font-size: 22px; font-weight: 800">Xem trước</h2>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px; border-radius: 18px; background: {{t.bg}}">
+        <div style="display: flex; flex-direction: column">
+          <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">{{kidName}} đang có</span>
+          <span style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800">{{balance}}</span>
+        </div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{t.muted}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <div style="display: flex; flex-direction: column; align-items: flex-end">
+          <span style="font-size: 13px; font-weight: 700; color: {{t.muted}}">Sau khi ghi</span>
+          <span style="font-family: 'Baloo 2', sans-serif; font-size: 28px; font-weight: 800; color: {{ctaBg}}">{{after}}</span>
+        </div>
+      </div>
+
+      <sc-if value="{{isAdhoc}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; gap: 8px">
+          <label style="display: flex; flex-direction: column; gap: 4px; width: 96px; font-size: 13px; font-weight: 800; color: {{t.muted}}">Số điểm
+            <input type="number" value="20" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 10px; font-size: 16px; font-weight: 800; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+          <label style="display: flex; flex-direction: column; gap: 4px; flex: 1; font-size: 13px; font-weight: 800; color: {{t.muted}}">Lý do (bắt buộc)
+            <input type="text" placeholder="VD: Giúp bà dọn nhà" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 10px; font-size: 16px; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box; width: 100%"></label>
+        </div>
+      </sc-if>
+      <sc-if value="{{notAdhoc}}" hint-placeholder-val="{{ true }}">
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 800; color: {{t.muted}}">Ghi chú (không bắt buộc)
+          <input type="text" placeholder="VD: lúc ăn tối" style="min-height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.15); padding: 0 12px; font-size: 16px; color: {{t.ink}}; background: {{t.card}}; box-sizing: border-box"></label>
+      </sc-if>
+
+      <sc-if value="{{capped}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: #FFF1C2; color: #5C3A00; font-size: 14px; font-weight: 700">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 1px"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+          <span>{{kidName}} chỉ còn {{balance}} Sao, nên chỉ trừ được {{balance}}. Lịch sử vẫn ghi mức phạt gốc {{amount}}.</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: {{t.ink}}; color: #FFFFFF; font-size: 15px; font-weight: 800">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>{{toastText}}</div>
+      </sc-if>
+      <button onClick="{{submit}}" style="min-height: 56px; border: none; border-radius: 18px; background: {{ctaBg}}; color: #FFFFFF; font-size: 18px; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.18)">{{cta}}</button>
+      <span style="font-size: 13px; font-weight: 600; color: {{t.muted}}">Ghi nhầm? Vào Lịch sử để tạo giao dịch điều chỉnh, giao dịch cũ không bị xóa.</span>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["sunny","ocean","candy","robot","magic"],"default":"sunny"},"$preview":{"width":1280,"height":900}}'>
+var THEMES = {
+  sunny: { bg: '#FFF6DF', card: '#FFFFFF', soft: '#FFE7A8', ring: '#FFC94D', primary: '#C2410C', onPrimary: '#FFFFFF', accent: '#F59E0B', ink: '#2B2118', muted: '#6B5644' },
+  ocean: { bg: '#E6F5FA', card: '#FFFFFF', soft: '#C7ECF5', ring: '#7DD3E8', primary: '#0E7490', onPrimary: '#FFFFFF', accent: '#14B8A6', ink: '#0F2A33', muted: '#486570' },
+  candy: { bg: '#FDEEF6', card: '#FFFFFF', soft: '#F8D2E8', ring: '#F0A6D6', primary: '#A21CAF', onPrimary: '#FFFFFF', accent: '#EC4899', ink: '#2E1530', muted: '#6E4D6E' },
+  robot: { bg: '#EEF2F7', card: '#FFFFFF', soft: '#D6E0EE', ring: '#F5C518', primary: '#1D4ED8', onPrimary: '#FFFFFF', accent: '#E11D2E', ink: '#0F172A', muted: '#475569' },
+  magic: { bg: '#FFF3F8', card: '#FFFFFF', soft: '#FFD9E8', ring: '#F7C948', primary: '#BE185D', onPrimary: '#FFFFFF', accent: '#E9A400', ink: '#3A0F24', muted: '#7A3B5A' }
+};
+var SFX_CTX = null;
+var SFX = {
+  reward: { type: 'triangle', gain: 0.18, notes: [[523.25, 0, 0.16], [659.25, 0.09, 0.16], [783.99, 0.18, 0.16], [1046.5, 0.27, 0.4]] },
+  penalty: { type: 'sine', gain: 0.16, notes: [[392, 0, 0.28], [293.66, 0.22, 0.45]] }
+};
+function playSfx(name) {
+  try {
+    var C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    if (!SFX_CTX) SFX_CTX = new C();
+    if (SFX_CTX.state === 'suspended') SFX_CTX.resume();
+    var s = SFX[name], now = SFX_CTX.currentTime;
+    s.notes.forEach(function (n) {
+      var o = SFX_CTX.createOscillator(), g = SFX_CTX.createGain();
+      o.type = s.type; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0.0001, now + n[1]);
+      g.gain.exponentialRampToValueAtTime(s.gain, now + n[1] + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + n[1] + n[2]);
+      o.connect(g); g.connect(SFX_CTX.destination);
+      o.start(now + n[1]); o.stop(now + n[1] + n[2] + 0.05);
+    });
+  } catch (e) {}
+}
+var RULES = {
+  reward: [
+    { id: 'r1', name: 'Đánh răng tối', pts: 5 },
+    { id: 'r2', name: 'Giúp việc nhà', pts: 10 },
+    { id: 'r3', name: 'Tự dọn đồ chơi', pts: 5 },
+    { id: 'r4', name: 'Đi ngủ đúng giờ', pts: 8 }
+  ],
+  penalty: [
+    { id: 'p1', name: 'Nói trống không', pts: 5 },
+    { id: 'p2', name: 'Nói dối', pts: 10 },
+    { id: 'p3', name: 'Đánh nhau với anh chị em', pts: 20 },
+    { id: 'p4', name: 'Xem điện thoại quá giờ', pts: 10 }
+  ]
+};
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { kid: 'Su', kind: 'penalty', rule: 'p2' };
+  }
+  renderVals() {
+    var t = THEMES[this.props.theme ?? 'sunny'] || THEMES.sunny;
+    var self = this;
+    var s = this.state;
+    var GREEN = '#15803D', RED = '#B91C1C';
+    var list = [
+      { name: 'Bin', balance: 120, hair: '#3B2A20', bun: 0 },
+      { name: 'Na', balance: 45, hair: '#6B3A1E', bun: 1 },
+      { name: 'Su', balance: 3, hair: '#1F1A17', bun: 0 }
+    ];
+    var kid = list.filter(function (k) { return k.name === s.kid; })[0];
+    var kids = list.map(function (k) {
+      var on = k.name === s.kid;
+      return Object.assign({}, k, { pressed: on ? 'true' : 'false', border: on ? t.primary : 'transparent', pick: function () { self.setState({ kid: k.name }); } });
+    });
+    var isR = s.kind === 'reward';
+    var color = isR ? GREEN : RED;
+    var rules = RULES[s.kind].map(function (r) {
+      var on = r.id === s.rule;
+      return Object.assign({}, r, {
+        pressed: on ? 'true' : 'false', border: on ? t.primary : 'transparent', dot: on ? t.primary : 'transparent',
+        label: (isR ? '+' : '−') + r.pts, color: color,
+        pick: function () { self.setState({ rule: r.id }); }
+      });
+    });
+    var isAdhoc = s.rule === 'adhoc';
+    var picked = RULES[s.kind].filter(function (r) { return r.id === s.rule; })[0];
+    var pts = isAdhoc ? 20 : (picked ? picked.pts : 0);
+    var capped = !isR && pts > kid.balance;
+    var applied = capped ? kid.balance : pts;
+    var after = isR ? kid.balance + applied : kid.balance - applied;
+    var cta = (isR ? 'Thưởng ' + kid.name + ' +' : 'Phạt ' + kid.name + ' −') + applied + ' Sao';
+    return {
+      t: t, kids: kids, rules: rules,
+      rewardPressed: isR ? 'true' : 'false', penaltyPressed: isR ? 'false' : 'true',
+      rewardBg: isR ? t.card : 'transparent', rewardFg: isR ? GREEN : t.muted,
+      penaltyBg: isR ? 'transparent' : t.card, penaltyFg: isR ? t.muted : RED,
+      setReward: function () { self.setState({ kind: 'reward', rule: 'r1' }); },
+      setPenalty: function () { self.setState({ kind: 'penalty', rule: 'p1' }); },
+      pickAdhoc: function () { self.setState({ rule: 'adhoc' }); },
+      isAdhoc: isAdhoc, notAdhoc: !isAdhoc,
+      adhocPressed: isAdhoc ? 'true' : 'false', adhocBorder: isAdhoc ? t.primary : 'rgba(0,0,0,.2)', adhocDot: isAdhoc ? t.primary : 'transparent',
+      capped: capped, kidName: kid.name, balance: kid.balance, after: after, amount: '−' + pts,
+      cta: cta, ctaBg: color,
+      hasToast: !!s.toast, toastText: s.toast || '',
+      submit: function () {
+        playSfx(isR ? 'reward' : 'penalty');
+        self.setState({ toast: 'Đã ghi: ' + cta });
+        clearTimeout(self.toastTimer);
+        self.toastTimer = setTimeout(function () { self.setState({ toast: '' }); }, 2500);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
