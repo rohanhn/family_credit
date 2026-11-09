@@ -43,7 +43,7 @@ export async function updateChildAction(_prev: ActionState, form: FormData): Pro
       name: str(form, "name"),
       avatar: str(form, "avatar"),
       pin: str(form, "pin"),
-    });
+    }, { parentId: auth.parentId });
     refresh();
     return { ok: true, message: `Đã lưu hồ sơ của ${child.name}` };
   } catch (err) {

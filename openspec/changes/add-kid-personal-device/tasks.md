@@ -19,7 +19,7 @@
 
 ## 4. Con đổi PIN
 
-- [ ] 4.1 Viết `changeChildPin` theo design D4, dùng chung bộ đếm khóa với đăng nhập PIN; `updateChild` ghi `pin_changed_at`; log `pin_changed` và `pin_reset` không chứa PIN. Kiểm tra bằng unit test cho mọi scenario của requirement "Con đổi PIN", gồm khóa sau 5 lần sai và phiên hiện tại vẫn giữ
+- [x] 4.1 Viết `changeChildPin` theo design D4, dùng chung bộ đếm khóa với đăng nhập PIN; `updateChild` ghi `pin_changed_at`; log `pin_changed` và `pin_reset` không chứa PIN. Kiểm tra bằng unit test cho mọi scenario của requirement "Con đổi PIN", gồm khóa sau 5 lần sai và phiên hiện tại vẫn giữ
 - [ ] 4.2 Làm trang `/kid/pin` (bàn phím số ba bước) và lối vào từ khu vực con; cài đặt bố mẹ hiện "PIN đổi lần cuối". Kiểm tra bằng e2e: con đổi PIN, thoát, đăng nhập bằng PIN cũ thất bại, PIN mới thành công; vùng bấm tối thiểu 44px ở 360px
 
 ## 5. Lối vào và PWA

@@ -38,6 +38,8 @@ export type SecurityEvent =
   | "signup_limited"
   | "pin_failed"
   | "pin_locked"
+  | "pin_changed"
+  | "pin_reset"
   | "device_enabled"
   | "device_revoked"
   | "password_changed"

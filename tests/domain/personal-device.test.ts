@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DAY, HOUR, fixedClock } from "@/server/clock";
 import { authenticateChild, authenticateDevice } from "@/server/auth/guards";
 import { createSession, resolveSession } from "@/server/auth/sessions";
-import { enableFamilyMode, enablePersonalDevice, listDevices, listKidsForDevice, loginChildWithPin } from "@/server/auth/family-mode";
+import { changeChildPin, enableFamilyMode, enablePersonalDevice, listDevices, listKidsForDevice, loginChildWithPin } from "@/server/auth/family-mode";
 import { children } from "@/server/db/schema";
 import { eq } from "drizzle-orm";
-import { archiveChild, createChild } from "@/server/domain/children";
+import { archiveChild, createChild, updateChild } from "@/server/domain/children";
 import { setSecurityLogSink } from "@/server/log";
 import { PERSONAL_CHILD_TTL_MS } from "@/server/auth/session-cookies";
 import { createTestDb, type TestDb } from "../helpers/db";
@@ -152,5 +152,65 @@ describe("Danh sách và thu hồi máy riêng", () => {
     expect(await authenticateDevice(t.db, binPhone.token, clock)).toBeNull();
     expect(await authenticateDevice(t.db, naPhone.token, clock)).not.toBeNull();
     expect(await authenticateDevice(t.db, shared.token, clock)).not.toBeNull();
+  });
+});
+
+describe("Con đổi PIN", () => {
+  async function setupKid() {
+    const { family, parent } = await seedFamily(t.db, { kids: [] });
+    const bin = await createChild(t.db, family.id, { name: "Bin", avatar: "boy-brown", pin: "1234" });
+    const shared = await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock);
+    const kid = { familyId: family.id, childId: bin.id };
+    const login = (pin: string) => loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin }, clock);
+    const change = (currentPin: string, newPin: string, confirmPin = newPin) => changeChildPin(t.db, kid, { currentPin, newPin, confirmPin }, clock);
+    return { family, parent, bin, shared, kid, login, change };
+  }
+
+  it("Đổi PIN thành công: PIN mới dùng được, PIN cũ không, phiên hiện tại vẫn giữ, có log không chứa PIN", async () => {
+    const { bin, shared, login, change } = await setupKid();
+    const session = await login("1234");
+    const events: [string, unknown][] = [];
+    setSecurityLogSink((e, f) => events.push([e, f]));
+    await change("1234", "4321");
+    setSecurityLogSink();
+    expect(await authenticateChild(t.db, shared.token, session.token, clock)).toMatchObject({ childId: bin.id });
+    await expect(login("1234")).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    await expect(login("4321")).resolves.toBeTruthy();
+    expect(events).toEqual([["pin_changed", { familyId: bin.familyId, childId: bin.id }]]);
+    expect(JSON.stringify(events)).not.toContain("4321");
+    const [row] = await t.db.select().from(children).where(eq(children.id, bin.id));
+    expect(row.pinChangedAt?.toISOString()).toBe(clock.now().toISOString());
+  });
+
+  it("Sai PIN hiện tại: từ chối, PIN không đổi, tính vào bộ đếm và khóa sau 5 lần", async () => {
+    const { login, change } = await setupKid();
+    for (let i = 0; i < 4; i++) await expect(change("0000", "4321")).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    await expect(change("0000", "4321")).rejects.toMatchObject({ code: "LOCKED" });
+    // Đang khóa: cả đổi PIN lẫn đăng nhập đều bị chặn, kể cả PIN đúng.
+    await expect(change("1234", "4321")).rejects.toMatchObject({ code: "LOCKED" });
+    await expect(login("1234")).rejects.toMatchObject({ code: "LOCKED" });
+    clock.advance(5 * 60 * 1000 + 1000);
+    await expect(login("1234")).resolves.toBeTruthy();
+  });
+
+  it("PIN mới không hợp lệ: sai định dạng, trùng PIN cũ, hai lần nhập khác nhau", async () => {
+    const { login, change } = await setupKid();
+    await expect(change("1234", "12a4")).rejects.toMatchObject({ code: "INVALID_INPUT", message: "PIN phải gồm đúng 4 chữ số" });
+    await expect(change("1234", "4321", "4322")).rejects.toMatchObject({ code: "INVALID_INPUT", message: "Hai lần nhập PIN mới chưa giống nhau" });
+    await expect(change("1234", "1234")).rejects.toMatchObject({ code: "INVALID_INPUT", message: "PIN mới phải khác PIN hiện tại" });
+    await expect(login("1234")).resolves.toBeTruthy();
+  });
+
+  it("Bố mẹ đặt lại PIN khi con quên: ghi pin_changed_at và log pin_reset", async () => {
+    const { family, parent, bin, login } = await setupKid();
+    const events: [string, unknown][] = [];
+    setSecurityLogSink((e, f) => events.push([e, f]));
+    await updateChild(t.db, family.id, bin.id, { pin: "9999" }, { parentId: parent.id, clock });
+    await updateChild(t.db, family.id, bin.id, { name: "Bin Bin" }, { parentId: parent.id, clock });
+    setSecurityLogSink();
+    await expect(login("9999")).resolves.toBeTruthy();
+    expect(events).toEqual([["pin_reset", { familyId: family.id, childId: bin.id, parentId: parent.id }]]);
+    const [row] = await t.db.select().from(children).where(eq(children.id, bin.id));
+    expect(row.pinChangedAt?.toISOString()).toBe(clock.now().toISOString());
   });
 });

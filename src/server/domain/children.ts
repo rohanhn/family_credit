@@ -6,6 +6,7 @@ import { hashSecret } from "../auth/crypto";
 import { deleteSessionsFor } from "../auth/sessions";
 import { isAvatarId } from "@/lib/avatars";
 import { invalid, notFound } from "./errors";
+import { logSecurityEvent } from "../log";
 
 // Hồ sơ con (spec family-accounts "Quản lý hồ sơ con").
 
@@ -44,6 +45,7 @@ export async function updateChild(
   familyId: number,
   childId: number,
   input: { name?: string; avatar?: string; pin?: string },
+  opts: { parentId?: number; clock?: Clock } = {},
 ): Promise<Child> {
   const patch: Partial<typeof children.$inferInsert> = {};
   if (input.name !== undefined) patch.name = normalizeChildName(input.name);
@@ -56,6 +58,7 @@ export async function updateChild(
     patch.pinHash = await hashSecret(input.pin);
     patch.failedPinCount = 0;
     patch.lockedUntil = null;
+    patch.pinChangedAt = (opts.clock ?? systemClock).now();
   }
   const [child] = await db
     .update(children)
@@ -63,6 +66,7 @@ export async function updateChild(
     .where(and(eq(children.id, childId), eq(children.familyId, familyId), isNull(children.archivedAt)))
     .returning();
   if (!child) throw notFound();
+  if (patch.pinHash) logSecurityEvent("pin_reset", { familyId, childId, parentId: opts.parentId });
   return child;
 }
 

@@ -2,9 +2,10 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { systemClock, type Clock, MINUTE } from "../clock";
 import { children, sessions } from "../db/schema";
 import type { Db, DbOrTx } from "../db/types";
-import { DomainError, notFound } from "../domain/errors";
+import { DomainError, invalid, notFound } from "../domain/errors";
 import { logSecurityEvent } from "../log";
-import { verifySecret } from "./crypto";
+import { hashSecret, verifySecret } from "./crypto";
+import { validatePin } from "../domain/children";
 import { PERSONAL_CHILD_TTL_MS } from "./session-cookies";
 import { createSession, deleteSession } from "./sessions";
 
@@ -111,6 +112,17 @@ export async function listKidsForDevice(db: DbOrTx, device: { familyId: number; 
   return rows.map((r) => ({ ...r, locked: !!r.lockedUntil && r.lockedUntil.getTime() > now }));
 }
 
+/** Ghi một lần sai PIN trên dòng con đã khóa (`FOR UPDATE`): tới lần thứ 5 thì khóa 5 phút. */
+async function recordPinFailure(tx: DbOrTx, child: { id: number; failedPinCount: number }, now: Date): Promise<"just_locked" | "wrong"> {
+  const failures = child.failedPinCount + 1;
+  if (failures >= PIN_MAX_FAILURES) {
+    await tx.update(children).set({ failedPinCount: 0, lockedUntil: new Date(now.getTime() + PIN_LOCK_MS) }).where(eq(children.id, child.id));
+    return "just_locked";
+  }
+  await tx.update(children).set({ failedPinCount: failures }).where(eq(children.id, child.id));
+  return "wrong";
+}
+
 /**
  * Con chọn avatar và nhập PIN. Sai 5 lần liên tiếp thì khóa 5 phút. Bộ đếm nằm trên dòng `children`
  * và được cập nhật trong transaction có khóa dòng, nên hai lần nhập đồng thời không làm đếm sai.
@@ -141,13 +153,7 @@ export async function loginChildWithPin(
       const session = await createSession(tx, "child", child.id, clock, personal ? { ttlMs: PERSONAL_CHILD_TTL_MS } : {});
       return { kind: "ok" as const, session: { ...session, browserSession: personal } };
     }
-    const failures = child.failedPinCount + 1;
-    if (failures >= PIN_MAX_FAILURES) {
-      await tx.update(children).set({ failedPinCount: 0, lockedUntil: new Date(now.getTime() + PIN_LOCK_MS) }).where(eq(children.id, child.id));
-      return { kind: "just_locked" as const };
-    }
-    await tx.update(children).set({ failedPinCount: failures }).where(eq(children.id, child.id));
-    return { kind: "wrong" as const };
+    return { kind: await recordPinFailure(tx, child, now) };
   });
 
   switch (outcome.kind) {
@@ -167,4 +173,53 @@ export async function loginChildWithPin(
 /** Con bấm "Thoát": kết thúc phiên con, thiết bị quay về màn chọn avatar. */
 export function logoutChild(db: DbOrTx, childToken: string | undefined): Promise<void> {
   return deleteSession(db, childToken);
+}
+
+export const PIN_CURRENT_WRONG_MESSAGE = "PIN hiện tại chưa đúng, con thử lại nhé";
+
+/**
+ * Con tự đổi PIN (spec "Con đổi PIN", design D4): cần đúng PIN hiện tại; sai thì tính vào bộ đếm khóa
+ * như đăng nhập. PIN mới đúng 4 chữ số, khác PIN cũ, hai lần nhập giống nhau. Phiên hiện có giữ nguyên.
+ */
+export async function changeChildPin(
+  db: Db,
+  kid: { familyId: number; childId: number },
+  input: { currentPin: string; newPin: string; confirmPin: string },
+  clock: Clock = systemClock,
+): Promise<void> {
+  validatePin(input.newPin);
+  if (input.newPin !== input.confirmPin) throw invalid("Hai lần nhập PIN mới chưa giống nhau");
+  const newHash = await hashSecret(input.newPin);
+  const outcome = await db.transaction(async (tx) => {
+    const [child] = await tx
+      .select()
+      .from(children)
+      .where(and(eq(children.id, kid.childId), eq(children.familyId, kid.familyId), isNull(children.archivedAt)))
+      .for("update");
+    if (!child) throw notFound();
+    const now = clock.now();
+    if (child.lockedUntil && child.lockedUntil.getTime() > now.getTime()) {
+      return { kind: "locked" as const, minutes: Math.ceil((child.lockedUntil.getTime() - now.getTime()) / MINUTE) };
+    }
+    if (!(await verifySecret(child.pinHash, input.currentPin))) return { kind: await recordPinFailure(tx, child, now) };
+    if (input.newPin === input.currentPin) return { kind: "same" as const };
+    await tx.update(children).set({ pinHash: newHash, pinChangedAt: now, failedPinCount: 0, lockedUntil: null }).where(eq(children.id, child.id));
+    return { kind: "ok" as const };
+  });
+
+  switch (outcome.kind) {
+    case "ok":
+      logSecurityEvent("pin_changed", { familyId: kid.familyId, childId: kid.childId });
+      return;
+    case "same":
+      throw invalid("PIN mới phải khác PIN hiện tại");
+    case "locked":
+      throw new DomainError("LOCKED", pinLockedMessage(outcome.minutes), { minutes: outcome.minutes });
+    case "just_locked":
+      logSecurityEvent("pin_locked", { familyId: kid.familyId, childId: kid.childId });
+      throw new DomainError("LOCKED", pinLockedMessage(PIN_LOCK_MS / MINUTE), { minutes: PIN_LOCK_MS / MINUTE });
+    case "wrong":
+      logSecurityEvent("pin_failed", { familyId: kid.familyId, childId: kid.childId, detail: "change_pin" });
+      throw new DomainError("INVALID_CREDENTIALS", PIN_CURRENT_WRONG_MESSAGE);
+  }
 }
