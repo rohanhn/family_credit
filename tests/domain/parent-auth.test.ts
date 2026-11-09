@@ -66,6 +66,15 @@ describe("Đăng ký tài khoản bố mẹ", () => {
   });
 });
 
+describe("Giới hạn đăng ký đếm cả lần trùng email", () => {
+  it("Dò email bằng đăng ký bị chặn sau 5 lần mỗi giờ", async () => {
+    await register();
+    for (let i = 0; i < 4; i++) await expect(register()).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(register()).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    await expect(register("moi@example.com")).rejects.toMatchObject({ code: "RATE_LIMITED" });
+  });
+});
+
 describe("Đăng nhập bố mẹ", () => {
   it("Đăng nhập đúng và đăng xuất", async () => {
     await register();
@@ -112,6 +121,24 @@ describe("Đăng nhập bố mẹ", () => {
     for (let i = 0; i < 4; i++) await expect(loginParent(t.db, { email: "me@example.com", password: "sai" }, ctx)).rejects.toThrow();
     await loginParent(t.db, { email: "me@example.com", password: "matkhau123" }, ctx);
     for (let i = 0; i < 4; i++) await expect(loginParent(t.db, { email: "me@example.com", password: "sai" }, ctx)).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+  });
+
+  it("Lần sai liên tiếp vắt qua ranh giới 15 phút vẫn bị tính và khóa", async () => {
+    await register();
+    clock.set("2026-11-09T10:14:58Z");
+    for (let i = 0; i < 4; i++) await expect(loginParent(t.db, { email: "me@example.com", password: "sai" }, ctx)).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    clock.advance(4000);
+    await expect(loginParent(t.db, { email: "me@example.com", password: "sai" }, ctx)).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    await expect(loginParent(t.db, { email: "me@example.com", password: "matkhau123" }, ctx)).rejects.toMatchObject({ code: "LOCKED" });
+  });
+
+  it("Đổi mật khẩu sai nhiều lần cũng khóa theo email", async () => {
+    const r = await register();
+    const [s] = await t.db.select().from(sessions);
+    const change = (currentPassword: string) =>
+      changePassword(t.db, { parentId: r.parentId, currentSessionIdHash: s.idHash, currentPassword, newPassword: "matkhaumoi1" }, ctx);
+    for (let i = 0; i < 5; i++) await expect(change("sai")).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    await expect(change("matkhau123")).rejects.toMatchObject({ code: "LOCKED" });
   });
 
   it("Mỗi IP thử tối đa 20 lần trong 15 phút", async () => {

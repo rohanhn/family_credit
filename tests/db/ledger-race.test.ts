@@ -6,6 +6,7 @@ import * as schema from "@/server/db/schema";
 import { runMigrations } from "@/server/db/migrate";
 import type { Db } from "@/server/db/types";
 import { applyLedgerEntry, getBalance, recordAdjustment } from "@/server/domain/ledger";
+import { loginParent, registerParent } from "@/server/auth/parent-auth";
 import { seedFamily } from "../helpers/seed";
 
 // Test chống race trên Postgres thật (task 8.2, design D3): PGlite chỉ có một kết nối nên không
@@ -56,8 +57,22 @@ describe.skipIf(!url)("Chống race trên Postgres thật", () => {
     const original = await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 10, description: "Thưởng nhầm", actorParentId: parent.id });
     await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 20, description: "Thưởng", actorParentId: parent.id });
     const adjust = () => recordAdjustment(db, { familyId: family.id, originalTransactionId: original.id, reason: "bấm nhầm", actorParentId: parent.id });
+    const run = randomUUID();
     const results = await Promise.allSettled([adjust(), adjust(), adjust()]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(await getBalance(db, child.id)).toBe(20);
+  });
+
+  it("Nhiều lần đăng nhập sai đồng thời: chỉ tối đa 5 lần được kiểm tra mật khẩu", async () => {
+    const email = `race-${randomUUID()}@example.com`;
+    await registerParent(db, { email, password: "matkhau123", displayName: "Mẹ" }, { ip: `signup-${randomUUID()}` });
+    const run = randomUUID();
+    const results = await Promise.allSettled(
+      Array.from({ length: 12 }, (_, i) => loginParent(db, { email, password: `sai${i}` }, { ip: `${run}-${i}` })),
+    );
+    const codes = results.map((r) => (r.status === "rejected" ? (r.reason as { code?: string }).code : "OK"));
+    expect(codes.filter((c) => c === "INVALID_CREDENTIALS").length).toBeLessThanOrEqual(5);
+    expect(codes.filter((c) => c === "LOCKED").length).toBeGreaterThanOrEqual(7);
+    await expect(loginParent(db, { email, password: "matkhau123" }, { ip: `${run}-ok` })).rejects.toMatchObject({ code: "LOCKED" });
   });
 });

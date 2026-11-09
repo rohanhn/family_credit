@@ -20,6 +20,8 @@ export type HistoryRow = {
   appliedAmount: number;
   childName?: string;
   actorName: string;
+  /** Đã có giao dịch điều chỉnh tham chiếu tới dòng này. */
+  adjusted?: boolean;
 };
 
 export function HistoryList({

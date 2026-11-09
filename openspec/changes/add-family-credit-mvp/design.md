@@ -160,8 +160,8 @@ auth_attempts(key, window_start, count)
 
 ### D9. Bảo mật vận hành
 - **Rate limit** (spec family-accounts): bộ đếm cửa sổ cố định trong bảng `auth_attempts`, tăng bằng một câu `INSERT … ON CONFLICT (key, window_start) DO UPDATE SET count = count + 1 RETURNING count`, nên đúng cả khi có nhiều request đồng thời và không cần Redis. Các khóa:
-  - `login:email:<sha256(lower(email))>`: 5 lần sai liên tiếp thì khóa 15 phút; đăng nhập đúng thì xóa bộ đếm. Đếm cả email không tồn tại (vẫn chạy argon2 với một hash giả để thời gian phản hồi như nhau).
-  - `login:ip:<ip>`: 20 lần trong 15 phút. `signup:ip:<ip>`: 5 lần mỗi giờ. `invite:family:<id>`: 10 lần mỗi ngày.
+  - `login:email:<sha256(lower(email))>`: bộ đếm liên tiếp, không cắt theo cửa sổ cố định (tổng các lần trong 1 ngày gần nhất, về 0 khi đăng nhập đúng hoặc khi khóa). Tăng trước khi kiểm tra mật khẩu, nên request thấy bộ đếm vượt 5 bị từ chối như đang khóa, kể cả khi nhiều request đồng thời; lần sai thứ 5 đặt khóa 15 phút. Đếm cả email không tồn tại (vẫn chạy argon2 với một hash giả để thời gian phản hồi như nhau). Đổi mật khẩu dùng chung bộ đếm này.
+  - `login:ip:<ip>`: 20 lần trong 15 phút. `signup:ip:<ip>`: 5 lần mỗi giờ, đếm mọi lần đăng ký kể cả email đã dùng, trước khi chạy argon2. `invite:family:<id>`: 10 lần mỗi ngày.
   - Khóa PIN của con giữ nguyên cơ chế trên dòng `children` (D4).
   - IP client lấy từ `X-Forwarded-For` do Traefik gắn (phần tử cuối). Chỉ tin header này vì container không publish port, mọi request đều qua Traefik.
   - Job dọn dẹp lúc khởi động xóa các dòng có cửa sổ đã quá 1 ngày.

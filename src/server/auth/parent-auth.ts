@@ -5,7 +5,7 @@ import type { Db } from "../db/types";
 import { DomainError, invalid } from "../domain/errors";
 import { logSecurityEvent } from "../log";
 import { hashSecret, sha256, verifyDummy, verifySecret } from "./crypto";
-import { clear, hit, LIMITS, lock, lockedUntil, peek } from "./rate-limit";
+import { clear, hit, hitStreak, LIMITS, lock, lockedUntil } from "./rate-limit";
 import { createSession, deleteSession, deleteSessionsFor } from "./sessions";
 
 // Đăng ký, đăng nhập, đổi mật khẩu của bố mẹ (spec family-accounts, design D4/D9).
@@ -48,21 +48,71 @@ export async function registerParent(
   validatePassword(input.password);
   const displayName = normalizeDisplayName(input.displayName);
 
+  // Đếm mọi lần đăng ký (kể cả email đã dùng) trước khi chạy argon2: giới hạn cả việc dò email
+  // qua thông báo "Email đã được sử dụng" lẫn chi phí CPU. Tăng rồi so nên đúng khi đồng thời.
   const signupKey = `signup:ip:${ctx.ip}`;
-  if ((await peek(db, signupKey, LIMITS.signupIp.windowMs, clock)) >= LIMITS.signupIp.max) {
+  if ((await hit(db, signupKey, LIMITS.signupIp.windowMs, clock)) > LIMITS.signupIp.max) {
     logSecurityEvent("signup_limited", { ip: ctx.ip });
     throw new DomainError("RATE_LIMITED", "Đăng ký quá nhiều tài khoản, thử lại sau");
   }
 
+  const emailTaken = () => new DomainError("CONFLICT", "Email đã được sử dụng");
+  const [existing] = await db.select({ id: parents.id }).from(parents).where(eq(parents.email, email));
+  if (existing) throw emailTaken();
   const passwordHash = await hashSecret(input.password);
-  return db.transaction(async (tx) => {
-    const [existing] = await tx.select({ id: parents.id }).from(parents).where(eq(parents.email, email));
-    if (existing) throw new DomainError("CONFLICT", "Email đã được sử dụng");
-    const [parent] = await tx.insert(parents).values({ email, displayName, passwordHash }).returning({ id: parents.id });
-    await hit(tx, signupKey, LIMITS.signupIp.windowMs, clock);
-    const session = await createSession(tx, "parent", parent.id, clock);
-    return { parentId: parent.id, ...session };
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      const [parent] = await tx.insert(parents).values({ email, displayName, passwordHash }).returning({ id: parents.id });
+      const session = await createSession(tx, "parent", parent.id, clock);
+      return { parentId: parent.id, ...session };
+    });
+  } catch (err) {
+    // Hai request cùng email đồng thời: request sau vấp UNIQUE.
+    if (isUniqueViolation(err)) throw emailTaken();
+    throw err;
+  }
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  for (let e: unknown = err; e && typeof e === "object"; e = (e as { cause?: unknown }).cause) {
+    if ((e as { code?: unknown }).code === "23505") return true;
+  }
+  return false;
+}
+
+/**
+ * Kiểm tra mật khẩu với khóa theo email (spec "Đăng nhập sai quá nhiều lần", design D9).
+ * Tăng bộ đếm trước khi kiểm tra, nên nhiều request đồng thời cũng chỉ được thử tối đa `max` lần:
+ * request thấy bộ đếm vượt `max` bị từ chối như đang khóa mà không chạy argon2.
+ */
+async function verifyWithLockout(
+  db: Db,
+  emailHash: string,
+  verify: () => Promise<boolean>,
+  clock: Clock,
+  ip?: string,
+): Promise<boolean> {
+  const { max, horizonMs } = LIMITS.loginEmailFailures;
+  if (await lockedUntil(db, lockKey(emailHash), LIMITS.loginEmailFailures.lockMs, clock)) {
+    logSecurityEvent("login_locked", { ip, emailHash });
+    throw new DomainError("LOCKED", LOCKED_MESSAGE);
+  }
+  const attempt = await hitStreak(db, emailKey(emailHash), horizonMs, clock);
+  if (attempt > max) {
+    logSecurityEvent("login_locked", { ip, emailHash });
+    throw new DomainError("LOCKED", LOCKED_MESSAGE);
+  }
+  const ok = await verify();
+  if (ok) {
+    await clear(db, emailKey(emailHash));
+    return true;
+  }
+  if (attempt >= max) {
+    await lock(db, lockKey(emailHash), clock);
+    await clear(db, emailKey(emailHash));
+    logSecurityEvent("login_locked", { ip, emailHash });
+  }
+  return false;
 }
 
 export async function loginParent(
@@ -78,26 +128,19 @@ export async function loginParent(
     logSecurityEvent("login_rate_limited", { ip: ctx.ip });
     throw new DomainError("RATE_LIMITED", "Thử đăng nhập quá nhiều lần, thử lại sau ít phút");
   }
-  if (await lockedUntil(db, lockKey(emailHash), LIMITS.loginEmailFailures.lockMs, clock)) {
-    logSecurityEvent("login_locked", { ip: ctx.ip, emailHash });
-    throw new DomainError("LOCKED", LOCKED_MESSAGE);
-  }
-
   const [parent] = await db.select({ id: parents.id, passwordHash: parents.passwordHash }).from(parents).where(eq(parents.email, email));
-  const ok = parent ? await verifySecret(parent.passwordHash, input.password) : await verifyDummy(input.password);
-
+  const ok = await verifyWithLockout(
+    db,
+    emailHash,
+    () => (parent ? verifySecret(parent.passwordHash, input.password) : verifyDummy(input.password)),
+    clock,
+    ctx.ip,
+  );
   if (!parent || !ok) {
-    const failures = await hit(db, emailKey(emailHash), LIMITS.loginEmailFailures.windowMs, clock);
     logSecurityEvent("login_failed", { ip: ctx.ip, emailHash });
-    if (failures >= LIMITS.loginEmailFailures.max) {
-      await lock(db, lockKey(emailHash), clock);
-      await clear(db, emailKey(emailHash));
-      logSecurityEvent("login_locked", { ip: ctx.ip, emailHash });
-    }
     throw new DomainError("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE);
   }
 
-  await clear(db, emailKey(emailHash));
   const session = await createSession(db, "parent", parent.id, clock);
   return { parentId: parent.id, ...session };
 }
@@ -121,15 +164,7 @@ export async function changePassword(
   if (!parent) throw new DomainError("NOT_FOUND", "Không tìm thấy");
 
   const emailHash = sha256(parent.email);
-  if (await lockedUntil(db, lockKey(emailHash), LIMITS.loginEmailFailures.lockMs, clock)) {
-    throw new DomainError("LOCKED", LOCKED_MESSAGE);
-  }
-  if (!(await verifySecret(parent.passwordHash, input.currentPassword))) {
-    const failures = await hit(db, emailKey(emailHash), LIMITS.loginEmailFailures.windowMs, clock);
-    if (failures >= LIMITS.loginEmailFailures.max) {
-      await lock(db, lockKey(emailHash), clock);
-      await clear(db, emailKey(emailHash));
-    }
+  if (!(await verifyWithLockout(db, emailHash, () => verifySecret(parent.passwordHash, input.currentPassword), clock))) {
     throw new DomainError("INVALID_CREDENTIALS", "Mật khẩu hiện tại không đúng");
   }
 

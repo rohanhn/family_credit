@@ -7,7 +7,8 @@ import type { DbOrTx } from "../db/types";
 // INSERT ... ON CONFLICT ... RETURNING nên đúng cả khi nhiều request đồng thời.
 
 export const LIMITS = {
-  loginEmailFailures: { max: 5, windowMs: 15 * MINUTE, lockMs: 15 * MINUTE },
+  // Lần sai liên tiếp theo email: đếm trong 1 ngày gần nhất (bằng thời gian giữ dòng của job dọn dẹp).
+  loginEmailFailures: { max: 5, horizonMs: DAY, lockMs: 15 * MINUTE },
   loginIp: { max: 20, windowMs: 15 * MINUTE },
   signupIp: { max: 5, windowMs: HOUR },
   inviteFamily: { max: 10, windowMs: DAY },
@@ -25,6 +26,25 @@ export async function hit(db: DbOrTx, key: string, windowMs: number, clock: Cloc
     .onConflictDoUpdate({ target: [authAttempts.key, authAttempts.windowStart], set: { count: sql`${authAttempts.count} + 1` } })
     .returning({ count: authAttempts.count });
   return row.count;
+}
+
+/**
+ * Bộ đếm liên tiếp (không cắt theo cửa sổ cố định): mỗi lần gọi cộng 1 vào dòng của thời điểm hiện tại
+ * rồi trả về tổng các lần trong `horizonMs` gần nhất. Chỉ về 0 khi gọi `clear` (đăng nhập đúng hoặc
+ * vừa khóa) hoặc khi các lần cũ quá `horizonMs`. Mỗi lần tăng là một câu riêng đã commit trước khi đọc
+ * tổng, nên với n request đồng thời, request thứ k luôn thấy tổng ≥ k.
+ */
+export async function hitStreak(db: DbOrTx, key: string, horizonMs: number, clock: Clock = systemClock): Promise<number> {
+  const now = clock.now();
+  await db
+    .insert(authAttempts)
+    .values({ key, windowStart: now, count: 1 })
+    .onConflictDoUpdate({ target: [authAttempts.key, authAttempts.windowStart], set: { count: sql`${authAttempts.count} + 1` } });
+  const [row] = await db
+    .select({ total: sql<number>`coalesce(sum(${authAttempts.count}), 0)::int` })
+    .from(authAttempts)
+    .where(and(eq(authAttempts.key, key), gt(authAttempts.windowStart, new Date(now.getTime() - horizonMs))));
+  return Number(row?.total ?? 0);
 }
 
 /** Số đếm của cửa sổ hiện tại, không tăng. */
