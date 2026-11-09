@@ -4,7 +4,7 @@ import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/server/db/client";
 import { enableFamilyMode, revokeDevice } from "@/server/auth/family-mode";
-import { requireParentWithFamily, setSessionCookie } from "@/server/auth/next";
+import { clearSessionCookie, readCookie, requireParentWithFamily, setSessionCookie } from "@/server/auth/next";
 import { archiveChild, createChild, updateChild } from "@/server/domain/children";
 import { updateCurrency } from "@/server/domain/currency";
 import { createInvite, setFamilySound } from "@/server/domain/families";
@@ -76,7 +76,8 @@ export async function updateCurrencyAction(_prev: ActionState, form: FormData): 
 /** Bật chế độ gia đình trên thiết bị đang dùng rồi chuyển sang màn chọn avatar. */
 export async function enableFamilyModeAction(): Promise<void> {
   const auth = await requireParentWithFamily();
-  const session = await enableFamilyMode(getDb(), auth);
+  const session = await enableFamilyMode(getDb(), auth, undefined, await readCookie("parent"));
+  await clearSessionCookie("parent");
   await setSessionCookie("device", session.token, session.expiresAt);
   redirect("/kid");
 }

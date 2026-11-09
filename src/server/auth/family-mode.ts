@@ -17,8 +17,18 @@ export function pinLockedMessage(minutesLeft: number): string {
   return `Con nhập sai nhiều lần rồi. Đợi ${minutesLeft} phút nữa rồi thử lại nhé`;
 }
 
-/** Bố mẹ đã đăng nhập bật chế độ gia đình trên thiết bị hiện tại: cấp phiên `device` 90 ngày. */
-export async function enableFamilyMode(db: DbOrTx, auth: { parentId: number; familyId: number }, clock: Clock = systemClock) {
+/**
+ * Bố mẹ đã đăng nhập bật chế độ gia đình trên thiết bị hiện tại: cấp phiên `device` 90 ngày và kết thúc
+ * phiên bố mẹ trên thiết bị đó (design D4: cookie device chỉ mở màn chọn avatar), để con dùng thiết bị
+ * không vào được khu vực bố mẹ.
+ */
+export async function enableFamilyMode(
+  db: DbOrTx,
+  auth: { parentId: number; familyId: number },
+  clock: Clock = systemClock,
+  parentToken?: string,
+) {
+  await deleteSession(db, parentToken);
   const session = await createSession(db, "device", auth.familyId, clock);
   logSecurityEvent("device_enabled", { familyId: auth.familyId, parentId: auth.parentId });
   return session;

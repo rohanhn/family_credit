@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "transactions_adjust_once_uq" ON "transactions" USING btree ("ref_id") WHERE "transactions"."kind" = 'adjust' and "transactions"."ref_type" = 'transaction';

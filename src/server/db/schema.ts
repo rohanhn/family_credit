@@ -294,6 +294,8 @@ export const transactions = pgTable(
     ),
     index("transactions_child_idx").on(t.childId, t.id),
     index("transactions_family_created_idx").on(t.familyId, t.createdAt),
+    // Mỗi giao dịch chỉ được điều chỉnh một lần (spec currency-ledger "Giao dịch điều chỉnh").
+    uniqueIndex("transactions_adjust_once_uq").on(t.refId).where(sql`${t.kind} = 'adjust' and ${t.refType} = 'transaction'`),
   ],
 );
 

@@ -81,7 +81,7 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
         timezone={family.timezone}
         currency={currency.name}
         showChild
-        rowAction={(r) => (r.kind !== "adjust" && r.appliedAmount !== 0 ? <AdjustButton transactionId={r.id} /> : null)}
+        rowAction={(r) => (r.kind !== "adjust" && !r.adjusted && r.appliedAmount !== 0 ? <AdjustButton transactionId={r.id} /> : null)}
       />
     </div>
   );

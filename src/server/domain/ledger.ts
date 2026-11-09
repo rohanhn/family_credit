@@ -94,12 +94,20 @@ export async function recordAdjustment(
   const reason = input.reason.trim();
   if (!reason) throw invalid("Cần nhập lý do điều chỉnh");
   return db.transaction(async (tx) => {
+    // Khóa dòng gốc để hai lần điều chỉnh đồng thời chạy lần lượt; lần sau thấy đã có điều chỉnh và bị từ chối.
     const [original] = await tx
       .select()
       .from(transactions)
-      .where(and(eq(transactions.id, input.originalTransactionId), eq(transactions.familyId, input.familyId)));
+      .where(and(eq(transactions.id, input.originalTransactionId), eq(transactions.familyId, input.familyId)))
+      .for("update");
     if (!original) throw notFound();
+    if (original.kind === "adjust") throw invalid("Không điều chỉnh một giao dịch điều chỉnh");
     if (original.appliedAmount === 0) throw invalid("Giao dịch gốc không làm thay đổi số dư nên không cần điều chỉnh");
+    const [existing] = await tx
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(and(eq(transactions.kind, "adjust"), eq(transactions.refType, "transaction"), eq(transactions.refId, original.id)));
+    if (existing) throw invalid("Giao dịch này đã được điều chỉnh rồi");
     return recordTransaction(tx, {
       familyId: input.familyId,
       childId: original.childId,
@@ -113,7 +121,8 @@ export async function recordAdjustment(
   });
 }
 
-export type TransactionView = Transaction & { childName: string; actorName: string };
+/** `adjusted`: giao dịch đã có một giao dịch điều chỉnh tham chiếu tới nó. */
+export type TransactionView = Transaction & { childName: string; actorName: string; adjusted: boolean };
 
 /** Lịch sử giao dịch, mới nhất trước; lọc theo con, khoảng thời gian [from, to) và loại. */
 export async function listTransactions(
@@ -127,12 +136,17 @@ export async function listTransactions(
   if (filter.kinds?.length) conditions.push(inArray(transactions.kind, filter.kinds));
 
   const rows = await db
-    .select({ txn: transactions, childName: children.name, actorName: parents.displayName })
+    .select({
+      txn: transactions,
+      childName: children.name,
+      actorName: parents.displayName,
+      adjusted: sql<boolean>`exists (select 1 from transactions adj where adj.kind = 'adjust' and adj.ref_type = 'transaction' and adj.ref_id = ${transactions.id})`,
+    })
     .from(transactions)
     .innerJoin(children, eq(children.id, transactions.childId))
     .innerJoin(parents, eq(parents.id, transactions.actorParentId))
     .where(and(...conditions))
     .orderBy(desc(transactions.id))
     .limit(Math.min(filter.limit ?? 200, 500));
-  return rows.map((r) => ({ ...r.txn, childName: r.childName, actorName: r.actorName }));
+  return rows.map((r) => ({ ...r.txn, childName: r.childName, actorName: r.actorName, adjusted: Boolean(r.adjusted) }));
 }

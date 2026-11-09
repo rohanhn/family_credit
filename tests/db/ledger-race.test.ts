@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as schema from "@/server/db/schema";
 import { runMigrations } from "@/server/db/migrate";
 import type { Db } from "@/server/db/types";
-import { applyLedgerEntry, getBalance } from "@/server/domain/ledger";
+import { applyLedgerEntry, getBalance, recordAdjustment } from "@/server/domain/ledger";
 import { seedFamily } from "../helpers/seed";
 
 // Test chống race trên Postgres thật (task 8.2, design D3): PGlite chỉ có một kết nối nên không
@@ -48,5 +48,16 @@ describe.skipIf(!url)("Chống race trên Postgres thật", () => {
     const many = await Promise.all(Array.from({ length: 8 }, (_, i) => entry(-3, `Phạt song song ${i}`)));
     expect(many.reduce((sum, r) => sum + r.appliedAmount, 0)).toBe(-7);
     expect(await getBalance(db, child.id)).toBe(0);
+  });
+
+  it("Hai bố mẹ điều chỉnh đồng thời cùng một giao dịch: chỉ một lần được ghi", async () => {
+    const { family, parent, kids } = await seedFamily(db, { familyName: `race-adj-${randomUUID()}` });
+    const child = kids[0];
+    const original = await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 10, description: "Thưởng nhầm", actorParentId: parent.id });
+    await applyLedgerEntry(db, { familyId: family.id, childId: child.id, kind: "adhoc", amount: 20, description: "Thưởng", actorParentId: parent.id });
+    const adjust = () => recordAdjustment(db, { familyId: family.id, originalTransactionId: original.id, reason: "bấm nhầm", actorParentId: parent.id });
+    const results = await Promise.allSettled([adjust(), adjust(), adjust()]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(await getBalance(db, child.id)).toBe(20);
   });
 });

@@ -11,7 +11,7 @@ import {
   PIN_WRONG_MESSAGE,
   revokeDevice,
 } from "@/server/auth/family-mode";
-import { resolveSession } from "@/server/auth/sessions";
+import { createSession, resolveSession } from "@/server/auth/sessions";
 import { archiveChild, createChild, listChildren, updateChild } from "@/server/domain/children";
 import { applyLedgerEntry, getBalance, listTransactions } from "@/server/domain/ledger";
 import { createTestDb, type TestDb } from "../helpers/db";
@@ -83,6 +83,13 @@ describe("Đăng nhập con bằng avatar và PIN", () => {
     const device = await enableFamilyMode(t.db, auth, clock);
     expect(await resolveSession(t.db, device.token, "device", clock)).toMatchObject({ subjectId: family.id });
     expect(device.expiresAt.getTime() - clock.now().getTime()).toBe(90 * 24 * 60 * MINUTE);
+  });
+
+  it("Bật chế độ gia đình kết thúc phiên bố mẹ trên thiết bị đó", async () => {
+    const { family, parent } = await seedFamily(t.db, { kids: [] });
+    const parentSession = await createSession(t.db, "parent", parent.id, clock);
+    await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock, parentSession.token);
+    expect(await resolveSession(t.db, parentSession.token, "parent", clock)).toBeNull();
   });
 
   it("Con nhập đúng PIN: mở phiên con 2 giờ", async () => {

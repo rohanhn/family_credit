@@ -62,6 +62,20 @@ describe("spec currency-ledger", () => {
     expect(await listTransactions(t.db, { familyId: family.id, childId: bin.id })).toHaveLength(2);
   });
 
+  it("Một giao dịch chỉ điều chỉnh được một lần, không điều chỉnh giao dịch điều chỉnh", async () => {
+    const { family, parent, bin, give } = await setup();
+    const wrong = await give(bin.id, 10, "Thưởng nhầm");
+    await give(bin.id, 20, "Thưởng");
+    const adjust = (id: number) => recordAdjustment(t.db, { familyId: family.id, originalTransactionId: id, reason: "bấm nhầm", actorParentId: parent.id });
+    const adj = await adjust(wrong.id);
+    await expect(adjust(wrong.id)).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(adjust(adj.id)).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    expect(await getBalance(t.db, bin.id)).toBe(20);
+    const rows = await listTransactions(t.db, { familyId: family.id, childId: bin.id });
+    expect(rows.find((r) => r.id === wrong.id)?.adjusted).toBe(true);
+    expect(rows.filter((r) => r.id !== wrong.id).every((r) => !r.adjusted)).toBe(true);
+  });
+
   it("Điều chỉnh bắt buộc có lý do và không tìm được giao dịch của gia đình khác", async () => {
     const { family, parent, bin, give } = await setup();
     const txn = await give(bin.id, 10);
