@@ -2,14 +2,16 @@
 
 ## Context
 
-Repo hiện chỉ có `openspec/` và `docs/`, chưa có code. Máy phát triển có Node 22 và npm 10. Các ràng buộc đã chốt khi explore (xem proposal.md): Next.js + SQLite, tự host, tự làm auth, một gia đình chỉ có một đơn vị tiền tệ, số dư không âm. Yêu cầu hành vi chi tiết nằm trong `specs/`.
+Repo hiện chỉ có `openspec/` và `docs/`, chưa có code. Máy phát triển có Node 22 và npm 10. Các ràng buộc đã chốt (xem proposal.md): Next.js + PostgreSQL, tự host, tự làm auth, một gia đình chỉ có một đơn vị tiền tệ, số dư không âm. Yêu cầu hành vi chi tiết nằm trong `specs/`.
 
-Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lượng ghi rất thấp. SQLite với một tiến trình Node là đủ.
+Hạ tầng triển khai có sẵn: một VPS chạy nhiều app sau gateway **Traefik**, một server **PostgreSQL** dùng chung (mỗi app một database riêng), image build bằng CI và lưu trên **GHCR**. App này chạy ở `https://app3.domain.xyz`.
+
+Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lượng ghi rất thấp. Một container Node là đủ.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Một ứng dụng Next.js duy nhất, vừa là giao diện vừa là backend, chạy được bằng một lệnh và lưu trữ trong một file SQLite.
+- Một ứng dụng Next.js duy nhất, vừa là giao diện vừa là backend, đóng gói thành một Docker image không giữ trạng thái; mọi dữ liệu nằm trong database PostgreSQL riêng của app.
 - Logic nghiệp vụ (sổ cái, duyệt, quy tắc số dư) nằm trong lớp domain thuần TypeScript, test được mà không cần chạy UI.
 - Mọi thao tác ghi điểm là atomic, không có race condition khi hai bố mẹ thao tác cùng lúc.
 
@@ -42,16 +44,18 @@ Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lư�
   ```
 - *Thay thế đã cân nhắc*: tách API riêng (REST) và SPA. Bị loại vì gấp đôi code và cấu hình deploy mà không có lợi gì ở quy mô này.
 
-### D2. Lưu trữ: SQLite + better-sqlite3 + Drizzle ORM
-- `better-sqlite3` chạy đồng bộ và nhanh. Mỗi nghiệp vụ ghi chạy trong một `db.transaction(...)` (BEGIN IMMEDIATE), nên việc kiểm tra số dư rồi ghi giao dịch là atomic.
-- Drizzle cung cấp schema có kiểu và migration bằng `drizzle-kit`. Bật WAL mode và `foreign_keys = ON`.
-- Đường dẫn file DB lấy từ biến môi trường `DATABASE_PATH` (mặc định `./data/app.db`, đã đưa vào `.gitignore`).
-- *Thay thế*: Prisma. Bị loại vì engine nặng hơn và transaction tương tác với SQLite kém linh hoạt hơn.
+### D2. Lưu trữ: PostgreSQL + Drizzle ORM
+- Dùng server PostgreSQL có sẵn trên VPS. App có **database riêng** `my_credit` và **role riêng** `my_credit` (owner của database đó, không có quyền trên database của app khác). Chuỗi kết nối lấy từ biến môi trường `DATABASE_URL`. Driver `postgres` (postgres.js) qua `drizzle-orm/postgres-js`.
+- **Atomic và chống race**: mỗi nghiệp vụ ghi chạy trong một `db.transaction(...)`. Trước khi đọc số dư, transaction khóa dòng của con bằng `SELECT … FROM children WHERE id = $1 FOR UPDATE`, nên mọi thao tác ghi điểm trên cùng một con (hai bố mẹ bấm cùng lúc, duyệt hai yêu cầu đổi thưởng liền nhau) chạy lần lượt. Mức cô lập mặc định READ COMMITTED là đủ khi đã có khóa này. Các chuyển trạng thái có điều kiện (`UPDATE … WHERE status = 'pending'`, kiểm tra số dòng bị ảnh hưởng) vẫn giữ để chống duyệt hai lần.
+- **Pool nhỏ**: tối đa 5 kết nối (`DATABASE_POOL_MAX`), vì server Postgres dùng chung với các app khác.
+- **Migration**: `drizzle-kit generate` sinh file SQL, commit vào `drizzle/`. Khi container khởi động, script `migrate` chạy migrator của Drizzle trong `pg_advisory_lock` (khóa theo hằng số của app) để hai container không chạy migration cùng lúc, rồi mới khởi động server. Migration hỏng thì container thoát với mã lỗi và Traefik không nhận traffic.
+- **Kiểu dữ liệu**: khóa chính `bigint generated always as identity`; thời điểm `timestamptz`; ngày của nhiệm vụ `date`; cờ `boolean`; các giá trị liệt kê (`kind`, `status`, `mode`…) dùng `text` + `CHECK` thay vì enum của Postgres để migration dễ hơn.
+- *Thay thế*: SQLite (lựa chọn ban đầu). Bị thay vì VPS đã có Postgres dùng chung với sao lưu và vận hành tập trung, và image không cần volume. Prisma bị loại vì engine nặng hơn và Drizzle đủ cho schema này.
 
 ### D3. Mô hình dữ liệu chính
 ```
 families(id, name, currency_name, currency_icon, timezone, default_theme,
-         sound_enabled DEFAULT 1)
+         sound_enabled DEFAULT true)
 parents(id, family_id?, email UNIQUE, password_hash)
 invites(id, family_id, token_hash, expires_at, used_at)
 children(id, family_id, name, avatar, pin_hash, theme?, goal_reward_id?,
@@ -78,14 +82,14 @@ notifications(id, child_id, kind[gift|penalty|rejected], title, amount?,
   -- index (child_id, read_at)
 sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 ```
-- **Sổ cái**: `transactions` chỉ có INSERT. Lớp domain không có hàm update hay delete; thêm trigger SQLite `BEFORE UPDATE/DELETE` để chặn ở tầng DB.
+- **Sổ cái**: `transactions` chỉ có INSERT. Lớp domain không có hàm update hay delete; thêm trigger PostgreSQL `BEFORE UPDATE OR DELETE ON transactions` gọi một hàm PL/pgSQL luôn `RAISE EXCEPTION`, để chặn ở tầng DB.
 - **Số dư** = `SUM(applied_amount)` theo `child_id`, có index `(child_id)`. Ở quy mô này không cần cột số dư cache, nên tránh được sai lệch giữa hai nguồn.
 - **Số dư không âm** (spec currency-ledger): trong transaction, `applied = max(requested, -currentBalance)` với khoản trừ; lưu cả `requested_amount` và `applied_amount`.
 - **Tên và điểm của rule được chụp lại** vào `description`/`requested_amount` lúc áp dụng, nên sửa rule không ảnh hưởng lịch sử.
 - **Hai kiểu nhiệm vụ** dùng chung bảng `tasks`, phân biệt bằng `mode`:
   - `individual`: mỗi con có dòng `task_days` riêng (`child_id` có giá trị). Nhiệm vụ "riêng cho một con" chính là `individual` với đúng một con được giao.
   - `group`: cả nhóm dùng chung một dòng `task_days` (`child_id IS NULL`); `reported_by_child_id` ghi ai đã báo.
-  - SQLite coi các giá trị NULL là khác nhau trong UNIQUE, nên cần hai partial unique index riêng như trên.
+  - PostgreSQL mặc định coi các giá trị NULL là khác nhau trong UNIQUE, nên cần hai partial unique index riêng như trên.
 - **Con được giao trong một ngày** = nếu `assign_all` thì mọi con chưa lưu trữ, ngược lại thì các dòng `task_assignees` còn hiệu lực trong ngày đó (`effective_from <= date < removed_from`), sau đó loại các con đã lưu trữ. Đổi danh sách con được giao chỉ ghi `removed_from` hoặc thêm dòng mới với `effective_from` là ngày hôm sau, nên lịch sử các ngày cũ không đổi.
 - **Mỗi nhiệm vụ mỗi ngày chỉ cộng một lần**: bảo đảm bằng các unique index trên, cộng với chuyển trạng thái `pending/todo → done` có điều kiện trong cùng transaction với việc ghi giao dịch.
 - **Duyệt nhiệm vụ nhóm**: trong một transaction, chuyển dòng `task_days` của nhóm sang `done`, rồi ghi một giao dịch `+points` loại `task` cho mỗi con bố mẹ chọn, với `ref_type=task_day`. Danh sách con được chọn phải là tập con của danh sách được giao trong ngày đó và không được rỗng.
@@ -120,18 +124,39 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 - **Tương phản**: mọi cặp chữ/nền đạt 4.5:1. Đã đo trên mockup: tất cả đạt, trừ chữ `primary` trên nền `soft` ở sunny (4.25) và ocean (4.27). Quy tắc: trên nền `soft`, `primary` chỉ dùng cho icon/viền (cần ≥ 3:1), chữ dùng `ink`. Unit test kiểm tra danh sách cặp chữ/nền được phép trong `docs/design/README.md` §2 cho từng theme.
 
 ### D7. Test
-- **Vitest** cho lớp domain, dùng SQLite in-memory: số dư không âm, sổ cái chỉ ghi thêm, chỉ cộng một lần mỗi nhiệm vụ mỗi ngày, duyệt đổi thưởng khi số dư đã giảm, phân quyền theo gia đình. Mỗi scenario trong specs nên ứng với ít nhất một test domain hoặc e2e.
+- **Vitest** cho lớp domain, dùng **PGlite** (`@electric-sql/pglite`, PostgreSQL chạy trong tiến trình test, không cần Docker) với cùng migration SQL như production; mỗi file test một instance sạch. Test chống race (hai giao dịch đồng thời trên cùng một con) chạy trên Postgres thật qua `DATABASE_URL_TEST`: ở máy dev là database `my_credit_test` trên container `shared-postgres`, trong CI là service container `postgres:16-alpine` (cùng major với Postgres dev). Các nhóm test chính: số dư không âm, sổ cái chỉ ghi thêm, chỉ cộng một lần mỗi nhiệm vụ mỗi ngày, duyệt đổi thưởng khi số dư đã giảm, phân quyền theo gia đình. Mỗi scenario trong specs nên ứng với ít nhất một test domain hoặc e2e.
 - **Playwright** cho luồng chính (bố mẹ đăng ký → tạo con → con đăng nhập PIN → báo nhiệm vụ → bố mẹ duyệt → con đổi thưởng) và kiểm tra viewport 360px.
 
-### D8. Triển khai tự host
-- `next build` với `output: "standalone"`, chạy bằng `node server.js` dưới systemd, hoặc một Dockerfile mount volume `/data`. Migration chạy tự động khi khởi động.
-- HTTPS do reverse proxy (Caddy hoặc nginx) đảm nhận.
-- Sao lưu: script `scripts/backup.sh` dùng `sqlite3 app.db ".backup ..."`, chạy bằng cron hằng ngày; README hướng dẫn khôi phục.
+### D8. Triển khai: image build trên CI, VPS chỉ chạy, sau Traefik
+- **CI (GitHub Actions, `.github/workflows/ci.yml`)**: khi push lên nhánh chính `master` hoặc tạo tag `v*`: cài đặt, lint, unit test (PGlite), e2e Playwright với service container Postgres, rồi build Docker image multi-stage và push lên `ghcr.io/<owner>/my-credit` với tag `sha-<short>`, `latest` (từ `master`) và `vX.Y.Z` (từ tag). Pull request chỉ chạy kiểm tra, không push image. Đăng nhập GHCR bằng `GITHUB_TOKEN` (quyền `packages: write`). Nền tảng build: `linux/amd64` (thêm `arm64` nếu VPS là ARM).
+- **Image**: `next build` với `output: "standalone"`, base `node:22-alpine`, chạy bằng user không phải root, không có volume (app không giữ trạng thái). Entrypoint chạy migration (D2) rồi `node server.js`. Endpoint `GET /api/health` trả 200 khi truy vấn được DB, dùng cho `HEALTHCHECK` của Docker.
+- **Trên VPS** (repo có mẫu `deploy/compose.yaml` và `deploy/.env.example`; VPS chỉ cần hai file này, không cần mã nguồn):
+  - Image ghim theo tag phiên bản (`vX.Y.Z`), không dùng `latest` trên production.
+  - Không publish port ra host. Container nối vào hai network ngoài (external) có sẵn: network của Traefik (`TRAEFIK_NETWORK`) và network của Postgres (`POSTGRES_NETWORK`); `DATABASE_URL` trỏ tới tên service Postgres trên network đó (ví dụ `postgres://my_credit:…@postgres:5432/my_credit`).
+  - Labels Traefik:
+    ```yaml
+    traefik.enable: "true"
+    traefik.docker.network: ${TRAEFIK_NETWORK}
+    traefik.http.routers.my-credit.rule: Host(`app3.domain.xyz`)
+    traefik.http.routers.my-credit.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+    traefik.http.routers.my-credit.tls.certresolver: ${TRAEFIK_CERTRESOLVER}
+    traefik.http.services.my-credit.loadbalancer.server.port: "3000"
+    ```
+  - Biến môi trường: `DATABASE_URL`, `DATABASE_POOL_MAX` (mặc định 5), `APP_URL=https://app3.domain.xyz`, `NODE_ENV=production`, `PORT=3000`, `HOSTNAME=0.0.0.0`. Bí mật chỉ nằm trong `.env` trên VPS, không nằm trong image hay repo.
+  - Package GHCR riêng tư thì VPS chạy `docker login ghcr.io` một lần bằng token chỉ có quyền `read:packages`.
+- **Sau proxy**: HTTPS kết thúc ở Traefik, nên cookie luôn đặt `Secure` khi `NODE_ENV=production`. Cấu hình `experimental.serverActions.allowedOrigins` từ host của `APP_URL` để kiểm tra Origin của Server Actions không chặn nhầm request đi qua proxy.
+- **Cập nhật (thủ công)**: đổi tag trong `.env` (`IMAGE_TAG`) rồi `docker compose pull && docker compose up -d`. Rollback: đặt lại tag cũ và `up -d`; nếu bản mới đã chạy migration không tương thích ngược thì khôi phục từ bản sao lưu. Migration nên viết theo kiểu chỉ thêm (thêm cột/bảng, không đổi tên hay xóa trong cùng một bản phát hành) để rollback image không cần khôi phục DB.
+- **Khởi tạo lần đầu** (README): trên Postgres tạo `CREATE ROLE my_credit LOGIN PASSWORD '…'; CREATE DATABASE my_credit OWNER my_credit;`, tạo `.env`, `docker compose up -d`; migration tự tạo bảng.
+- **Sao lưu**: `scripts/backup.sh` chạy trên VPS bằng cron hằng ngày: `docker run --rm --network $POSTGRES_NETWORK postgres:<major>-alpine pg_dump -Fc "$DATABASE_URL"` ghi vào `BACKUP_DIR` (tên file kèm ngày), giữ 14 bản gần nhất. `<major>` phải cùng hoặc mới hơn phiên bản server Postgres. README hướng dẫn khôi phục bằng `pg_restore --clean --if-exists` và khuyên chép thư mục sao lưu ra ngoài VPS.
+- **Công cụ quản trị**: `docker compose exec app node scripts/reset-password.js <email>` để đặt lại mật khẩu bố mẹ.
 
 ## Risks / Trade-offs
 
 - [PIN 4 số dễ đoán] → Khóa 5 phút sau 5 lần sai; đăng nhập PIN chỉ hoạt động trên thiết bị đã được bố mẹ bật chế độ gia đình.
-- [Mất file SQLite là mất toàn bộ dữ liệu] → Bật WAL, chạy sao lưu hằng ngày, có tài liệu khôi phục.
+- [Mất dữ liệu khi Postgres hoặc VPS hỏng] → `pg_dump` hằng ngày, giữ 14 bản, khuyên chép ra ngoài VPS; README có hướng dẫn khôi phục.
+- [Postgres dùng chung: app khác chiếm hết kết nối hoặc tài nguyên] → Pool nhỏ (5), role riêng chỉ có quyền trên database của app; `/api/health` báo lỗi để dễ phát hiện.
+- [Image mới chạy migration hỏng] → Migration chạy trước khi server nhận traffic, lỗi thì container dừng; migration chỉ thêm, rollback bằng tag cũ.
+- [Kiểm tra Origin của Server Actions sai khi đi qua proxy] → `allowedOrigins` lấy từ `APP_URL`; e2e trong CI chạy sau một reverse proxy giống production là không bắt buộc, nhưng cần kiểm tra thủ công sau lần deploy đầu.
 - [Tính `SUM` mỗi lần đọc số dư có thể chậm khi sổ cái lớn] → Có index theo `child_id`; ở quy mô gia đình (hàng nghìn dòng) thì không đáng kể. Nếu cần, thêm bảng cache số dư sau.
 - [Quên mật khẩu mà không có email reset] → Bố mẹ khác trong gia đình vẫn đăng nhập được; thêm lệnh CLI `npm run reset-password` cho người host.
 - [Hình chibi cần tài nguyên đồ họa] → MVP dùng bộ SVG tối giản, tách khỏi code qua thư mục theme để thay thế sau mà không sửa logic.
@@ -139,10 +164,11 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 
 ## Migration Plan
 
-Project mới nên không có dữ liệu cũ. Khởi chạy lần đầu sẽ tạo DB và chạy migration Drizzle. Rollback bằng cách dừng tiến trình, khôi phục file DB từ bản sao lưu và chạy lại bản build trước.
+Project mới nên không có dữ liệu cũ. Lần đầu: tạo role và database `my_credit` trên Postgres có sẵn, rồi khởi động container; migration Drizzle tự tạo bảng. Rollback: đặt lại tag image trước đó và `docker compose up -d`; chỉ khi migration không tương thích ngược mới cần `pg_restore` từ bản sao lưu.
 
 ## Open Questions
 
 - Bộ hình chibi chính thức. MVP dùng bộ SVG tự vẽ trong `docs/design/assets/`; có thể đặt vẽ bộ đẹp hơn sau và chỉ thay tài nguyên trong `public/`, không ảnh hưởng spec hay kiến trúc.
 - Các màn chưa có mockup (lịch sử, danh sách rule, quản lý rule và cửa hàng, cài đặt, đăng ký/đăng nhập bố mẹ, màn khóa PIN) làm theo hệ thống trong `docs/design/README.md`; có thể bổ sung mockup trước khi code nếu cần chốt.
-- Tên miền và máy chủ để host. Chỉ ảnh hưởng cấu hình deploy.
+- Tên các network ngoài (Traefik, Postgres), tên entrypoint và certresolver của Traefik trên VPS: để làm biến trong `deploy/.env`, điền khi deploy.
+- Phiên bản major của server Postgres trên VPS: quyết định image `pg_dump` trong `scripts/backup.sh`.

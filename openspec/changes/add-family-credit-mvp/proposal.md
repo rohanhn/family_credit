@@ -41,7 +41,7 @@ Giả định (có thể chỉnh khi review):
 
 ## Impact
 
-- Codebase mới: ứng dụng Next.js (TypeScript) cùng cơ sở dữ liệu SQLite ở thư mục gốc repo.
-- Dependency mới: Next.js/React, thư viện truy cập SQLite + ORM, thư viện băm mật khẩu, framework test.
-- Vận hành: tự host trên một máy chủ hoặc VPS; cần sao lưu file SQLite định kỳ.
+- Codebase mới: ứng dụng Next.js (TypeScript) ở thư mục gốc repo, dữ liệu trong một database PostgreSQL riêng.
+- Dependency mới: Next.js/React, driver PostgreSQL + ORM (Drizzle), thư viện băm mật khẩu, framework test.
+- Vận hành: image Docker build bằng GitHub Actions và lưu trên GHCR; VPS chỉ kéo image về chạy, sau gateway Traefik có sẵn, tại `https://app3.domain.xyz`; dùng server PostgreSQL có sẵn trên VPS với database và role riêng; sao lưu bằng `pg_dump` hằng ngày.
 - Dữ liệu: có thông tin cá nhân của trẻ (tên, avatar). Mật khẩu và PIN phải được băm, không lưu dạng rõ.
