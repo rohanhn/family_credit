@@ -17,6 +17,7 @@
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.5",
+    "pino": "^10.4.0",
     "postgres": "^4.1.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

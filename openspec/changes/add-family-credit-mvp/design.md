@@ -164,8 +164,9 @@ auth_attempts(key, window_start, count)
   - IP client lấy từ `X-Forwarded-For` do Traefik gắn (phần tử cuối). Chỉ tin header này vì container không publish port, mọi request đều qua Traefik.
   - Job dọn dẹp lúc khởi động xóa các dòng có cửa sổ đã quá 1 ngày.
   - Tùy chọn: thêm middleware `ratelimit` của Traefik (theo IP, cho toàn bộ app) làm lớp ngoài chống tràn request.
-- **Header bảo mật**: middleware của Next sinh nonce cho mỗi request và đặt:
-  - `Content-Security-Policy`: `default-src 'self'; script-src 'self' 'nonce-<nonce>' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'`. (`style-src 'unsafe-inline'` cần cho style inline của Next/Tailwind; font tự host qua `next/font` nên không cần nguồn ngoài.)
+- **Header bảo mật**: đặt trong `headers()` của `next.config.ts` cho mọi đường dẫn:
+  - `Content-Security-Policy`: `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests` (khi chạy dev thêm `'unsafe-eval'` cho script và bỏ `upgrade-insecure-requests`). Font tự host qua `next/font` nên không cần nguồn ngoài.
+  - **Không dùng nonce**: theo tài liệu Next 16, CSP có nonce không dùng chung được với Partial Prerendering mà Cache Components bật (script trong khung tĩnh dựng sẵn không có nonce). Đã chọn giữ Cache Components/PPR và dùng CSP không nonce theo hướng dẫn chính thức. Chống XSS dựa vào việc React tự escape và quy tắc: không render HTML từ dữ liệu người dùng (`dangerouslySetInnerHTML` chỉ dùng cho CSS theme sinh từ hằng số). Có thể xem lại SRI (`experimental.sri`) khi tính năng này ổn định.
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains` (chưa preload), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 - **Phiên khi đổi mật khẩu**: đổi mật khẩu xóa mọi `sessions` của bố mẹ đó trừ phiên hiện tại; reset bằng CLI xóa tất cả. Mật khẩu hiện tại được kiểm tra bằng argon2 và tính vào bộ đếm `login:email`.
 - **Log sự kiện bảo mật**: `pino` ghi JSON ra stdout. Sự kiện: `login_failed`, `login_locked`, `signup_limited`, `pin_failed`, `pin_locked`, `device_enabled`, `device_revoked`, `password_changed`, `password_reset`, `invite_created`, `invite_accepted`, `authz_denied`. Mỗi dòng có thời điểm, sự kiện, `familyId`/`subjectId` nếu có, IP. Không bao giờ ghi mật khẩu, PIN, token hay cookie; email chỉ ghi dạng SHA-256. Trong compose đặt `logging: json-file` với `max-size: 10m`, `max-file: 5`.
@@ -186,7 +187,8 @@ auth_attempts(key, window_start, count)
 - [Dò mật khẩu bố mẹ] → Khóa theo email sau 5 lần sai và giới hạn theo IP (D9); thông báo và thời gian phản hồi như nhau với email có hoặc không tồn tại.
 - [Spam tài khoản và lời mời] → Giới hạn đăng ký theo IP và lời mời theo gia đình (D9).
 - [Kẻ tấn công khóa tài khoản của người khác bằng cách cố ý đăng nhập sai] → Chấp nhận: khóa chỉ 15 phút và bố mẹ khác trong gia đình vẫn đăng nhập được; theo dõi qua log `login_locked`.
-- [CSP chặn nhầm script của Next] → Dùng nonce + `strict-dynamic` theo hướng dẫn của Next; e2e chạy với header thật để phát hiện sớm.
+- [CSP không nonce cho phép script inline nên yếu hơn trước XSS] → React tự escape mọi nội dung; không render HTML từ dữ liệu người dùng; các lớp khác vẫn giữ (`frame-ancestors 'none'`, `object-src 'none'`, `base-uri`, `form-action`, cookie `httpOnly`). Xem lại khi Next hỗ trợ nonce cùng PPR hoặc SRI ổn định.
+- [CSP chặn nhầm script của Next] → e2e chạy với header thật và kiểm tra console không có lỗi CSP.
 - [Lộ file sao lưu chứa dữ liệu của trẻ] → Mã hóa bằng `age` trước khi ghi đĩa, private key không nằm trên VPS.
 
 ## Migration Plan
