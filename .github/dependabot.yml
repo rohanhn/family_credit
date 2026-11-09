@@ -6,6 +6,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
+    ignore:
+      # typescript-eslint (qua eslint-config-next) chỉ hỗ trợ TypeScript < 6.1; bỏ dòng này khi nó hỗ trợ bản mới.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Kiểu của Node phải khớp phiên bản Node lúc chạy (node:22-alpine); nâng cùng lúc với image.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]

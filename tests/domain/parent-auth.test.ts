@@ -77,10 +77,11 @@ describe("Đăng nhập bố mẹ", () => {
 
   it("Đăng nhập sai: cùng một thông báo chung cho sai email hay sai mật khẩu", async () => {
     await register();
-    const wrongPw = loginParent(t.db, { email: "me@example.com", password: "sai-mat-khau" }, ctx);
-    const wrongEmail = loginParent(t.db, { email: "khong-co@example.com", password: "matkhau123" }, ctx);
-    await expect(wrongPw).rejects.toMatchObject({ code: "INVALID_CREDENTIALS", message: "Email hoặc mật khẩu không đúng" });
-    await expect(wrongEmail).rejects.toMatchObject({ code: "INVALID_CREDENTIALS", message: "Email hoặc mật khẩu không đúng" });
+    // Chờ từng lời gọi: tạo cả hai promise trước rồi mới await thì promise sau có thể reject khi chưa
+    // có ai bắt (unhandled rejection), làm Vitest báo lỗi ngẫu nhiên tùy tốc độ argon2.
+    const expected = { code: "INVALID_CREDENTIALS", message: "Email hoặc mật khẩu không đúng" };
+    await expect(loginParent(t.db, { email: "me@example.com", password: "sai-mat-khau" }, ctx)).rejects.toMatchObject(expected);
+    await expect(loginParent(t.db, { email: "khong-co@example.com", password: "matkhau123" }, ctx)).rejects.toMatchObject(expected);
   });
 
   it("Đăng nhập sai quá nhiều lần: khóa 15 phút kể cả khi mật khẩu đúng", async () => {
