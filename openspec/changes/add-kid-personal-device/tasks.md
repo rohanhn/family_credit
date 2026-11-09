@@ -24,7 +24,7 @@
 
 ## 5. Lối vào và PWA
 
-- [ ] 5.1 `src/proxy.ts` chuyển trang `/` theo cookie (design D5); `src/app/page.tsx` thêm link dự phòng. Kiểm tra bằng unit test proxy cho bốn trường hợp, và e2e mở `/` trên máy riêng chưa đăng nhập thì tới màn nhập PIN
+- [x] 5.1 `src/proxy.ts` chuyển trang `/` theo cookie (design D5); `src/app/page.tsx` thêm link dự phòng. Kiểm tra bằng unit test proxy cho bốn trường hợp, và e2e mở `/` trên máy riêng chưa đăng nhập thì tới màn nhập PIN
 - [ ] 5.2 Thêm `src/app/manifest.ts`, icon 192/512/maskable và apple-icon (design D6); kiểm tra CSP không chặn manifest. Kiểm tra bằng e2e: `GET /manifest.webmanifest` trả JSON có `display: standalone` và các icon trả 200; Lighthouse/Chrome DevTools báo manifest hợp lệ (thủ công)
 
 ## 6. Tài liệu và tổng kiểm

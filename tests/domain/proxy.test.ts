@@ -36,4 +36,12 @@ describe("proxy gia hạn cookie phiên", () => {
     expect(proxy(request("POST", "mc_parent=p1")).cookies.getAll()).toEqual([]);
     expect(proxy(request("GET", "")).cookies.getAll()).toEqual([]);
   });
+
+  it("Trang gốc chuyển theo cookie: con → /kid/home, thiết bị → /kid, bố mẹ → /parent, không có → /login", () => {
+    const at = (cookie: string) => proxy(new NextRequest("http://localhost/", { headers: { cookie } })).headers.get("location");
+    expect(at("mc_child=c1; mc_device=d1; mc_parent=p1")).toBe("http://localhost/kid/home");
+    expect(at("mc_device=d1; mc_parent=p1")).toBe("http://localhost/kid");
+    expect(at("mc_parent=p1")).toBe("http://localhost/parent");
+    expect(at("")).toBe("http://localhost/login");
+  });
 });

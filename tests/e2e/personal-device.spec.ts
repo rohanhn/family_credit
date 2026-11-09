@@ -89,6 +89,9 @@ test("Máy riêng: con nhập PIN mỗi lần mở lại trình duyệt; phiên 
   const reopened = await browser.newContext();
   await reopened.addCookies(cookies.filter((c) => c.expires > 0));
   const again = await reopened.newPage();
+  // Mở ứng dụng ở trang gốc (như mở từ màn hình chính): tới màn nhập PIN của con.
+  await again.goto("/");
+  await again.waitForURL("**/kid");
   await again.goto("/kid/home");
   await again.waitForURL("**/kid");
   await expect(again.getByRole("button", { name: /^Bin/ })).toBeVisible();

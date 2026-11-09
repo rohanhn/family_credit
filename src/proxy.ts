@@ -9,7 +9,21 @@ import { CHILD_MODE_COOKIE, COOKIE, SESSION_TTL_MS, SLIDING, sessionCookieOption
 // dùng chung hạn thật vẫn do DB quyết định (cố định 90 ngày), nên đặt lại cookie không kéo dài gì.
 const REFRESHED_SUBJECTS = [...(Object.keys(SLIDING) as SessionSubject[]).filter((k) => SLIDING[k]), "device" as const];
 
+/**
+ * Lối vào ở trang gốc (spec "Lối vào ứng dụng", design D5): chỉ dựa vào cookie có mặt, không đọc DB.
+ * Cookie đã hết hiệu lực thì guard ở trang đích chuyển tiếp (`/kid/home` → `/kid` → …).
+ */
+export function entryPath(request: NextRequest): string {
+  if (request.cookies.has(COOKIE.child)) return "/kid/home";
+  if (request.cookies.has(COOKIE.device)) return "/kid";
+  if (request.cookies.has(COOKIE.parent)) return "/parent";
+  return "/login";
+}
+
 export function proxy(request: NextRequest) {
+  if (request.method === "GET" && request.nextUrl.pathname === "/") {
+    return NextResponse.redirect(new URL(entryPath(request), request.url));
+  }
   const response = NextResponse.next();
   if (request.method !== "GET") return response;
   const now = Date.now();
