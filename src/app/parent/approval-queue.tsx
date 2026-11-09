@@ -1,10 +1,12 @@
 import type { ReactNode } from "react";
 import { approveClaimAction, rejectClaimAction } from "@/app/actions/rules";
 import type { DbOrTx } from "@/server/db/types";
+import { listPendingTaskDays } from "@/server/domain/daily-tasks";
 import { listPendingClaims } from "@/server/domain/rule-claims";
-import { formatDateTime, signed } from "@/lib/time";
+import { dateInZone, formatDate, formatDateTime, signed } from "@/lib/time";
 import { Card, Chip } from "@/ui/primitives";
 import { DecisionForm } from "./decision-form";
+import { TaskDecision } from "./task-decision";
 
 // Hàng chờ duyệt chung của gia đình (design D3): gộp các nguồn đang chờ.
 // Task 4.2: khai rule. Nhiệm vụ (5.5) và đổi thưởng (6.2) thêm nguồn vào `loadQueue`.
@@ -21,7 +23,22 @@ export type QueueItem = {
 };
 
 export async function loadQueue(db: DbOrTx, familyId: number, timezone: string): Promise<QueueItem[]> {
-  const claims = await listPendingClaims(db, familyId);
+  const [claims, taskItems] = await Promise.all([listPendingClaims(db, familyId), listPendingTaskDays(db, familyId)]);
+  const today = dateInZone(new Date(), timezone);
+  const tasks: QueueItem[] = taskItems.map((i) => {
+    const reporter = i.members.find((m) => m.id === i.reportedByChildId)?.name;
+    const day = i.date === today ? "" : ` · ngày ${formatDate(i.date)}`;
+    return {
+      key: `task-${i.key}-${i.date}`,
+      tag: i.mode === "group" ? "Nhiệm vụ nhóm" : "Nhiệm vụ",
+      title: i.mode === "group" ? i.name : `${i.members[0]?.name} · ${i.name}`,
+      meta: `${reporter ? `${reporter} báo xong` : "Đã báo xong"}${i.mode === "group" ? ` cho cả nhóm (${i.members.map((m) => m.name).join(", ")})` : ""}${day}`,
+      amount: i.points,
+      amountSuffix: i.mode === "group" ? " mỗi con" : undefined,
+      decision: <TaskDecision taskId={i.taskId} date={i.date} childId={i.childId} members={i.members} pending />,
+      createdAt: new Date(`${i.date}T00:00:00Z`),
+    };
+  });
   const items: QueueItem[] = claims.map((c) => ({
     key: `claim-${c.id}`,
     tag: "Khai rule",
@@ -31,7 +48,7 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     decision: <DecisionForm id={c.id} approve={approveClaimAction} reject={rejectClaimAction} />,
     createdAt: c.createdAt,
   }));
-  return items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  return [...tasks, ...items].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 }
 
 export function ApprovalQueue({ items }: { items: QueueItem[] }) {

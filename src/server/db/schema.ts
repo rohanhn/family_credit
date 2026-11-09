@@ -179,6 +179,8 @@ export const tasks = pgTable(
     weekdaysMask: smallint("weekdays_mask").notNull().default(127),
     effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
     pausedFrom: date("paused_from", { mode: "string" }),
+    /** Sửa nhiệm vụ tạo phiên bản mới có hiệu lực từ hôm sau; bản cũ trỏ sang bản mới (design D3). */
+    replacedByTaskId: ref("replaced_by_task_id").references((): AnyPgColumn => tasks.id),
     createdAt: createdAt(),
   },
   (t) => [

@@ -67,7 +67,7 @@ rule_claims(id, child_id, rule_id, name_snapshot, points_snapshot, note?,
             status[pending|approved|rejected|cancelled], reason?,
             decided_by_parent_id?, created_at, decided_at?)
 tasks(id, family_id, name, points, mode[individual|group], assign_all,
-      weekdays_mask, effective_from, paused_from?)
+      weekdays_mask, effective_from, paused_from?, replaced_by_task_id?)
 task_assignees(task_id, child_id, effective_from, removed_from?)
 task_days(id, task_id, child_id?, date, status[todo|pending|done],
           reported_by_child_id?, reject_reason)
@@ -102,6 +102,7 @@ auth_attempts(key, window_start, count)
 - **Khai rule thưởng** (`rule_claims`): con chỉ tạo được claim cho rule `kind=reward` đang hiện; tên và điểm được chụp lại lúc khai. Duyệt là chuyển trạng thái có điều kiện `pending → approved` (`UPDATE … WHERE status='pending'`, kiểm tra số dòng bị ảnh hưởng), ghi giao dịch `kind=rule` theo `points_snapshot` với `ref_type=rule_claim`, tất cả trong một transaction, nên không duyệt hai lần được. Hàng chờ duyệt của bố mẹ gộp ba nguồn: `task_days` đang chờ, `rule_claims` đang chờ, `redemptions` đang chờ.
 - **Thông báo**: một hàm domain `notifyChild(tx, …)` được gọi **trong cùng transaction** với mọi thao tác ghi giao dịch (`kind` theo dấu của `applied_amount`: dương thì `gift`, âm hoặc phạt có mức thực trừ 0 thì `penalty`) và với mọi thao tác từ chối (`rejected`, kèm lý do). Riêng duyệt đổi thưởng tạo thông báo `gift` ("nhận quà") dù số điểm là âm. Nhờ vậy không có giao dịch nào thiếu thông báo. Thông báo không phải sổ cái: được đánh dấu đọc, và job dọn dẹp lúc khởi động xóa thông báo đã đọc quá 30 ngày.
 - **Cập nhật khi đang mở app**: layout khu vực con có client component gọi Server Action `getUnreadSummary()` mỗi 30 giây (dừng khi tab ẩn, gọi lại khi tab hiện), trả về số chưa đọc và danh sách thông báo chưa đọc. Ở quy mô gia đình, cách hỏi định kỳ này đủ dùng mà không cần WebSocket hay SSE.
+- **Phiên bản nhiệm vụ** (mọi thay đổi có hiệu lực từ hôm sau): nhiệm vụ mới có `effective_from` = ngày mai. Sửa nhiệm vụ đang chạy tạo một dòng `tasks` mới (`effective_from` = ngày mai, chép danh sách con được giao) và đặt cho bản cũ `paused_from` = ngày mai cùng `replaced_by_task_id` trỏ sang bản mới; nên hôm nay và các ngày đã qua vẫn tính theo điểm, tên, ngày áp dụng cũ, còn `task_days` cũ vẫn trỏ đúng bản cũ. Bảng nhiệm vụ của bố mẹ chỉ hiện các dòng có `replaced_by_task_id IS NULL`. Tạm dừng đặt `paused_from` = ngày mai; chạy lại sau khi đã dừng thì tạo phiên bản mới từ ngày mai. Nhiệm vụ "Tất cả các con" giao cho con có hồ sơ tạo trước ngày đó (con mới thấy từ hôm sau).
 - **`task_days` tạo lười**: dòng được tạo khi con báo xong hoặc bố mẹ đánh dấu. Danh sách "hôm nay" được tính từ `tasks` (theo weekdays_mask, effective_from, paused_from và danh sách con được giao) rồi ghép với `task_days`, nên không cần cron.
 
 ### D4. Auth tự làm

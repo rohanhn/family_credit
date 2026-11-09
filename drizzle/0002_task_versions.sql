@@ -1,0 +1,2 @@
+ALTER TABLE "tasks" ADD COLUMN "replaced_by_task_id" bigint;--> statement-breakpoint
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_replaced_by_task_id_tasks_id_fk" FOREIGN KEY ("replaced_by_task_id") REFERENCES "public"."tasks"("id") ON DELETE no action ON UPDATE no action;
