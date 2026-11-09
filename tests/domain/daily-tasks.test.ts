@@ -112,14 +112,36 @@ describe("5.1 Ngày theo múi giờ gia đình và danh sách nhiệm vụ trong
   });
 
   it("Con đã lưu trữ không còn nhiệm vụ; ngày trước vẫn giữ trạng thái", async () => {
-    const { familyId, kids, task, today, kid } = await setup();
+    const { familyId, kids, task, kid, parentInput } = await setup();
     const tk = await task({ name: "Đọc sách", points: 5, assignAll: true });
+    const bin = kids[0].id;
+    nextDay(); // 2026-11-10
+    await reportDone(t.db, kid(bin), tk.id, clock);
+    nextDay(); // 2026-11-11
+    await reportDone(t.db, kid(bin), tk.id, clock);
+    await archiveChild(t.db, familyId, bin, clock);
+
+    // Mục chờ duyệt của ngày trước và của chính ngày lưu trữ vẫn nằm trong hàng chờ duyệt.
+    const pending = (await listPendingTaskDays(t.db, familyId, clock)).filter((i) => i.childId === bin);
+    expect(pending.map((i) => i.date)).toEqual(["2026-11-10", "2026-11-11"]);
+    await approveTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10", childId: bin }, clock);
+    expect((await getDay(t.db, familyId, "2026-11-10")).find((i) => i.childId === bin)?.status).toBe("done");
+    expect(await getBalance(t.db, bin)).toBe(5);
+
+    // Ngày lưu trữ: mục chưa làm của con đó không còn; ngày sau: không còn mục nào của con đó.
+    const archiveDay = await getDay(t.db, familyId, "2026-11-11");
+    expect(archiveDay.filter((i) => i.childId === bin).map((i) => i.status)).toEqual(["pending"]);
     nextDay();
-    await reportDone(t.db, kid(kids[0].id), tk.id, clock);
+    expect((await getDay(t.db, familyId, "2026-11-12")).some((i) => i.childId === bin)).toBe(false);
+  });
+
+  it("Con lưu trữ khi chưa báo xong: ngày lưu trữ không còn mục của con đó", async () => {
+    const { familyId, kids, task } = await setup();
+    await task({ name: "Đọc sách", points: 5, assignAll: true });
+    nextDay();
     await archiveChild(t.db, familyId, kids[0].id, clock);
-    expect(await today(kids[0].id)).toEqual([]);
-    nextDay();
-    expect((await getDay(t.db, familyId, "2026-11-11")).some((i) => i.childId === kids[0].id)).toBe(false);
+    expect((await getDay(t.db, familyId, "2026-11-10")).some((i) => i.childId === kids[0].id)).toBe(false);
+    expect((await getDay(t.db, familyId, "2026-11-10")).some((i) => i.childId === kids[1].id)).toBe(true);
   });
 });
 

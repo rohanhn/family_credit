@@ -82,7 +82,7 @@ function membersOn(task: Task, date: string, kids: Kid[], assignees: (typeof tas
 
 /**
  * Danh sách nhiệm vụ của gia đình trong một ngày: nhiệm vụ còn hiệu lực, đúng ngày trong tuần, chưa
- * tạm dừng, với các con chưa lưu trữ; ghép với trạng thái đã lưu trong task_days.
+ * tạm dừng, với các con chưa lưu trữ vào ngày đó; ghép với trạng thái đã lưu trong task_days.
  */
 export async function getDay(db: DbOrTx, familyId: number, date: string): Promise<DayItem[]> {
   const tz = await familyTz(db, familyId);
@@ -101,20 +101,31 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
     .orderBy(asc(tasks.id));
   if (active.length === 0) return [];
 
-  const kids = await db
-    .select({ id: children.id, name: children.name, createdAt: children.createdAt })
+  const allKids = await db
+    .select({ id: children.id, name: children.name, createdAt: children.createdAt, archivedAt: children.archivedAt })
     .from(children)
-    .where(and(eq(children.familyId, familyId), isNull(children.archivedAt)))
+    .where(eq(children.familyId, familyId))
     .orderBy(asc(children.id));
+  // Con đã lưu trữ vẫn thuộc những ngày trước ngày lưu trữ, để trạng thái các ngày đó được giữ
+  // (spec daily-tasks "Con đã lưu trữ"). Từ ngày lưu trữ trở đi con không còn được giao.
+  const kids = allKids.filter((k) => k.archivedAt === null || date < dateInZone(k.archivedAt, tz));
   const ids = active.map((t) => t.id);
   const [assignees, days] = await Promise.all([
     db.select().from(taskAssignees).where(inArray(taskAssignees.taskId, ids)),
     db.select().from(taskDays).where(and(inArray(taskDays.taskId, ids), eq(taskDays.date, date))),
   ]);
+  // Ngày lưu trữ: mục riêng con đã báo xong hoặc đã được duyệt trước lúc lưu trữ vẫn hiện, để bố mẹ
+  // duyệt được việc con đã làm.
+  const archivedToday = allKids.filter((k) => k.archivedAt !== null && date === dateInZone(k.archivedAt, tz));
 
   const items: DayItem[] = [];
   for (const task of active) {
     const members = membersOn(task, date, kids, assignees, tz);
+    if (task.mode === "individual") {
+      for (const k of membersOn(task, date, archivedToday, assignees, tz)) {
+        if (days.some((d) => d.taskId === task.id && d.childId === k.id && d.status !== "todo")) members.push(k);
+      }
+    }
     if (members.length === 0) continue;
     const base = { taskId: task.id, name: task.name, points: task.points, mode: task.mode, date };
     if (task.mode === "group") {
