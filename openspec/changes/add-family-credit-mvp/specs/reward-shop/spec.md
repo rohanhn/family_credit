@@ -25,7 +25,7 @@ Con SHALL thấy các phần thưởng đang hiện kèm giá. Phần thưởng 
 - **THEN** phần thưởng giá 50 có nút "Đổi", còn phần thưởng giá 200 hiển thị "Còn thiếu 140"
 
 ### Requirement: Con gửi yêu cầu đổi thưởng
-Con SHALL gửi yêu cầu đổi một phần thưởng khi số dư lớn hơn hoặc bằng giá. Yêu cầu ghi lại giá tại thời điểm gửi và có trạng thái "chờ duyệt". Gửi yêu cầu MUST NOT trừ điểm. Con SHALL hủy được yêu cầu đang chờ duyệt.
+Con SHALL gửi yêu cầu đổi một phần thưởng đang hiện khi số dư lớn hơn hoặc bằng giá; số dư được so trực tiếp với giá, không trừ đi các yêu cầu khác đang chờ. Yêu cầu ghi lại tên và giá tại thời điểm gửi và có trạng thái "chờ duyệt". Gửi yêu cầu MUST NOT trừ điểm. Mỗi con MUST có tối đa một yêu cầu đang chờ duyệt cho mỗi phần thưởng. Con SHALL hủy được yêu cầu đang chờ duyệt.
 
 #### Scenario: Gửi yêu cầu
 - **WHEN** con có 60 điểm bấm "Đổi" phần thưởng giá 50
@@ -35,12 +35,16 @@ Con SHALL gửi yêu cầu đổi một phần thưởng khi số dư lớn hơn
 - **WHEN** con có 30 điểm cố đổi phần thưởng giá 50
 - **THEN** hệ thống từ chối
 
+#### Scenario: Đã có yêu cầu đang chờ cho phần thưởng đó
+- **WHEN** con đã có một yêu cầu đang chờ duyệt cho "Kem ốc quế" và gửi thêm một yêu cầu nữa cho "Kem ốc quế"
+- **THEN** hệ thống từ chối, và phần thưởng đó hiển thị "Chờ duyệt" thay cho nút "Đổi"
+
 #### Scenario: Hủy yêu cầu
 - **WHEN** con hủy một yêu cầu đang chờ duyệt
 - **THEN** yêu cầu chuyển sang "đã hủy" và không có giao dịch nào được ghi
 
 ### Requirement: Bố mẹ duyệt yêu cầu đổi thưởng
-Bố mẹ SHALL thấy các yêu cầu đổi đang chờ duyệt và duyệt hoặc từ chối (kèm lý do tùy chọn). Khi duyệt, hệ thống SHALL ghi giao dịch loại "đổi thưởng" trừ đúng giá đã ghi trong yêu cầu. Nếu số dư lúc duyệt nhỏ hơn giá, hệ thống MUST từ chối thao tác duyệt.
+Bố mẹ SHALL thấy các yêu cầu đổi đang chờ duyệt và duyệt hoặc từ chối (kèm lý do tùy chọn). Khi duyệt, hệ thống SHALL ghi giao dịch loại "đổi thưởng" trừ đúng giá đã ghi trong yêu cầu, với tên đã ghi trong yêu cầu. Bố mẹ SHALL duyệt hoặc từ chối được yêu cầu kể cả khi phần thưởng đã bị sửa hoặc bị ẩn sau khi con gửi. Nếu số dư lúc duyệt nhỏ hơn giá, hệ thống MUST từ chối thao tác duyệt.
 
 #### Scenario: Duyệt yêu cầu
 - **WHEN** bố mẹ duyệt yêu cầu đổi "30 phút chơi game" giá 50 của con đang có 60 điểm
@@ -50,12 +54,16 @@ Bố mẹ SHALL thấy các yêu cầu đổi đang chờ duyệt và duyệt ho
 - **WHEN** con có hai yêu cầu chờ duyệt, mỗi cái giá 50, số dư 60, và bố mẹ đã duyệt yêu cầu thứ nhất
 - **THEN** thao tác duyệt yêu cầu thứ hai bị từ chối vì số dư 10 không đủ, và bố mẹ được báo lý do
 
+#### Scenario: Phần thưởng bị sửa hoặc ẩn trong lúc chờ
+- **WHEN** con gửi yêu cầu đổi "Kem ốc quế" giá 80, sau đó bố mẹ đổi tên thành "Kem que", tăng giá lên 100 rồi ẩn phần thưởng, và cuối cùng duyệt yêu cầu
+- **THEN** giao dịch trừ 80 với tên "Kem ốc quế"
+
 #### Scenario: Từ chối yêu cầu
 - **WHEN** bố mẹ từ chối một yêu cầu với lý do "Tối nay không chơi game"
 - **THEN** yêu cầu chuyển sang "bị từ chối", con thấy lý do, và số dư không đổi
 
 ### Requirement: Mục tiêu tiết kiệm
-Con SHALL chọn một phần thưởng đang hiện làm mục tiêu. Màn hình của con SHALL hiển thị tiến độ là số dư trên giá mục tiêu, giới hạn ở 100%. Nếu phần thưởng mục tiêu bị ẩn, mục tiêu MUST được bỏ chọn.
+Con SHALL chọn một phần thưởng đang hiện làm mục tiêu. Màn hình của con SHALL hiển thị tiến độ là số dư trên giá mục tiêu, giới hạn ở 100%. Nếu phần thưởng mục tiêu bị ẩn, mục tiêu MUST được bỏ chọn; hiện lại phần thưởng không tự chọn lại mục tiêu. Đổi thành công phần thưởng mục tiêu MUST NOT bỏ chọn mục tiêu.
 
 #### Scenario: Chọn mục tiêu
 - **WHEN** con có 40 điểm chọn phần thưởng "Đi công viên" giá 200 làm mục tiêu
@@ -68,3 +76,7 @@ Con SHALL chọn một phần thưởng đang hiện làm mục tiêu. Màn hìn
 #### Scenario: Mục tiêu bị ẩn
 - **WHEN** bố mẹ ẩn phần thưởng đang là mục tiêu của một con
 - **THEN** con đó không còn mục tiêu và được gợi ý chọn mục tiêu mới
+
+#### Scenario: Đổi thành công phần thưởng mục tiêu
+- **WHEN** bố mẹ duyệt yêu cầu đổi đúng phần thưởng đang là mục tiêu của con
+- **THEN** phần thưởng đó vẫn là mục tiêu của con, và tiến độ tính lại theo số dư mới

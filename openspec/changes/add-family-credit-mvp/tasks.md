@@ -42,7 +42,7 @@
 
 ## 6. Cửa hàng đổi thưởng (reward-shop)
 
-- [ ] 6.1 Viết domain cửa hàng: quản lý phần thưởng, gửi/hủy yêu cầu (kiểm tra số dư, chụp lại giá), duyệt (kiểm tra lại số dư trong transaction, trừ theo giá đã chụp, tạo thông báo "nhận quà")/từ chối (tạo thông báo `rejected`), mục tiêu tiết kiệm (bỏ chọn khi phần thưởng bị ẩn); kiểm tra bằng unit test cho mọi scenario trong `specs/reward-shop`, gồm cả hai yêu cầu cùng chờ duyệt khi số dư đã giảm
+- [x] 6.1 Viết domain cửa hàng: quản lý phần thưởng, gửi/hủy yêu cầu (kiểm tra số dư, chụp lại tên và giá, tối đa một yêu cầu đang chờ mỗi phần thưởng; thêm cột `redemptions.name_snapshot` và partial unique index bằng migration mới), duyệt (kiểm tra lại số dư trong transaction, trừ theo giá đã chụp, tạo thông báo "nhận quà")/từ chối (tạo thông báo `rejected`), mục tiêu tiết kiệm (bỏ chọn khi phần thưởng bị ẩn); kiểm tra bằng unit test cho mọi scenario trong `specs/reward-shop`, gồm cả hai yêu cầu cùng chờ duyệt khi số dư đã giảm
 - [ ] 6.2 Làm UI (theo mockup `KidShop` / `WebKidShop`, `ParentDashboard`): bố mẹ quản lý phần thưởng và hàng chờ duyệt đổi thưởng; con xem cửa hàng (đủ hoặc "Còn thiếu N"), gửi/hủy yêu cầu, chọn mục tiêu; kiểm tra thủ công luồng đổi thưởng → duyệt → số dư giảm
 
 ## 7. Theme và màn hình con (ui-theme)

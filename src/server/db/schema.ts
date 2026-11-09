@@ -245,6 +245,7 @@ export const redemptions = pgTable(
     rewardId: ref("reward_id")
       .notNull()
       .references(() => rewards.id),
+    nameSnapshot: text("name_snapshot").notNull(),
     priceSnapshot: integer("price_snapshot").notNull(),
     status: text("status", { enum: REQUEST_STATUSES }).notNull().default("pending"),
     reason: text("reason"),
@@ -256,6 +257,8 @@ export const redemptions = pgTable(
     check("redemptions_status", inList("status", REQUEST_STATUSES)),
     check("redemptions_price_positive", sql`${t.priceSnapshot} > 0`),
     index("redemptions_child_status_idx").on(t.childId, t.status),
+    // Mỗi con tối đa một yêu cầu đang chờ cho mỗi phần thưởng (spec reward-shop).
+    uniqueIndex("redemptions_pending_uq").on(t.childId, t.rewardId).where(sql`${t.status} = 'pending'`),
   ],
 );
 

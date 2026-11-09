@@ -1,0 +1,2 @@
+ALTER TABLE "redemptions" ADD COLUMN "name_snapshot" text NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "redemptions_pending_uq" ON "redemptions" USING btree ("child_id","reward_id") WHERE "redemptions"."status" = 'pending';
