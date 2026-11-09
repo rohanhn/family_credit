@@ -1,6 +1,25 @@
 # Secrets
 .env
 .env.*
+!.env.example
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+
+# Test
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Sao lưu database (scripts/backup.sh)
+backups/
 
 # Python
 __pycache__/

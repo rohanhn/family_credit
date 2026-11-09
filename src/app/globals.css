@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Token theme (--bg, --primary...) được sinh từ src/ui/themes.ts trong root layout.
+   Ở đây chỉ map chúng sang màu Tailwind, cộng các màu trạng thái cố định
+   (docs/design/README.md §2). */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-soft: var(--soft);
+  --color-halo: var(--ring);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+
+  --color-done-bg: #dcf5e3;
+  --color-done-fg: #166534;
+  --color-wait-bg: #fff1c2;
+  --color-wait-fg: #7a4a00;
+  --color-reward-bg: #dcf5e3;
+  --color-reward-on: #14532d;
+  --color-penalty-bg: #fde2e1;
+  --color-penalty-on: #8a1c1c;
+  --color-plus: #15803d;
+  --color-minus: #b91c1c;
+  --color-coin: #ffc531;
+  --color-coin-edge: #8a5a00;
+
+  --font-sans: var(--font-nunito), system-ui, sans-serif;
+  --font-display: var(--font-baloo), var(--font-nunito), system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* Bóng phẳng phía dưới cho thẻ và nút (README §4). */
+@utility shadow-flat {
+  box-shadow: 0 3px 0 rgb(0 0 0 / 0.05);
+}
+@utility shadow-press {
+  box-shadow: 0 3px 0 rgb(0 0 0 / 0.18);
+}

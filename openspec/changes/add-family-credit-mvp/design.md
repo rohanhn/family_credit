@@ -56,8 +56,10 @@ Quy mô dự kiến: vài gia đình, mỗi gia đình vài người, nên lư�
 ```
 families(id, name, currency_name, currency_icon, timezone, default_theme,
          sound_enabled DEFAULT true)
-parents(id, family_id?, email UNIQUE, password_hash)
-invites(id, family_id, token_hash, expires_at, used_at)
+parents(id, family_id?, email UNIQUE, display_name, password_hash)
+  -- display_name ("Bố", "Mẹ"…) hiện ở cột "người thực hiện" trong lịch sử
+invites(id, family_id, created_by_parent_id, token_hash UNIQUE, expires_at,
+        used_at?, used_by_parent_id?)
 children(id, family_id, name, avatar, pin_hash, theme?, goal_reward_id?,
          archived_at, failed_pin_count, locked_until)
 rules(id, family_id, name, kind[reward|penalty], points, icon, hidden)
@@ -73,7 +75,8 @@ task_days(id, task_id, child_id?, date, status[todo|pending|done],
   -- group:      UNIQUE(task_id, date) WHERE child_id IS NULL
 rewards(id, family_id, name, price, icon, description, hidden)
 redemptions(id, child_id, reward_id, price_snapshot,
-            status[pending|approved|rejected|cancelled], reason)
+            status[pending|approved|rejected|cancelled], reason,
+            decided_by_parent_id?, created_at, decided_at?)
 transactions(id, family_id, child_id, kind[rule|task|adhoc|redeem|adjust],
              requested_amount, applied_amount, description,
              actor_parent_id, ref_type?, ref_id?, created_at)
@@ -84,6 +87,7 @@ sessions(id_hash, subject_type[parent|device|child], subject_id, expires_at)
 auth_attempts(key, window_start, count)
   -- PRIMARY KEY (key, window_start); bộ đếm rate limit, xem D9
 ```
+- Các bảng đều có `created_at`. Nguồn chuẩn của cột, CHECK và index là `src/server/db/schema.ts`; `transactions` có CHECK bảo đảm `applied_amount` cùng dấu và không vượt `requested_amount`.
 - **Sổ cái**: `transactions` chỉ có INSERT. Lớp domain không có hàm update hay delete; thêm trigger PostgreSQL `BEFORE UPDATE OR DELETE ON transactions` gọi một hàm PL/pgSQL luôn `RAISE EXCEPTION`, để chặn ở tầng DB.
 - **Số dư** = `SUM(applied_amount)` theo `child_id`, có index `(child_id)`. Ở quy mô này không cần cột số dư cache, nên tránh được sai lệch giữa hai nguồn.
 - **Số dư không âm** (spec currency-ledger): trong transaction, `applied = max(requested, -currentBalance)` với khoản trừ; lưu cả `requested_amount` và `applied_amount`.
