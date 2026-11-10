@@ -86,4 +86,16 @@ describe("Mời bố mẹ khác", () => {
     clock.advance(DAY);
     await expect(createInvite(t.db, { parentId: bo, familyId: family.id }, clock)).resolves.toBeTruthy();
   });
+
+  it("Giới hạn lời mời theo cửa sổ 24 giờ cố định theo UTC (00:00–24:00 UTC), không theo ngày của gia đình", async () => {
+    clock.set("2026-11-09T00:30:00Z"); // 07:30 giờ Việt Nam
+    const { bo, family } = await familyWithInvite(); // lời mời thứ 1
+    for (let i = 0; i < 9; i++) await createInvite(t.db, { parentId: bo, familyId: family.id }, clock);
+    // 23:59 UTC: vẫn cùng cửa sổ (dù đã sang ngày 10/11 theo giờ Việt Nam).
+    clock.set("2026-11-09T23:59:00Z");
+    await expect(createInvite(t.db, { parentId: bo, familyId: family.id }, clock)).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    // 00:00 UTC: cửa sổ mới.
+    clock.set("2026-11-10T00:00:00Z");
+    await expect(createInvite(t.db, { parentId: bo, familyId: family.id }, clock)).resolves.toBeTruthy();
+  });
 });

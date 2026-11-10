@@ -41,7 +41,7 @@
 ## 8. Test bổ sung
 
 - [x] 8.1 Thêm test race trên Postgres thật (design D11): hai lần duyệt đổi thưởng đồng thời; duyệt đổi thưởng song song với phạt; hai bố mẹ duyệt cùng một khai rule; hai bố mẹ duyệt cùng một nhiệm vụ trong ngày. Kiểm tra `npx vitest run tests/db` pass
-- [ ] 8.2 Thêm e2e phiên con gọi Server Action của bố mẹ, chuyển sang test tầng action nếu cách gửi POST không ổn định (design Risks). Thêm unit test giới hạn 10 lời mời mỗi 24 giờ. Kiểm tra toàn bộ `npm test`, `npm run lint` và `npm run test:e2e` pass
+- [x] 8.2 Thêm e2e phiên con gọi Server Action của bố mẹ, chuyển sang test tầng action nếu cách gửi POST không ổn định (design Risks). Thêm unit test giới hạn 10 lời mời mỗi 24 giờ. Kiểm tra toàn bộ `npm test`, `npm run lint` và `npm run test:e2e` pass
 
 ## Workflow follow-up
 
