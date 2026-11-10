@@ -1,4 +1,4 @@
-import { DAY, HOUR } from "../clock";
+import { DAY, HOUR, MINUTE } from "../clock";
 
 // Tên cookie, thời hạn và thuộc tính cookie phiên (design D4). Không phụ thuộc DB, nên dùng được cả
 // trong `src/proxy.ts`.
@@ -18,6 +18,13 @@ export const SESSION_TTL_MS: Record<SessionSubject, number> = {
  * (tự gia hạn) làm chốt chặn phía server (design D2 của change add-kid-personal-device).
  */
 export const PERSONAL_CHILD_TTL_MS = 30 * DAY;
+
+/**
+ * Phiên bố mẹ đăng nhập trên thiết bị đang bật chế độ gia đình (máy dùng chung hoặc máy riêng của
+ * con): hết hạn sau 15 phút không thao tác, còn dùng thì tự gia hạn (design D1, D2 của change
+ * polish-after-mvp).
+ */
+export const PARENT_ON_FAMILY_DEVICE_TTL_MS = 15 * MINUTE;
 
 /**
  * Phiên bố mẹ và con được gia hạn khi còn dùng. Phiên thiết bị dùng chung có hạn cố định; phiên

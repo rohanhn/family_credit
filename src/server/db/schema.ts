@@ -338,6 +338,8 @@ export const sessions = pgTable(
     /** Chỉ với phiên device: con sở hữu máy riêng; null là máy dùng chung của gia đình. */
     deviceChildId: ref("device_child_id").references(() => children.id),
     expiresAt: ts("expires_at").notNull(),
+    /** Thời hạn riêng của phiên (ms), dùng khi gia hạn; null là thời hạn mặc định của loại phiên. */
+    ttlMs: bigint("ttl_ms", { mode: "number" }),
     createdAt: createdAt(),
   },
   (t) => [

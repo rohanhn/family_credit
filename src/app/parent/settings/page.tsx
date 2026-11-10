@@ -7,6 +7,7 @@ import { requireParentWithFamily } from "@/server/auth/next";
 import { listChildren } from "@/server/domain/children";
 import { CURRENCY_ICONS, getCurrency } from "@/server/domain/currency";
 import { getFamily, listParents } from "@/server/domain/families";
+import { formatInstantDate } from "@/lib/time";
 import { Button, Card } from "@/ui/primitives";
 import { AddChildForm, ChangePasswordForm, ChildRow, CurrencyForm, DeviceRow, FamilySoundForm, FamilyThemeForm, InviteBox } from "./settings-forms";
 
@@ -46,7 +47,7 @@ async function Settings() {
                 id: k.id,
                 name: k.name,
                 avatar: k.avatar,
-                pinChangedAt: k.pinChangedAt ? k.pinChangedAt.toLocaleDateString("vi-VN", { timeZone: family.timezone }) : null,
+                pinChangedAt: k.pinChangedAt ? formatInstantDate(k.pinChangedAt, family.timezone) : null,
               }}
             />
           ))}
@@ -67,7 +68,13 @@ async function Settings() {
               devices.map((d) => (
                 <DeviceRow
                   key={d.id}
-                  device={{ id: d.id, kind: d.kind, childName: d.childName, createdAt: d.createdAt.toISOString(), expiresAt: d.expiresAt.toISOString() }}
+                  device={{
+                    id: d.id,
+                    kind: d.kind,
+                    childName: d.childName,
+                    enabledOn: formatInstantDate(d.createdAt, family.timezone),
+                    expiresOn: formatInstantDate(d.expiresAt, family.timezone),
+                  }}
                 />
               ))
             )}

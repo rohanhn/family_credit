@@ -9,7 +9,7 @@ import { addDays, dateInZone, formatDate, isDateString, weekdayIndex } from "@/l
 import { ParentColumns } from "@/ui/parent-shell";
 import { Button, Card, Chip } from "@/ui/primitives";
 import { TaskDecision } from "../task-decision";
-import { TaskForm, TaskRow } from "./task-form";
+import { TaskCard, TaskForm, TaskRow } from "./task-form";
 
 export const metadata: Metadata = { title: "Nhiệm vụ · Sao nhà mình" };
 
@@ -46,6 +46,31 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
 
   const [kids, list, day] = await Promise.all([listChildren(db, auth.familyId), listTasks(db, auth.familyId), getDay(db, auth.familyId, date)]);
   const kidOptions = kids.map((k) => ({ id: k.id, name: k.name }));
+  const items = list.map((tk) => ({
+    id: tk.id,
+    task: {
+      taskId: tk.id,
+      name: tk.name,
+      points: tk.points,
+      weekdays: weekdaysFromMask(tk.weekdaysMask),
+      mode: tk.mode,
+      assignAll: tk.assignAll,
+      childIds: tk.assignees.map((a) => a.id),
+      paused: tk.state === "paused",
+    },
+    info: {
+      name: tk.name,
+      points: `+${tk.points}`,
+      days: daysLabel(tk.weekdaysMask),
+      assignees: tk.assignAll ? "Tất cả các con" : tk.assignees.map((a) => a.name).join(", "),
+      mode: <Chip>{tk.mode === "group" ? "Cả nhóm làm chung" : tk.assignAll || tk.assignees.length > 1 ? "Mỗi con làm riêng" : "Riêng một con"}</Chip>,
+      state: (
+        <Chip tone={tk.state === "active" ? "done" : tk.state === "paused" ? "soft" : "wait"}>
+          {tk.state === "active" ? "Đang chạy" : tk.state === "paused" ? "Tạm dừng" : `Từ ${formatDate(tk.effectiveFrom).slice(0, 5)}`}
+        </Chip>
+      ),
+    },
+  }));
 
   return (
     <ParentColumns
@@ -55,55 +80,71 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
           {list.length === 0 ? (
             <Card className="font-semibold text-muted">Chưa có nhiệm vụ nào. Tạo nhiệm vụ ở cột bên cạnh.</Card>
           ) : (
-            <div className="overflow-x-auto rounded-[22px] bg-card shadow-flat">
-              <table className="w-full min-w-[560px] border-collapse text-[15px]">
-                <thead>
-                  <tr className="text-left text-xs font-extrabold tracking-wide text-muted">
-                    {COLUMNS.map((h) => (
-                      <th key={h} scope="col" className={`whitespace-nowrap border-b border-black/5 px-3.5 py-3 ${h === "THAO TÁC" ? "text-right" : ""}`}>
-                        {h}
-                      </th>
+            <>
+              {/* Hai cách trình bày từ cùng dữ liệu (design D4): cách bị ẩn có display:none nên không trùng nút. */}
+              <div className="hidden overflow-x-auto rounded-[22px] bg-card shadow-flat md:block">
+                <table className="w-full min-w-[560px] border-collapse text-[15px]">
+                  <thead>
+                    <tr className="text-left text-xs font-extrabold tracking-wide text-muted">
+                      {COLUMNS.map((h) => (
+                        <th key={h} scope="col" className={`whitespace-nowrap border-b border-black/5 px-3.5 py-3 ${h === "THAO TÁC" ? "text-right" : ""}`}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map(({ id, task, info }) => (
+                      <TaskRow
+                        key={id}
+                        colSpan={COLUMNS.length}
+                        kids={kidOptions}
+                        startLabel={startLabel}
+                        task={task}
+                        cells={
+                          <>
+                            <td className="font-extrabold">{info.name}</td>
+                            <td className="font-display text-lg font-extrabold text-primary">{info.points}</td>
+                            <td className="whitespace-nowrap font-bold text-muted">{info.days}</td>
+                            <td className="font-bold">{info.assignees}</td>
+                            <td>{info.mode}</td>
+                            <td className="whitespace-nowrap">{info.state}</td>
+                          </>
+                        }
+                      />
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((tk) => (
-                    <TaskRow
-                      key={tk.id}
-                      colSpan={COLUMNS.length}
-                      kids={kidOptions}
-                      startLabel={startLabel}
-                      task={{
-                        taskId: tk.id,
-                        name: tk.name,
-                        points: tk.points,
-                        weekdays: weekdaysFromMask(tk.weekdaysMask),
-                        mode: tk.mode,
-                        assignAll: tk.assignAll,
-                        childIds: tk.assignees.map((a) => a.id),
-                        paused: tk.state === "paused",
-                      }}
-                      cells={
-                        <>
-                          <td className="font-extrabold">{tk.name}</td>
-                          <td className="font-display text-lg font-extrabold text-primary">+{tk.points}</td>
-                          <td className="whitespace-nowrap font-bold text-muted">{daysLabel(tk.weekdaysMask)}</td>
-                          <td className="font-bold">{tk.assignAll ? "Tất cả các con" : tk.assignees.map((a) => a.name).join(", ")}</td>
-                          <td>
-                            <Chip>{tk.mode === "group" ? "Cả nhóm làm chung" : tk.assignAll || tk.assignees.length > 1 ? "Mỗi con làm riêng" : "Riêng một con"}</Chip>
-                          </td>
-                          <td className="whitespace-nowrap">
-                            <Chip tone={tk.state === "active" ? "done" : tk.state === "paused" ? "soft" : "wait"}>
-                              {tk.state === "active" ? "Đang chạy" : tk.state === "paused" ? "Tạm dừng" : `Từ ${formatDate(tk.effectiveFrom).slice(0, 5)}`}
-                            </Chip>
-                          </td>
-                        </>
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </tbody>
+                </table>
+              </div>
+              <ul aria-label="Danh sách nhiệm vụ" className="flex flex-col gap-3 md:hidden">
+                {items.map(({ id, task, info }) => (
+                  <TaskCard
+                    key={id}
+                    kids={kidOptions}
+                    startLabel={startLabel}
+                    task={task}
+                    body={
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="min-w-0 break-words text-[17px] font-extrabold">{info.name}</span>
+                          <span className="shrink-0 font-display text-lg font-extrabold text-primary">{info.points}</span>
+                        </div>
+                        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[15px]">
+                          <dt className="font-extrabold text-muted">Ngày</dt>
+                          <dd className="font-bold">{info.days}</dd>
+                          <dt className="font-extrabold text-muted">Giao cho</dt>
+                          <dd className="min-w-0 break-words font-bold">{info.assignees}</dd>
+                        </dl>
+                        <div className="flex flex-wrap gap-1.5">
+                          {info.mode}
+                          {info.state}
+                        </div>
+                      </div>
+                    }
+                  />
+                ))}
+              </ul>
+            </>
           )}
           <p className="text-[13px] font-semibold text-muted">Mọi thay đổi (sửa điểm, tạm dừng, đổi người được giao) có hiệu lực từ ngày hôm sau.</p>
 

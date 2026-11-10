@@ -133,50 +133,76 @@ export function TaskForm({
  * Một dòng của bảng nhiệm vụ: các ô thông tin (render ở server) và cột thao tác căn phải. Bấm "Sửa" thì form sửa
  * hiện ở một dòng riêng rộng hết bảng ngay bên dưới, để cột thao tác không bị kéo giãn và các dòng vẫn thẳng hàng.
  */
-export function TaskRow({
-  cells,
-  colSpan,
-  task,
-  kids,
-  startLabel,
-}: {
-  cells: ReactNode;
-  colSpan: number;
-  task: TaskFormValue & { taskId: number; paused: boolean };
-  kids: { id: number; name: string }[];
-  startLabel: string;
-}) {
+type TaskActionTarget = TaskFormValue & { taskId: number; paused: boolean };
+
+/** Trạng thái thao tác của một nhiệm vụ (sửa, tạm dừng, chạy lại), dùng chung cho dòng bảng và thẻ (design D4). */
+export function useTaskActions() {
   const [editing, setEditing] = useState(false);
   const [pState, pause] = useActionState(pauseTaskAction, undefined);
   const [rState, resume] = useActionState(resumeTaskAction, undefined);
+  return { editing, setEditing, pause, resume, message: pState ?? rState };
+}
+
+type TaskActions = ReturnType<typeof useTaskActions>;
+
+/** Hai nút "Sửa"/"Đóng" và "Tạm dừng"/"Chạy lại", kèm thông báo kết quả. */
+function TaskActionButtons({ task, actions, align }: { task: TaskActionTarget; actions: TaskActions; align: "start" | "end" }) {
+  return (
+    <div className={`flex flex-col gap-2 ${align === "end" ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-nowrap gap-2 whitespace-nowrap ${align === "end" ? "justify-end" : ""}`}>
+        <Button variant="outline" onClick={() => actions.setEditing(!actions.editing)} aria-expanded={actions.editing}>
+          {actions.editing ? "Đóng" : "Sửa"}
+        </Button>
+        <form action={task.paused ? actions.resume : actions.pause}>
+          <input type="hidden" name="taskId" value={task.taskId} />
+          <SubmitButton variant="soft">{task.paused ? "Chạy lại" : "Tạm dừng"}</SubmitButton>
+        </form>
+      </div>
+      <FormMessage state={actions.message} />
+    </div>
+  );
+}
+
+function EditPanel({ task, kids, startLabel, actions }: { task: TaskActionTarget; kids: { id: number; name: string }[]; startLabel: string; actions: TaskActions }) {
+  return (
+    <div className="rounded-2xl bg-bg p-3">
+      <TaskForm kids={kids} initial={task} startLabel={startLabel} onDone={() => actions.setEditing(false)} />
+    </div>
+  );
+}
+
+type TaskItemProps = { task: TaskActionTarget; kids: { id: number; name: string }[]; startLabel: string };
+
+/** Dòng nhiệm vụ trong bảng (màn hình từ 768px); form sửa hiện ở dòng riêng bên dưới. */
+export function TaskRow({ cells, colSpan, ...props }: TaskItemProps & { cells: ReactNode; colSpan: number }) {
+  const actions = useTaskActions();
   return (
     <>
-      <tr className={`align-top [&>td]:px-3.5 [&>td]:py-3 ${editing ? "" : "[&>td]:border-b [&>td]:border-black/5"}`}>
+      <tr className={`align-top [&>td]:px-3.5 [&>td]:py-3 ${actions.editing ? "" : "[&>td]:border-b [&>td]:border-black/5"}`}>
         {cells}
         <td>
-          <div className="flex flex-col items-end gap-2">
-            <div className="flex flex-nowrap justify-end gap-2 whitespace-nowrap">
-              <Button variant="outline" onClick={() => setEditing(!editing)} aria-expanded={editing}>
-                {editing ? "Đóng" : "Sửa"}
-              </Button>
-              <form action={task.paused ? resume : pause}>
-                <input type="hidden" name="taskId" value={task.taskId} />
-                <SubmitButton variant="soft">{task.paused ? "Chạy lại" : "Tạm dừng"}</SubmitButton>
-              </form>
-            </div>
-            <FormMessage state={pState ?? rState} />
-          </div>
+          <TaskActionButtons task={props.task} actions={actions} align="end" />
         </td>
       </tr>
-      {editing && (
+      {actions.editing && (
         <tr>
           <td colSpan={colSpan} className="border-b border-black/5 px-3.5 pb-4">
-            <div className="rounded-2xl bg-bg p-3">
-              <TaskForm kids={kids} initial={task} startLabel={startLabel} onDone={() => setEditing(false)} />
-            </div>
+            <EditPanel {...props} actions={actions} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+/** Thẻ nhiệm vụ ở màn hình hẹp (dưới 768px); form sửa hiện ngay trong thẻ (spec ui-theme "Danh sách nhiệm vụ trên điện thoại"). */
+export function TaskCard({ body, ...props }: TaskItemProps & { body: ReactNode }) {
+  const actions = useTaskActions();
+  return (
+    <li className="flex flex-col gap-3 rounded-[22px] bg-card p-4 shadow-flat">
+      {body}
+      <TaskActionButtons task={props.task} actions={actions} align="start" />
+      {actions.editing && <EditPanel {...props} actions={actions} />}
+    </li>
   );
 }

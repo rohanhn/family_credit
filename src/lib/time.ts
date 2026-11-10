@@ -59,6 +59,11 @@ export function formatDate(date: string): string {
   return `${d}/${m}/${y}`;
 }
 
+/** Ngày "dd/mm/yyyy" của một thời điểm theo múi giờ `tz` (múi giờ gia đình, không theo máy xem). */
+export function formatInstantDate(instant: Date, tz: string): string {
+  return formatDate(dateInZone(instant, tz));
+}
+
 /** "+5" / "−5" (dấu trừ Unicode cho dễ đọc). */
 export function signed(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";

@@ -3,10 +3,11 @@ import { NextRequest } from "next/server";
 import { proxy } from "@/proxy";
 import { HOUR, DAY } from "@/server/clock";
 
-// Design D4 "gia hạn khi hoạt động": cookie phiên trượt được đặt lại hạn mới ở mỗi request GET.
+// Design D4 "gia hạn khi hoạt động": cookie phiên trượt được đặt lại hạn mới ở mỗi request GET tải trang
+// (không phải request chạy ngầm như RSC hay prefetch, design D6 của change polish-after-mvp).
 
-function request(method: string, cookie: string) {
-  return new NextRequest("http://localhost/kid/home", { method, headers: { cookie } });
+function request(method: string, cookie: string, headers: Record<string, string> = {}) {
+  return new NextRequest("http://localhost/kid/home", { method, headers: { cookie, ...headers } });
 }
 
 describe("proxy gia hạn cookie phiên", () => {
@@ -35,6 +36,16 @@ describe("proxy gia hạn cookie phiên", () => {
   it("POST (Server Action) và request không có cookie: không đặt cookie", () => {
     expect(proxy(request("POST", "mc_parent=p1")).cookies.getAll()).toEqual([]);
     expect(proxy(request("GET", "")).cookies.getAll()).toEqual([]);
+  });
+
+  it("Request chạy ngầm (RSC, prefetch: Sec-Fetch-Mode khác navigate): không đặt cookie, để request chạy dở không ghi lại cookie vừa bị xóa (design D6)", () => {
+    const cookie = "mc_parent=p1; mc_child=c1; mc_device=d1";
+    for (const mode of ["cors", "same-origin", "no-cors"]) {
+      expect(proxy(request("GET", cookie, { "sec-fetch-mode": mode, "sec-fetch-dest": "empty" })).cookies.getAll(), mode).toEqual([]);
+    }
+    // Lần tải trang vẫn gia hạn; trình duyệt không gửi Sec-Fetch-Mode thì giữ hành vi cũ.
+    expect(proxy(request("GET", cookie, { "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" })).cookies.get("mc_parent")?.value).toBe("p1");
+    expect(proxy(request("GET", cookie)).cookies.get("mc_parent")?.value).toBe("p1");
   });
 
   it("Trang gốc chuyển theo cookie: con → /kid/home, thiết bị → /kid, bố mẹ → /parent, không có → /login", () => {

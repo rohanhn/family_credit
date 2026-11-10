@@ -115,7 +115,8 @@ export function InviteBox() {
 export function DeviceRow({
   device,
 }: {
-  device: { id: string; kind: "shared" | "personal"; childName: string | null; createdAt: string; expiresAt: string };
+  /** Ngày bật và ngày hết hạn đã định dạng ở server theo múi giờ gia đình. */
+  device: { id: string; kind: "shared" | "personal"; childName: string | null; enabledOn: string; expiresOn: string };
 }) {
   const [state, action] = useActionState(revokeDeviceAction, undefined);
   return (
@@ -124,8 +125,7 @@ export function DeviceRow({
       <span className="flex flex-1 flex-col">
         <span className="font-extrabold">{device.kind === "personal" ? `Máy riêng của ${device.childName}` : "Máy dùng chung"}</span>
         <span className="text-sm font-semibold text-muted">
-          Bật ngày {new Date(device.createdAt).toLocaleDateString("vi-VN")} ·{" "}
-          {device.kind === "personal" ? "tự gia hạn khi con còn dùng" : `hết hạn ${new Date(device.expiresAt).toLocaleDateString("vi-VN")}`}
+          Bật ngày {device.enabledOn} · {device.kind === "personal" ? "tự gia hạn khi con còn dùng" : `hết hạn ${device.expiresOn}`}
         </span>
       </span>
       <SubmitButton variant="outline">Thu hồi</SubmitButton>

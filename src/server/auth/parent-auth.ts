@@ -1,16 +1,33 @@
 import { eq } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
 import { parents } from "../db/schema";
-import type { Db } from "../db/types";
+import type { Db, DbOrTx } from "../db/types";
 import { DomainError, invalid } from "../domain/errors";
 import { logSecurityEvent } from "../log";
 import { hashSecret, sha256, verifyDummy, verifySecret } from "./crypto";
 import { clear, hit, hitStreak, LIMITS, lock, lockedUntil } from "./rate-limit";
+import { authenticateDevice } from "./guards";
+import { PARENT_ON_FAMILY_DEVICE_TTL_MS } from "./session-cookies";
 import { createSession, deleteSession, deleteSessionsFor } from "./sessions";
 
 // Đăng ký, đăng nhập, đổi mật khẩu của bố mẹ (spec family-accounts, design D4/D9).
 
-export type AuthContext = { ip: string; clock?: Clock };
+export type AuthContext = {
+  ip: string;
+  clock?: Clock;
+  /** Cookie `mc_device` của thiết bị đang đăng nhập (nếu có), để nhận biết máy của con. */
+  deviceToken?: string;
+};
+
+/**
+ * Tạo phiên bố mẹ. Thiết bị có phiên thiết bị còn hiệu lực (đang bật chế độ gia đình hoặc là máy
+ * riêng của con) thì phiên bố mẹ chỉ sống 15 phút không thao tác; cookie `mc_device` giả hoặc đã hết
+ * hạn không rút ngắn được phiên (design D2 của change polish-after-mvp).
+ */
+async function createParentSession(db: DbOrTx, parentId: number, ctx: AuthContext, clock: Clock) {
+  const onFamilyDevice = (await authenticateDevice(db, ctx.deviceToken, clock)) !== null;
+  return createSession(db, "parent", parentId, clock, onFamilyDevice ? { ttlMs: PARENT_ON_FAMILY_DEVICE_TTL_MS, persistTtl: true } : {});
+}
 
 export const MIN_PASSWORD_LENGTH = 8;
 export const INVALID_CREDENTIALS_MESSAGE = "Email hoặc mật khẩu không đúng";
@@ -63,7 +80,7 @@ export async function registerParent(
   try {
     return await db.transaction(async (tx) => {
       const [parent] = await tx.insert(parents).values({ email, displayName, passwordHash }).returning({ id: parents.id });
-      const session = await createSession(tx, "parent", parent.id, clock);
+      const session = await createParentSession(tx, parent.id, ctx, clock);
       return { parentId: parent.id, ...session };
     });
   } catch (err) {
@@ -141,7 +158,7 @@ export async function loginParent(
     throw new DomainError("INVALID_CREDENTIALS", INVALID_CREDENTIALS_MESSAGE);
   }
 
-  const session = await createSession(db, "parent", parent.id, clock);
+  const session = await createParentSession(db, parent.id, ctx, clock);
   return { parentId: parent.id, ...session };
 }
 

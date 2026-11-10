@@ -19,7 +19,7 @@ export async function registerAction(_prev: ActionState, form: FormData): Promis
     const r = await registerParent(
       getDb(),
       { email: str(form, "email"), password: str(form, "password"), displayName: str(form, "displayName") },
-      { ip: await requestIp() },
+      { ip: await requestIp(), deviceToken: await readCookie("device") },
     );
     await setSessionCookie("parent", r.token, r.expiresAt);
   } catch (err) {
@@ -30,7 +30,7 @@ export async function registerAction(_prev: ActionState, form: FormData): Promis
 
 export async function loginAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   try {
-    const r = await loginParent(getDb(), { email: str(form, "email"), password: str(form, "password") }, { ip: await requestIp() });
+    const r = await loginParent(getDb(), { email: str(form, "email"), password: str(form, "password") }, { ip: await requestIp(), deviceToken: await readCookie("device") });
     await setSessionCookie("parent", r.token, r.expiresAt);
   } catch (err) {
     return fromError(err);
