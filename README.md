@@ -90,7 +90,7 @@ Biến chỉ dùng trên VPS (`deploy/.env.example`): `GHCR_OWNER`, `IMAGE_TAG`,
 CI (`.github/workflows/ci.yml`) chạy trên GitHub Actions:
 
 - **Pull request vào `master`**: lint, typecheck, `npm audit --omit=dev --audit-level=high`, unit test, test chống race và e2e với Postgres 16; build image, chạy thử và quét Trivy nhưng không push.
-- **Push lên `master`**: chạy lại các kiểm tra, build image, quét bằng Trivy (dừng nếu có lỗ hổng HIGH/CRITICAL đã có bản vá), rồi push lên `ghcr.io/<owner>/my-credit` với tag `sha-<short>` và `latest`.
+- **Push lên `master`**: chạy lại các kiểm tra, build image, quét bằng Trivy (dừng nếu có lỗ hổng HIGH/CRITICAL đã có bản vá), rồi push lên `ghcr.io/<owner>/family_credit` với tag `sha-<short>` và `latest`.
 - **Push tag `vX.Y.Z`**: như trên, kèm tag `vX.Y.Z`.
 
 Đăng nhập GHCR dùng `GITHUB_TOKEN` nên không cần secret. Image không phụ thuộc domain nên CI không cần biến repo nào; nếu trước đây đã tạo biến `APP_URL` trong Settings → Secrets and variables → Actions → Variables thì có thể xóa.
@@ -105,7 +105,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Khi CI xanh, image `ghcr.io/<owner>/my-credit:v0.1.0` xuất hiện trong mục Packages của repo. Dependabot (`.github/dependabot.yml`) mở PR cập nhật npm, GitHub Actions và image Docker hằng tuần. Image Node trong `Dockerfile` được ghim theo digest (`node:22-alpine@sha256:…`), nên mỗi lần image gốc có bản vá, Dependabot mở PR đổi digest ở cả ba stage.
+Khi CI xanh, image `ghcr.io/<owner>/family_credit:v0.1.0` xuất hiện trong mục Packages của repo. Dependabot (`.github/dependabot.yml`) mở PR cập nhật npm, GitHub Actions và image Docker hằng tuần. Image Node trong `Dockerfile` được ghim theo digest (`node:22-alpine@sha256:…`), nên mỗi lần image gốc có bản vá, Dependabot mở PR đổi digest ở cả ba stage.
 
 ## Triển khai lần đầu trên VPS
 
@@ -118,22 +118,22 @@ Giả định VPS đã có Traefik (với entrypoint HTTPS và certresolver) và
    ```
 
    ```sql
-   CREATE ROLE my_credit LOGIN PASSWORD 'mat-khau-manh';
-   CREATE DATABASE my_credit OWNER my_credit;
-   REVOKE ALL ON DATABASE my_credit FROM PUBLIC;
+   CREATE ROLE family_credit LOGIN PASSWORD 'mat-khau-manh';
+   CREATE DATABASE family_credit OWNER family_credit;
+   REVOKE ALL ON DATABASE family_credit FROM PUBLIC;
    ```
 
 2. Chép các file triển khai lên VPS (VPS không cần mã nguồn):
 
    ```bash
-   ssh vps 'sudo mkdir -p /opt/my-credit && sudo chown "$USER" /opt/my-credit'
-   scp deploy/compose.yaml deploy/.env.example scripts/backup.sh vps:/opt/my-credit/
+   ssh vps 'sudo mkdir -p /opt/family_credit && sudo chown "$USER" /opt/family_credit'
+   scp deploy/compose.yaml deploy/.env.example deploy/prod_up.sh deploy/prod_down.sh deploy/prod_cleanup.sh scripts/backup.sh vps:/opt/family_credit/
    ```
 
-3. Trên VPS, tạo `.env` và điền giá trị thật: `GHCR_OWNER`, `IMAGE_TAG` (một tag `vX.Y.Z` đã phát hành, không dùng `latest`), `APP_HOST`, `APP_URL`, `DATABASE_URL` (trỏ tới tên service Postgres trên network của nó, ví dụ `postgres://my_credit:…@postgres:5432/my_credit`), tên network và cấu hình Traefik.
+3. Trên VPS, tạo `.env` và điền giá trị thật: `GHCR_OWNER`, `IMAGE_TAG` (một tag `vX.Y.Z` đã phát hành, không dùng `latest`), `APP_HOST`, `APP_URL`, `DATABASE_URL` (trỏ tới tên service Postgres trên network của nó, ví dụ `postgres://family_credit:…@postgres:5432/family_credit`), tên network và cấu hình Traefik.
 
    ```bash
-   cd /opt/my-credit
+   cd /opt/family_credit
    cp .env.example .env && chmod 600 .env
    nano .env
    ```
@@ -163,10 +163,10 @@ Sau lần deploy đầu, nên tự thử một thao tác có Server Action (đă
 
 ## Cập nhật và rollback
 
-Cập nhật lên bản mới: sửa `IMAGE_TAG` trong `/opt/my-credit/.env`, rồi:
+Cập nhật lên bản mới: sửa `IMAGE_TAG` trong `/opt/family_credit/.env`, rồi:
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 docker compose pull
 docker compose up -d
 docker compose ps
@@ -174,37 +174,37 @@ docker compose ps
 
 Rollback: đặt lại `IMAGE_TAG` về tag cũ rồi chạy lại `docker compose up -d`. Vì migration chỉ thêm, image cũ vẫn chạy được trên schema mới. Chỉ khi một bản phát hành có migration không tương thích ngược mới cần [khôi phục từ bản sao lưu](#khôi-phục) trước khi chạy image cũ.
 
-Nên sao lưu thủ công ngay trước mỗi lần cập nhật: `/opt/my-credit/backup.sh`.
+Nên sao lưu thủ công ngay trước mỗi lần cập nhật: `/opt/family_credit/backup.sh`.
 
 ## Sao lưu và khôi phục
 
-`backup.sh` chạy `pg_dump -Fc` trong một container `postgres:<major>-alpine` trên network của Postgres, dẫn thẳng đầu ra qua `age` để mã hóa bằng public key, ghi thành `BACKUP_DIR/my-credit-<thời điểm UTC>.dump.age` (quyền 600) và giữ `BACKUP_KEEP` bản mới nhất (mặc định 14). Trên đĩa không bao giờ có bản rõ. `PG_IMAGE` phải có major bằng hoặc mới hơn server Postgres.
+`backup.sh` chạy `pg_dump -Fc` trong một container `postgres:<major>-alpine` trên network của Postgres, dẫn thẳng đầu ra qua `age` để mã hóa bằng public key, ghi thành `BACKUP_DIR/family_credit-<thời điểm UTC>.dump.age` (quyền 600) và giữ `BACKUP_KEEP` bản mới nhất (mặc định 14). Trên đĩa không bao giờ có bản rõ. `PG_IMAGE` phải có major bằng hoặc mới hơn server Postgres.
 
 ### Tạo cặp khóa age
 
 Làm trên **máy của bạn**, không phải VPS:
 
 ```bash
-age-keygen -o my-credit-backup.key
+age-keygen -o family_credit-backup.key
 # Public key: age1...
 ```
 
-Cất `my-credit-backup.key` (private key) vào trình quản lý mật khẩu hoặc nơi an toàn ngoài VPS; mất nó thì không giải mã được bản sao lưu nào. Chỉ đưa dòng `age1...` lên VPS.
+Cất `family_credit-backup.key` (private key) vào trình quản lý mật khẩu hoặc nơi an toàn ngoài VPS; mất nó thì không giải mã được bản sao lưu nào. Chỉ đưa dòng `age1...` lên VPS.
 
 ### Cài trên VPS
 
 ```bash
 sudo apt install age                     # Debian/Ubuntu
-cd /opt/my-credit && chmod 700 backup.sh
+cd /opt/family_credit && chmod 700 backup.sh
 nano .env                                # BACKUP_AGE_RECIPIENT=age1..., BACKUP_DIR, BACKUP_KEEP
-sudo mkdir -p /var/backups/my-credit && sudo chown "$USER" /var/backups/my-credit
+sudo mkdir -p /var/backups/family_credit && sudo chown "$USER" /var/backups/family_credit
 ./backup.sh                              # chạy thử: "backup: đã ghi ..."
 ```
 
 Cron hằng ngày lúc 3:15 (`crontab -e` của user có quyền chạy docker):
 
 ```cron
-15 3 * * * /opt/my-credit/backup.sh /opt/my-credit/.env >> /var/log/my-credit-backup.log 2>&1
+15 3 * * * /opt/family_credit/backup.sh /opt/family_credit/.env >> /var/log/family_credit-backup.log 2>&1
 ```
 
 Nên chép thư mục sao lưu ra ngoài VPS định kỳ (ví dụ `rsync` hoặc `rclone` sang máy khác hay object storage). File đã mã hóa nên chép đi đâu cũng an toàn.
@@ -214,19 +214,19 @@ Nên chép thư mục sao lưu ra ngoài VPS định kỳ (ví dụ `rsync` ho�
 Private key không nằm trên VPS, nên giải mã trên máy của bạn rồi đẩy luồng dữ liệu qua SSH. Dừng app trước để không có ghi mới trong lúc khôi phục:
 
 ```bash
-ssh vps 'cd /opt/my-credit && docker compose stop app'
+ssh vps 'cd /opt/family_credit && docker compose stop app'
 
-age -d -i my-credit-backup.key my-credit-20261109-031500.dump.age \
-  | ssh vps 'cd /opt/my-credit && set -a && . ./.env && set +a && \
+age -d -i family_credit-backup.key family_credit-20261109-031500.dump.age \
+  | ssh vps 'cd /opt/family_credit && set -a && . ./.env && set +a && \
       docker run --rm -i --network "$POSTGRES_NETWORK" -e DATABASE_URL "${PG_IMAGE:-postgres:16-alpine}" \
         sh -c "pg_restore --clean --if-exists --no-owner -d \"\$DATABASE_URL\""'
 
-ssh vps 'cd /opt/my-credit && docker compose start app'
+ssh vps 'cd /opt/family_credit && docker compose start app'
 ```
 
 (`. ./.env` đọc file như script shell; nếu mật khẩu trong `DATABASE_URL` có ký tự đặc biệt của shell như `$` hay dấu nháy, hãy đặt giá trị trong nháy đơn trong `.env`, hoặc export `DATABASE_URL` và `POSTGRES_NETWORK` bằng tay.)
 
-Nếu file sao lưu đang nằm trên VPS, chép nó về máy (`scp vps:/var/backups/my-credit/<file> .`) trước. Khôi phục ra một database khác để kiểm tra mà không đụng production: tạo database mới (ví dụ `my_credit_restore`, owner `my_credit`) và trỏ `-d` vào đó.
+Nếu file sao lưu đang nằm trên VPS, chép nó về máy (`scp vps:/var/backups/family_credit/<file> .`) trước. Khôi phục ra một database khác để kiểm tra mà không đụng production: tạo database mới (ví dụ `my_credit_restore`, owner `my_credit`) và trỏ `-d` vào đó.
 
 ## Thiết bị của con
 
@@ -256,7 +256,7 @@ Icon mở app ở chế độ toàn màn hình tại trang gốc, và app tự �
 App không gửi email, nên người host đặt lại mật khẩu bằng lệnh. Lệnh sinh một mật khẩu tạm ngẫu nhiên, in ra một lần và **xóa mọi phiên đăng nhập** của bố mẹ đó:
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 docker compose exec app node scripts/reset-password.js bo@example.com
 # Đã đặt lại mật khẩu, đã hủy 2 phiên đăng nhập.
 # Mật khẩu tạm: ...
@@ -269,7 +269,7 @@ Gửi mật khẩu tạm cho bố mẹ qua kênh riêng và nhắc họ đổi l
 App ghi log JSON ra stdout (pino); Docker giữ tối đa 5 file × 10 MB. Sự kiện bảo mật có `"kind":"security"` và trường `event`: `login_failed`, `login_locked`, `login_rate_limited`, `signup_limited`, `pin_failed`, `pin_locked`, `pin_changed`, `pin_reset`, `device_enabled` (trường `detail` là `shared` hoặc `personal`), `device_revoked`, `password_changed`, `password_reset`, `invite_created`, `invite_accepted`, `authz_denied`. Log không chứa mật khẩu, PIN, token hay cookie; email chỉ ở dạng SHA-256 (`emailHash`).
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 # Mọi sự kiện bảo mật trong 24 giờ qua
 docker compose logs --no-log-prefix --since 24h app | grep '"kind":"security"'
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Sao lưu database my-credit, mã hóa bằng age (design D8/D9). Chạy trên VPS bằng cron hằng ngày:
-#   15 3 * * * /opt/my-credit/backup.sh /opt/my-credit/.env >> /var/log/my-credit-backup.log 2>&1
+# Sao lưu database family_credit, mã hóa bằng age (design D8/D9). Chạy trên VPS bằng cron hằng ngày:
+#   15 3 * * * /opt/family_credit/backup.sh /opt/family_credit/.env >> /var/log/family_credit-backup.log 2>&1
 # Đối số: đường dẫn file .env (mặc định: .env cạnh script). Biến đã có trong môi trường được ưu tiên.
 # Cần: docker, age. Đầu ra pg_dump đi thẳng qua age, trên đĩa không có bản rõ.
 set -euo pipefail
@@ -44,8 +44,8 @@ command -v age >/dev/null || { echo "backup: chưa cài age (apt install age)" >
 
 mkdir -p "$BACKUP_DIR"
 stamp="$(date -u +%Y%m%d-%H%M%S)"
-final="$BACKUP_DIR/my-credit-$stamp.dump.age"
-partial="$BACKUP_DIR/.my-credit-$stamp.dump.age.partial"
+final="$BACKUP_DIR/family_credit-$stamp.dump.age"
+partial="$BACKUP_DIR/.family_credit-$stamp.dump.age.partial"
 trap 'rm -f "$partial"' EXIT
 
 # DATABASE_URL truyền qua biến môi trường (-e), không nằm trên dòng lệnh nên không lộ qua ps.
@@ -60,7 +60,7 @@ mv "$partial" "$final"
 echo "backup: đã ghi $final ($(du -h "$final" | cut -f1))"
 
 # Giữ BACKUP_KEEP bản mới nhất (tên file có thời điểm nên sắp xếp theo tên là theo thời gian).
-mapfile -t old < <(find "$BACKUP_DIR" -maxdepth 1 -name 'my-credit-*.dump.age' -type f | sort -r | tail -n +"$((BACKUP_KEEP + 1))")
+mapfile -t old < <(find "$BACKUP_DIR" -maxdepth 1 -name 'family_credit-*.dump.age' -type f | sort -r | tail -n +"$((BACKUP_KEEP + 1))")
 if [ "${#old[@]}" -gt 0 ]; then
   rm -f -- "${old[@]}"
   echo "backup: đã xóa ${#old[@]} bản cũ"
