@@ -12,7 +12,7 @@
 
 ## 3. Danh sách nhiệm vụ trên màn hình hẹp (ui-theme)
 
-- [ ] 3.1 Tách `useTaskActions` và `TaskActionButtons` từ `TaskRow`, thêm `TaskCard`; trang render bảng `hidden md:block` và danh sách thẻ `md:hidden` (design D4). Kiểm tra bằng e2e ở 360px: thấy thẻ có đủ thông tin, bấm "Sửa" lưu được, bấm "Tạm dừng" đổi trạng thái, trang không cuộn ngang; ở 1280px vẫn là bảng
+- [x] 3.1 Tách `useTaskActions` và `TaskActionButtons` từ `TaskRow`, thêm `TaskCard`; trang render bảng `hidden md:block` và danh sách thẻ `md:hidden` (design D4). Kiểm tra bằng e2e ở 360px: thấy thẻ có đủ thông tin, bấm "Sửa" lưu được, bấm "Tạm dừng" đổi trạng thái, trang không cuộn ngang; ở 1280px vẫn là bảng
 
 ## 4. Trang cài đặt (sửa lỗi)
 
