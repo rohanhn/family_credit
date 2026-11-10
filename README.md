@@ -103,7 +103,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Khi CI xanh, image `ghcr.io/<owner>/my-credit:v0.1.0` xuất hiện trong mục Packages của repo. Dependabot (`.github/dependabot.yml`) mở PR cập nhật npm, GitHub Actions và image Docker hằng tuần.
+Khi CI xanh, image `ghcr.io/<owner>/my-credit:v0.1.0` xuất hiện trong mục Packages của repo. Dependabot (`.github/dependabot.yml`) mở PR cập nhật npm, GitHub Actions và image Docker hằng tuần. Image Node trong `Dockerfile` được ghim theo digest (`node:22-alpine@sha256:…`), nên mỗi lần image gốc có bản vá, Dependabot mở PR đổi digest ở cả ba stage.
 
 ## Triển khai lần đầu trên VPS
 
