@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { kidMarkReadAction, kidUnreadAction, type UnreadPayload } from "@/app/actions/notifications";
-import { buildScreens, type NotificationItem } from "@/lib/notification-screens";
+import { buildScreens, keepCurrentScreen, nextScreenAfterClose, screenKey, type FeedbackScreen, type NotificationItem } from "@/lib/notification-screens";
 import type { ThemeId } from "@/ui/themes";
 import { PointsFeedback } from "./points-feedback";
 
@@ -41,10 +41,14 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
   const router = useRouter();
   const [items, setItems] = useState<NotificationItem[]>(initial.items);
   const [balance, setBalance] = useState(initial.balance);
+  // Màn đang hiện giữ trong state riêng (design D4): thông báo mới chỉ vào hàng đợi phía sau, không thay màn giữa chừng.
+  const [current, setCurrent] = useState<FeedbackScreen | null>(() => buildScreens(initial.items)[0] ?? null);
   const dismissed = useRef(new Set<number>());
 
   const apply = useCallback((payload: UnreadPayload) => {
-    setItems(payload.items.filter((i) => !dismissed.current.has(i.id)));
+    const fresh = payload.items.filter((i) => !dismissed.current.has(i.id));
+    setItems(fresh);
+    setCurrent((c) => keepCurrentScreen(c, fresh));
     setBalance(payload.balance);
   }, []);
 
@@ -83,14 +87,16 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
     };
   }, [apply]);
 
-  const screens = useMemo(() => buildScreens(items), [items]);
-  const current = screens[0];
-
   const close = useCallback(
-    async (ids: number[]) => {
+    // Chỉ đánh dấu đã đọc thông báo của chính màn đang hiện, không dùng danh sách id từ màn gửi lên.
+    async () => {
+      if (!current) return;
+      const ids = current.items.map((i) => i.id);
       for (const id of ids) dismissed.current.add(id);
-      const remaining = items.filter((i) => !ids.includes(i.id));
+      const next = nextScreenAfterClose(current, items);
+      const remaining = next.items;
       setItems(remaining);
+      setCurrent(next.current);
       try {
         await kidMarkReadAction(ids);
       } catch {
@@ -98,9 +104,9 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
         for (const id of ids) dismissed.current.delete(id);
       }
       // Số dư và danh sách trên trang có thể đã đổi.
-      if (buildScreens(remaining).length === 0) router.refresh();
+      if (next.current === null) router.refresh();
     },
-    [items, router],
+    [current, items, router],
   );
 
   const ctx = useMemo<Ctx>(() => ({ count: items.length, balance, apply }), [items.length, balance, apply]);
@@ -111,7 +117,7 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
       {current && (
         // Overlay nằm ngoài khung KidShell nên tự đặt data-theme (biến CSS kế thừa qua display: contents).
         <div data-theme={profile.theme} className="contents">
-          <PointsFeedback key={current.kind + current.items[0].id} screen={current} profile={profile} balance={balance} onClose={close} />
+          <PointsFeedback key={screenKey(current)} screen={current} profile={profile} balance={balance} onClose={close} />
         </div>
       )}
     </KidNotificationsContext.Provider>

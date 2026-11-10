@@ -70,6 +70,26 @@ export function buildScreens(items: NotificationItem[]): FeedbackScreen[] {
   return screens;
 }
 
+/** Khóa ổn định của một màn (loại + id các thông báo): cùng khóa thì là cùng một màn, không phát âm lại. */
+export function screenKey(screen: FeedbackScreen): string {
+  return `${screen.kind}:${screen.items.map((i) => i.id).join(",")}`;
+}
+
+/**
+ * Hàng đợi màn phản hồi (design D4): màn đang hiện giữ nguyên cho tới khi con đóng, dù lượt hỏi định kỳ
+ * trả về thông báo mới. Chưa có màn nào đang hiện thì lấy màn đầu tiên của các thông báo chưa đọc.
+ */
+export function keepCurrentScreen(current: FeedbackScreen | null, items: NotificationItem[]): FeedbackScreen | null {
+  return current ?? buildScreens(items)[0] ?? null;
+}
+
+/** Sau khi con đóng màn `closed`: màn tiếp theo dựng từ các thông báo còn lại (bỏ các thông báo của màn vừa đóng). */
+export function nextScreenAfterClose(closed: FeedbackScreen, items: NotificationItem[]): { items: NotificationItem[]; current: FeedbackScreen | null } {
+  const ids = new Set(closed.items.map((i) => i.id));
+  const remaining = items.filter((i) => !ids.has(i.id));
+  return { items: remaining, current: buildScreens(remaining)[0] ?? null };
+}
+
 /** "+15", "−10" (dấu trừ thật), "0". */
 export function formatPoints(n: number): string {
   if (n > 0) return `+${n}`;
