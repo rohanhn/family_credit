@@ -1,5 +1,6 @@
 # CI/CD (design D8/D9).
-# - Pull request: lint, typecheck, npm audit, unit test, test chống race và e2e trên Postgres thật.
+# - Pull request: lint, typecheck, npm audit, unit test, test chống race và e2e trên Postgres thật;
+#   build image, chạy thử image và quét Trivy (không push).
 #   E2E chạy trên bản build production (E2E_PROD=1) để kiểm tra đúng CSP và HSTS.
 # - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, chạy thử image với Postgres
 #   (migration, /api/health, reset-password.js), quét Trivy, rồi push lên GHCR
@@ -96,10 +97,11 @@ jobs:
             test-results/
           retention-days: 7
 
+  # Pull request: build, chạy thử và quét image (không đăng nhập GHCR, không push).
+  # Push lên master/tag: thêm bước push lên GHCR.
   image:
     name: Build, quét và push image
     needs: check
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -170,6 +172,7 @@ jobs:
           format: table
 
       - name: Đăng nhập GHCR
+        if: github.event_name == 'push'
         uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
@@ -177,6 +180,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push image
+        if: github.event_name == 'push'
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
