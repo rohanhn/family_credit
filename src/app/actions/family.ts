@@ -76,7 +76,10 @@ export async function updateCurrencyAction(_prev: ActionState, form: FormData): 
 /** Bật chế độ gia đình trên thiết bị đang dùng rồi chuyển sang màn chọn avatar. */
 export async function enableFamilyModeAction(): Promise<void> {
   const auth = await requireParentWithFamily();
-  const session = await enableFamilyMode(getDb(), auth, undefined, await readCookie("parent"));
+  const session = await enableFamilyMode(getDb(), auth, undefined, {
+    parentToken: await readCookie("parent"),
+    currentDeviceToken: await readCookie("device"),
+  });
   await clearSessionCookie("parent");
   await setSessionCookie("device", session.token, session.expiresAt);
   redirect("/kid");

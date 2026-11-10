@@ -29,7 +29,7 @@
 ## 6. Phiên và log bảo mật
 
 - [x] 6.1 Thêm `cleanupExpiredSessions` vào job dọn dẹp lúc khởi động và lần chạy định kỳ 24 giờ (design D9). Kiểm tra bằng unit test: phiên hết hạn bị xóa, phiên còn hạn giữ nguyên
-- [ ] 6.2 Bật lại chế độ gia đình thì xóa phiên thiết bị cũ của chính thiết bị đó; đăng nhập PIN thì xóa phiên con cũ. Kiểm tra bằng unit test, và danh sách thiết bị trong cài đặt không tăng khi bật lại trên cùng thiết bị
+- [x] 6.2 Bật lại chế độ gia đình thì xóa phiên thiết bị cũ của chính thiết bị đó; đăng nhập PIN thì xóa phiên con cũ. Kiểm tra bằng unit test, và danh sách thiết bị trong cài đặt không tăng khi bật lại trên cùng thiết bị
 - [ ] 6.3 Ghi `authz_denied` khi Server Action gặp `NOT_FOUND` lúc có phiên hợp lệ. Kiểm tra bằng unit test cho `fromError` với sink log giả
 
 ## 7. CI và đóng gói

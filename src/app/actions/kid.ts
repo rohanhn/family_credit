@@ -21,6 +21,7 @@ export async function kidPinLoginAction(_prev: ActionState, form: FormData): Pro
       childId: int(form, "childId"),
       pin: str(form, "pin"),
       deviceChildId: device.childId,
+      previousChildToken: await readCookie("child"),
     });
     await setChildSessionCookie(session.token, session.expiresAt, session.browserSession);
   } catch (err) {

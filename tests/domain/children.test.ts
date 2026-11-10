@@ -88,7 +88,7 @@ describe("Đăng nhập con bằng avatar và PIN", () => {
   it("Bật chế độ gia đình kết thúc phiên bố mẹ trên thiết bị đó", async () => {
     const { family, parent } = await seedFamily(t.db, { kids: [] });
     const parentSession = await createSession(t.db, "parent", parent.id, clock);
-    await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock, parentSession.token);
+    await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock, { parentToken: parentSession.token });
     expect(await resolveSession(t.db, parentSession.token, "parent", clock)).toBeNull();
   });
 
