@@ -333,7 +333,17 @@ Muốn thử Let's Encrypt mà không đụng giới hạn tần suất, thêm t
 
 **Một lần:** vào repo trên GitHub → Settings → Secrets and variables → Actions → **Variables**, tạo biến `APP_URL` bằng địa chỉ công khai của app, ví dụ `https://app3.domain.xyz`.
 
-`APP_URL` được đóng vào image **lúc build** (thêm host vào `allowedOrigins` của Server Actions). Đặt sai hoặc quên thì image vẫn build được (CI chỉ cảnh báo), nhưng trên VPS mọi thao tác có form (đăng nhập, tạo rule) sẽ bị chặn. Đổi domain thì phải đổi biến này và phát hành image mới. Đăng nhập GHCR trong CI dùng `GITHUB_TOKEN`, không cần secret.
+`APP_URL` được dùng ở hai chỗ:
+
+- **Lúc build** (biến repo này, truyền làm build arg): host của nó được thêm vào `serverActions.allowedOrigins` trong `next.config.ts`. Bản standalone đóng cấu hình này vào image, nên đặt lúc chạy không đổi được danh sách này.
+- **Lúc chạy** (`APP_URL` trong `.env` ở [bước 10](#bước-10-tạo-env)): dùng để tạo link mời bố mẹ. Đây là giá trị quyết định domain trong link.
+
+Danh sách `allowedOrigins` chỉ là lớp dự phòng. Next kiểm tra Server Action bằng cách so host trong header `Origin` với `X-Forwarded-Host` (không có thì với `Host`); Traefik với cấu hình mặc định giữ nguyên `Host` và gắn `X-Forwarded-Host` bằng domain gốc, nên request hợp lệ khớp ngay mà không cần tới `allowedOrigins`. Danh sách này chỉ có tác dụng khi proxy đổi `Host` hoặc `X-Forwarded-Host` (ví dụ có thêm một lớp proxy viết lại host). Vì vậy:
+
+- Nên đặt biến repo này đúng domain thật, nhưng quên hoặc đặt sai thì form vẫn chạy sau Traefik mặc định (CI chỉ cảnh báo).
+- Đổi domain **không bắt buộc** phát hành image mới: sửa `APP_HOST` và `APP_URL` trong `.env` là đủ. Sửa luôn biến repo để lần phát hành sau khớp.
+
+Đăng nhập GHCR trong CI dùng `GITHUB_TOKEN`, không cần secret.
 
 **Mỗi lần phát hành:** CI (`.github/workflows/ci.yml`) chạy kiểm tra (lint, typecheck, audit, unit, chống race, e2e), build image, chạy thử image với Postgres (migration, `/api/health`, `reset-password.js`), quét Trivy, rồi mới push:
 
@@ -405,7 +415,7 @@ nano .env
 | `GHCR_OWNER` | User hoặc org GitHub sở hữu package, **viết thường** |
 | `IMAGE_TAG` | Tag đã phát hành, ví dụ `v0.1.0` |
 | `APP_HOST` | Domain, ví dụ `app3.domain.xyz` (dùng cho rule `Host()` của Traefik) |
-| `APP_URL` | `https://` + domain, trùng với biến repo `APP_URL` lúc build |
+| `APP_URL` | `https://` + domain, ví dụ `https://app3.domain.xyz`. Dùng lúc chạy để tạo link mời; nên trùng với biến repo `APP_URL` |
 | `DATABASE_URL` | `postgres://my_credit:<mật khẩu bước 9>@postgres:5432/my_credit` |
 | `DATABASE_POOL_MAX` | Mặc định `5` |
 | `LOG_LEVEL` | Mặc định `info` |
@@ -568,5 +578,6 @@ docker image prune -a --filter "until=720h"
 | Traefik log `client version ... is too old` | Traefik cũ không hợp Docker Engine mới | Dùng Traefik v3.6.1 trở lên |
 | Traefik trả `404 page not found` | Sai `APP_HOST`, sai entrypoint, app chưa `healthy`, hoặc Traefik không thấy container | Kiểm tra `APP_HOST`, `TRAEFIK_ENTRYPOINT`, `docker compose ps`, log Traefik |
 | Chứng chỉ không hợp lệ (`TRAEFIK DEFAULT CERT`) | DNS chưa trỏ về VPS, port 80 bị chặn, sai `TRAEFIK_CERTRESOLVER`, hoặc `acme.json` sai quyền | Kiểm tra DNS, `ufw status`, `chmod 600 acme.json`, log ACME của Traefik |
-| Mở được trang nhưng đăng nhập/gửi form báo lỗi | Host của `APP_URL` lúc build image khác domain thật | Sửa biến repo `APP_URL`, phát hành tag mới, cập nhật `IMAGE_TAG` |
+| Mở được trang nhưng đăng nhập/gửi form báo lỗi; log app có dòng `` `x-forwarded-host` header with value ... does not match `origin` `` | Proxy đổi `Host`/`X-Forwarded-Host` (ví dụ thêm một lớp proxy, hoặc cấu hình Traefik `passHostHeader: false`) nên không khớp `Origin`, và domain thật không có trong `allowedOrigins` | Ưu tiên sửa proxy để giữ nguyên host gốc. Nếu không sửa được: đặt biến repo `APP_URL` đúng domain thật, phát hành tag mới, cập nhật `IMAGE_TAG` |
+| Link mời bố mẹ trỏ sai domain hoặc thiếu domain | `APP_URL` trong `.env` sai hoặc trống | Sửa `APP_URL` trong `.env` rồi `docker compose up -d` |
 | Đăng nhập xong vẫn bị đá ra | Truy cập qua HTTP; cookie có cờ `Secure` | Luôn vào bằng `https://` |

@@ -76,7 +76,7 @@ docker build --build-arg APP_URL=http://localhost:3000 -t my-credit:dev .
 | --- | --- | --- |
 | `DATABASE_URL` | có | Chuỗi kết nối Postgres của app (role riêng `my_credit`). |
 | `DATABASE_POOL_MAX` | không | Số kết nối tối đa trong pool, mặc định `5` (server Postgres dùng chung). |
-| `APP_URL` | có trên production | Địa chỉ công khai, ví dụ `https://app3.domain.xyz`. Host của nó được thêm vào `allowedOrigins` của Server Actions **lúc build image** (build arg `APP_URL`; trong CI là biến repo `vars.APP_URL`). |
+| `APP_URL` | có trên production | Địa chỉ công khai, ví dụ `https://app3.domain.xyz`. **Lúc chạy** (`.env` trên VPS): dùng để tạo link mời bố mẹ. **Lúc build image** (build arg `APP_URL`; trong CI là biến repo `vars.APP_URL`): host được thêm vào `allowedOrigins` của Server Actions. Danh sách này chỉ là dự phòng khi proxy đổi `Host`; sau Traefik mặc định, `Origin` khớp `X-Forwarded-Host` nên không cần tới nó. Xem [docs/deploy-vps.md](docs/deploy-vps.md#bước-8-phát-hành-image-trên-github). |
 | `LOG_LEVEL` | không | Mức log của pino, mặc định `info`. |
 | `DATABASE_URL_TEST` | chỉ khi test | Database riêng cho test chống race. |
 | `E2E_PORT` | chỉ khi test | Cổng cho e2e, mặc định `3100`. Nếu đã có server chạy ở cổng đó (ngoài CI), Playwright dùng luôn server ấy. |
@@ -89,11 +89,13 @@ Biến chỉ dùng trên VPS (`deploy/.env.example`): `GHCR_OWNER`, `IMAGE_TAG`,
 
 CI (`.github/workflows/ci.yml`) chạy trên GitHub Actions:
 
-- **Pull request vào `master`**: lint, typecheck, `npm audit --omit=dev --audit-level=high`, unit test, test chống race và e2e với Postgres 16. Không build image.
+- **Pull request vào `master`**: lint, typecheck, `npm audit --omit=dev --audit-level=high`, unit test, test chống race và e2e với Postgres 16; build image, chạy thử và quét Trivy nhưng không push.
 - **Push lên `master`**: chạy lại các kiểm tra, build image, quét bằng Trivy (dừng nếu có lỗ hổng HIGH/CRITICAL đã có bản vá), rồi push lên `ghcr.io/<owner>/my-credit` với tag `sha-<short>` và `latest`.
 - **Push tag `vX.Y.Z`**: như trên, kèm tag `vX.Y.Z`.
 
-Chuẩn bị một lần: trong GitHub vào Settings → Secrets and variables → Actions → Variables, tạo biến `APP_URL` (ví dụ `https://app3.domain.xyz`). Đăng nhập GHCR dùng `GITHUB_TOKEN` nên không cần secret.
+Chuẩn bị một lần: trong GitHub vào Settings → Secrets and variables → Actions → Variables, tạo biến `APP_URL` (ví dụ `https://app3.domain.xyz`) để đặt `allowedOrigins` dự phòng lúc build. Đăng nhập GHCR dùng `GITHUB_TOKEN` nên không cần secret.
+
+Hướng dẫn triển khai đầy đủ từ VPS trắng (Docker, Postgres, Traefik, sao lưu, xử lý sự cố): [docs/deploy-vps.md](docs/deploy-vps.md).
 
 Phát hành:
 
