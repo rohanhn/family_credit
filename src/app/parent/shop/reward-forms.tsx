@@ -62,7 +62,7 @@ export function RewardRow({ reward, currencyName }: { reward: RewardRowData; cur
   const [toggleState, toggle] = useActionState(toggleRewardHiddenAction, undefined);
   const icon = rewardIcon(reward.icon);
   return (
-    <Card className={`flex flex-col gap-3 ${reward.hidden ? "opacity-70" : ""}`}>
+    <Card className={`flex flex-col gap-3 ${reward.hidden ? "border-2 border-dashed border-black/25 shadow-none" : ""}`}>
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex size-11 shrink-0 items-center justify-center rounded-[14px] bg-soft text-primary">
           <Icon name={icon} />

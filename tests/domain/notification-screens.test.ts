@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScreens, formatPoints, type NotificationItem } from "@/lib/notification-screens";
+import { buildScreens, formatPoints, keepCurrentScreen, nextScreenAfterClose, screenKey, type NotificationItem } from "@/lib/notification-screens";
 
 // Task 7.3: nhóm thông báo theo loại và thứ tự hiển thị (spec ui-theme, kid-notifications).
 
@@ -76,5 +76,44 @@ describe("formatPoints", () => {
     expect(formatPoints(15)).toBe("+15");
     expect(formatPoints(-10)).toBe("−10");
     expect(formatPoints(0)).toBe("0");
+  });
+});
+
+describe("Hàng đợi màn phản hồi (design D4)", () => {
+  it("Có quà mới khi đang xem màn bị trừ: màn bị trừ giữ nguyên, đóng xong mới tới màn quà", () => {
+    const penalty = n("penalty", "Nói dối", -10);
+    let items = [penalty];
+    let current = keepCurrentScreen(null, items);
+    expect(current?.kind).toBe("penalty");
+    const key = screenKey(current!);
+
+    // Lượt hỏi định kỳ trả về thêm một quà (màn quà đứng trước màn trừ theo thứ tự).
+    const gift = n("gift", "Đọc sách", 5);
+    items = [penalty, gift];
+    current = keepCurrentScreen(current, items);
+    expect(current?.kind).toBe("penalty");
+    expect(screenKey(current!)).toBe(key);
+
+    const next = nextScreenAfterClose(current!, items);
+    expect(next.items.map((i) => i.id)).toEqual([gift.id]);
+    expect(next.current?.kind).toBe("gift");
+    expect(screenKey(next.current!)).not.toBe(key);
+  });
+
+  it("Thông báo cùng loại đến sau không gộp vào màn đang hiện; hiện ở màn kế tiếp", () => {
+    const first = n("gift", "Một", 5);
+    const current = keepCurrentScreen(null, [first]);
+    const later = n("gift", "Hai", 3);
+    const same = keepCurrentScreen(current, [first, later]);
+    expect(same).toBe(current);
+    expect(same?.items.map((i) => i.title)).toEqual(["Một"]);
+    const next = nextScreenAfterClose(same!, [first, later]);
+    expect(next.current?.items.map((i) => i.title)).toEqual(["Hai"]);
+  });
+
+  it("Đóng màn cuối thì không còn màn nào", () => {
+    const only = n("rejected", "Kem", null);
+    const current = keepCurrentScreen(null, [only]);
+    expect(nextScreenAfterClose(current!, [only])).toEqual({ items: [], current: null });
   });
 });

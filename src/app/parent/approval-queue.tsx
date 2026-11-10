@@ -17,6 +17,8 @@ export type QueueItem = {
   key: string;
   tag: string;
   title: string;
+  /** Con đã lưu trữ: gắn nhãn "đã lưu trữ" cạnh tên (spec family-accounts "Yêu cầu gửi trước khi lưu trữ"). */
+  childArchived?: boolean;
   meta: string;
   amount: number;
   amountSuffix?: string;
@@ -34,12 +36,13 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
   ]);
   const today = dateInZone(new Date(), timezone);
   const tasks: QueueItem[] = taskItems.map((i) => {
-    const reporter = i.members.find((m) => m.id === i.reportedByChildId)?.name;
+    const reporter = i.reporterName;
     const day = i.date === today ? "" : ` · ngày ${formatDate(i.date)}`;
     return {
       key: `task-${i.key}-${i.date}`,
       tag: i.mode === "group" ? "Nhiệm vụ nhóm" : "Nhiệm vụ",
       title: i.mode === "group" ? i.name : `${i.members[0]?.name} · ${i.name}`,
+      childArchived: i.childArchived,
       meta: `${reporter ? `${reporter} báo xong` : "Đã báo xong"}${i.mode === "group" ? ` cho cả nhóm (${i.members.map((m) => m.name).join(", ")})` : ""}${day}`,
       amount: i.points,
       amountSuffix: i.mode === "group" ? " mỗi con" : undefined,
@@ -51,6 +54,7 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     key: `claim-${c.id}`,
     tag: "Khai rule",
     title: `${c.childName} · ${c.nameSnapshot}`,
+    childArchived: c.childArchived,
     meta: `${c.childName} khai lúc ${formatDateTime(c.createdAt, timezone)}${c.note ? ` · “${c.note}”` : ""}`,
     amount: c.pointsSnapshot,
     decision: <DecisionForm id={c.id} approve={approveClaimAction} reject={rejectClaimAction} />,
@@ -60,6 +64,7 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     key: `redeem-${r.id}`,
     tag: "Đổi thưởng",
     title: `${r.childName} · ${r.nameSnapshot}`,
+    childArchived: r.childArchived,
     meta: `${r.childName} gửi lúc ${formatDateTime(r.createdAt, timezone)} · số dư hiện tại ${r.balance}`,
     amount: -r.priceSnapshot,
     warning: r.balance < r.priceSnapshot ? `Số dư hiện tại (${r.balance}) không đủ để duyệt; có thể từ chối kèm lý do.` : undefined,
@@ -87,6 +92,11 @@ export function ApprovalQueue({ items }: { items: QueueItem[] }) {
               </div>
               <span className="text-[17px] font-extrabold">
                 {it.title}{" "}
+                {it.childArchived && (
+                  <Chip className="align-middle">
+                    đã lưu trữ
+                  </Chip>
+                )}{" "}
                 <span className={it.amount >= 0 ? "text-plus" : "text-minus"}>
                   {signed(it.amount)}
                   {it.amountSuffix ?? ""}

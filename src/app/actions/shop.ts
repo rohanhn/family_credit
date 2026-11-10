@@ -31,7 +31,7 @@ export async function createRewardAction(_prev: ActionState, form: FormData): Pr
     refresh();
     return { ok: true, message: `Đã thêm "${reward.name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "createRewardAction", auth: auth, form });
   }
 }
 
@@ -42,7 +42,7 @@ export async function updateRewardAction(_prev: ActionState, form: FormData): Pr
     refresh();
     return { ok: true, message: `Đã lưu "${reward.name}". Yêu cầu đã gửi giữ giá cũ.` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "updateRewardAction", auth: auth, form });
   }
 }
 
@@ -53,7 +53,7 @@ export async function toggleRewardHiddenAction(_prev: ActionState, form: FormDat
     refresh();
     return { ok: true, message: reward.hidden ? `Đã ẩn "${reward.name}"` : `Đã hiện lại "${reward.name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "toggleRewardHiddenAction", auth: auth, form });
   }
 }
 
@@ -64,7 +64,7 @@ export async function approveRedemptionAction(_prev: ActionState, form: FormData
     refresh();
     return { ok: true, message: `Đã duyệt ${signed(txn.appliedAmount)}`, data: { applied: String(txn.appliedAmount) } };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "approveRedemptionAction", auth: auth, form });
   }
 }
 
@@ -75,7 +75,7 @@ export async function rejectRedemptionAction(_prev: ActionState, form: FormData)
     refresh();
     return { ok: true, message: "Đã từ chối" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "rejectRedemptionAction", auth: auth, form });
   }
 }
 
@@ -88,7 +88,7 @@ export async function redeemAction(_prev: ActionState, form: FormData): Promise<
     refresh();
     return { ok: true, message: `Đã gửi "${req.nameSnapshot}" cho bố mẹ duyệt` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "redeemAction", auth: kid, form });
   }
 }
 
@@ -99,7 +99,7 @@ export async function cancelRedemptionAction(_prev: ActionState, form: FormData)
     refresh();
     return { ok: true, message: "Đã hủy yêu cầu" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "cancelRedemptionAction", auth: kid, form });
   }
 }
 
@@ -112,6 +112,6 @@ export async function setGoalAction(_prev: ActionState, form: FormData): Promise
     refresh();
     return { ok: true, message: raw ? "Đã chọn mục tiêu" : "Đã bỏ mục tiêu" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "setGoalAction", auth: kid, form });
   }
 }

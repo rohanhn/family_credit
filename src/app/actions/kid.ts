@@ -21,6 +21,7 @@ export async function kidPinLoginAction(_prev: ActionState, form: FormData): Pro
       childId: int(form, "childId"),
       pin: str(form, "pin"),
       deviceChildId: device.childId,
+      previousChildToken: await readCookie("child"),
     });
     await setChildSessionCookie(session.token, session.expiresAt, session.browserSession);
   } catch (err) {
@@ -45,7 +46,7 @@ export async function kidSetThemeAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: "Đã đổi giao diện" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "kidSetThemeAction", auth: kid, form });
   }
 }
 
@@ -57,6 +58,6 @@ export async function kidChangePinAction(_prev: ActionState, form: FormData): Pr
     return { ok: true, message: "Đã đổi PIN. Lần đăng nhập sau con dùng PIN mới nhé" };
   } catch (err) {
     if (err instanceof DomainError && err.code === "LOCKED") return { error: err.message, data: { locked: "1" } };
-    return fromError(err);
+    return fromError(err, { action: "kidChangePinAction", auth: kid, form });
   }
 }

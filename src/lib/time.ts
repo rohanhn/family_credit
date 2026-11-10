@@ -63,3 +63,14 @@ export function formatDate(date: string): string {
 export function signed(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
 }
+
+/**
+ * Thời điểm của thông báo theo múi giờ gia đình (spec kid-notifications "Thiết bị ở múi giờ khác"):
+ * "hôm nay 20:00" nếu cùng ngày với `now`, còn lại "9/11 20:00".
+ */
+export function formatNotificationTime(instant: Date, timeZone: string, now: Date = new Date()): string {
+  const day = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(x);
+  const time = new Intl.DateTimeFormat("vi-VN", { timeZone, hour: "2-digit", minute: "2-digit" }).format(instant);
+  if (day(instant) === day(now)) return `hôm nay ${time}`;
+  return `${new Intl.DateTimeFormat("vi-VN", { timeZone, day: "numeric", month: "numeric" }).format(instant)} ${time}`;
+}

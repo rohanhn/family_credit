@@ -7,6 +7,7 @@ import { getBalance, lockChild, recordTransaction, type Transaction } from "./le
 import { notifyRejected } from "./notifications";
 import { validatePoints } from "./rules";
 import { DEFAULT_REWARD_ICON, REWARD_ICONS, type RewardIcon } from "@/lib/reward-icons";
+import { progressPercent } from "@/lib/progress";
 
 // Cửa hàng đổi thưởng (spec reward-shop, design D3 "Đổi thưởng").
 // - Gửi yêu cầu không trừ điểm; tên và giá được chụp lại lúc gửi.
@@ -112,19 +113,32 @@ export async function getVisibleReward(db: DbOrTx, familyId: number, rewardId: n
 /** Tiến độ mục tiêu: số dư trên giá, giới hạn 100% (spec "Mục tiêu tiết kiệm"). */
 export function goalProgress(balance: number, price: number): { percent: number; remaining: number; reached: boolean } {
   const remaining = Math.max(0, price - balance);
-  const percent = price > 0 ? Math.min(100, Math.floor((Math.max(0, balance) * 100) / price)) : 0;
+  const percent = progressPercent(balance, price);
   return { percent, remaining, reached: remaining === 0 };
 }
 
-/** Con chọn một phần thưởng đang hiện làm mục tiêu, hoặc bỏ mục tiêu (rewardId = null). */
-export async function setGoal(db: DbOrTx, input: { familyId: number; childId: number; rewardId: number | null }): Promise<void> {
-  if (input.rewardId !== null) await getVisibleReward(db, input.familyId, input.rewardId);
-  const rows = await db
-    .update(children)
-    .set({ goalRewardId: input.rewardId })
-    .where(and(eq(children.id, input.childId), eq(children.familyId, input.familyId)))
-    .returning({ id: children.id });
-  if (rows.length === 0) throw notFound();
+/**
+ * Con chọn một phần thưởng đang hiện làm mục tiêu, hoặc bỏ mục tiêu (rewardId = null).
+ * Chạy trong transaction và khóa dòng phần thưởng FOR SHARE (design D6): `setRewardHidden` cập nhật dòng đó
+ * (khóa ghi) nên hai thao tác chạy lần lượt, không còn mục tiêu trỏ tới phần thưởng vừa bị ẩn.
+ */
+export async function setGoal(db: Db, input: { familyId: number; childId: number; rewardId: number | null }): Promise<void> {
+  await db.transaction(async (tx) => {
+    if (input.rewardId !== null) {
+      const [reward] = await tx
+        .select({ id: rewards.id })
+        .from(rewards)
+        .where(and(eq(rewards.id, input.rewardId), eq(rewards.familyId, input.familyId), eq(rewards.hidden, false)))
+        .for("share");
+      if (!reward) throw notFound();
+    }
+    const rows = await tx
+      .update(children)
+      .set({ goalRewardId: input.rewardId })
+      .where(and(eq(children.id, input.childId), eq(children.familyId, input.familyId)))
+      .returning({ id: children.id });
+    if (rows.length === 0) throw notFound();
+  });
 }
 
 // ---------------------------------------------------------------- cửa hàng của con
@@ -231,7 +245,7 @@ export function listRecentRejectedRedemptions(
 /** Yêu cầu đổi thưởng đang chờ của cả gia đình (cho hàng chờ duyệt chung), kèm số dư hiện tại của con. */
 export async function listPendingRedemptions(db: DbOrTx, familyId: number) {
   const rows = await db
-    .select({ redemption: redemptions, childName: children.name })
+    .select({ redemption: redemptions, childName: children.name, childArchivedAt: children.archivedAt })
     .from(redemptions)
     .innerJoin(children, eq(children.id, redemptions.childId))
     .where(and(eq(children.familyId, familyId), eq(redemptions.status, "pending")))
@@ -240,7 +254,7 @@ export async function listPendingRedemptions(db: DbOrTx, familyId: number) {
   for (const r of rows) {
     if (!balances.has(r.redemption.childId)) balances.set(r.redemption.childId, await getBalance(db, r.redemption.childId));
   }
-  return rows.map((r) => ({ ...r.redemption, childName: r.childName, balance: balances.get(r.redemption.childId)! }));
+  return rows.map((r) => ({ ...r.redemption, childName: r.childName, childArchived: r.childArchivedAt !== null, balance: balances.get(r.redemption.childId)! }));
 }
 
 /** Khóa yêu cầu của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
@@ -290,6 +304,7 @@ export async function approveRedemption(
       actorParentId: input.actorParentId,
       refType: "redemption",
       refId: redemption.id,
+      allowArchived: true,
       notifyTitle: `Bố mẹ đã duyệt: ${redemption.nameSnapshot}`,
     });
   });

@@ -35,7 +35,7 @@ export function RuleRow({ rule }: { rule: { id: number; name: string; kind: "rew
   const [saveState, save] = useActionState(updateRuleAction, undefined);
   const [toggleState, toggle] = useActionState(toggleRuleHiddenAction, undefined);
   return (
-    <Card className={`flex flex-col gap-3 ${rule.hidden ? "opacity-70" : ""}`}>
+    <Card className={`flex flex-col gap-3 ${rule.hidden ? "border-2 border-dashed border-black/25 shadow-none" : ""}`}>
       <div className="flex flex-wrap items-center gap-3">
         <span className="flex flex-1 flex-col">
           <span className="font-extrabold">{rule.name}</span>

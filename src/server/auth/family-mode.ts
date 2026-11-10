@@ -22,15 +22,17 @@ export function pinLockedMessage(minutesLeft: number): string {
 /**
  * Bố mẹ đã đăng nhập bật chế độ gia đình trên thiết bị hiện tại: cấp phiên `device` 90 ngày và kết thúc
  * phiên bố mẹ trên thiết bị đó (design D4: cookie device chỉ mở màn chọn avatar), để con dùng thiết bị
- * không vào được khu vực bố mẹ.
+ * không vào được khu vực bố mẹ. Bật lại trên cùng thiết bị thì thay phiên thiết bị cũ của chính thiết bị đó
+ * (design D9), không để lại phiên mồ côi trong danh sách thiết bị.
  */
 export async function enableFamilyMode(
   db: DbOrTx,
   auth: { parentId: number; familyId: number },
   clock: Clock = systemClock,
-  parentToken?: string,
+  tokens: { parentToken?: string; currentDeviceToken?: string } = {},
 ) {
-  await deleteSession(db, parentToken);
+  await deleteSession(db, tokens.parentToken);
+  await deleteSession(db, tokens.currentDeviceToken);
   const session = await createSession(db, "device", auth.familyId, clock);
   logSecurityEvent("device_enabled", { familyId: auth.familyId, parentId: auth.parentId, detail: "shared" });
   return session;
@@ -129,7 +131,7 @@ async function recordPinFailure(tx: DbOrTx, child: { id: number; failedPinCount:
  */
 export async function loginChildWithPin(
   db: Db,
-  input: { familyId: number; childId: number; pin: string; deviceChildId?: number | null },
+  input: { familyId: number; childId: number; pin: string; deviceChildId?: number | null; previousChildToken?: string },
   clock: Clock = systemClock,
 ): Promise<{ token: string; expiresAt: Date; browserSession: boolean }> {
   // Máy riêng chỉ cho con sở hữu máy đăng nhập. Từ chối trước khi đụng tới dòng của con kia, nên
@@ -150,6 +152,8 @@ export async function loginChildWithPin(
     }
     if (await verifySecret(child.pinHash, input.pin)) {
       await tx.update(children).set({ failedPinCount: 0, lockedUntil: null }).where(eq(children.id, child.id));
+      // Phiên con cũ trên thiết bị này (cookie còn lại) bị thay bằng phiên mới (design D9).
+      await deleteSession(tx, input.previousChildToken);
       const session = await createSession(tx, "child", child.id, clock, personal ? { ttlMs: PERSONAL_CHILD_TTL_MS } : {});
       return { kind: "ok" as const, session: { ...session, browserSession: personal } };
     }

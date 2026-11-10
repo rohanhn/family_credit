@@ -135,6 +135,30 @@ describe("5.1 Ngày theo múi giờ gia đình và danh sách nhiệm vụ trong
     expect((await getDay(t.db, familyId, "2026-11-12")).some((i) => i.childId === bin)).toBe(false);
   });
 
+  it("Hàng chờ gắn cờ childArchived; nhiệm vụ nhóm vẫn hiện tên người báo đã lưu trữ", async () => {
+    const { familyId, kids, task, kid, today } = await setup();
+    const own = await task({ name: "Đọc sách", points: 5, childIds: [kids[0].id, kids[1].id] });
+    const grp = await task({ name: "Dọn phòng", points: 10, mode: "group", childIds: kids.map((k) => k.id) });
+    nextDay();
+    await reportDone(t.db, kid(kids[0].id), own.id, clock);
+    await reportDone(t.db, kid(kids[1].id), own.id, clock);
+    await reportDone(t.db, kid(kids[0].id), grp.id, clock);
+    await archiveChild(t.db, familyId, kids[0].id, clock);
+
+    const pending = await listPendingTaskDays(t.db, familyId, clock);
+    const flags = pending
+      .filter((i) => i.taskId === own.id)
+      .map((i) => [i.childId, i.childArchived])
+      .sort((a, b) => Number(a[0]) - Number(b[0]));
+    expect(flags).toEqual([
+      [kids[0].id, true],
+      [kids[1].id, false],
+    ]);
+    const group = (await today(kids[1].id)).find((i) => i.taskId === grp.id)!;
+    expect(group.members.some((m) => m.id === kids[0].id)).toBe(false);
+    expect(group).toMatchObject({ status: "pending", reportedByChildId: kids[0].id, reporterName: "Bin" });
+  });
+
   it("Con lưu trữ khi chưa báo xong: ngày lưu trữ không còn mục của con đó", async () => {
     const { familyId, kids, task } = await setup();
     await task({ name: "Đọc sách", points: 5, assignAll: true });
@@ -243,7 +267,7 @@ describe("5.3 Nhiệm vụ riêng", () => {
     await rejectTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10", childId: bin.id, reason: "Chưa làm xong bài toán" }, clock);
     expect((await today(bin.id))[0]).toMatchObject({ status: "todo", rejectReason: "Chưa làm xong bài toán" });
     expect((await getUnreadSummary(t.db, bin.id)).items[0]).toMatchObject({ kind: "rejected", reason: "Chưa làm xong bài toán" });
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
     // Báo lại thì lý do cũ biến mất.
     await reportDone(t.db, kid(bin.id), tk.id, clock);
     expect((await today(bin.id))[0].rejectReason).toBeNull();
@@ -341,7 +365,7 @@ describe("5.4 Nhiệm vụ cả nhóm làm chung", () => {
     const { tk, familyId, parentInput } = await group();
     await approveTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10" }, clock);
     await expect(approveTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10" }, clock)).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await listTransactions(t.db, { familyId })).toHaveLength(3);
+    expect((await listTransactions(t.db, { familyId })).rows).toHaveLength(3);
   });
 
   it("Từ chối nhiệm vụ nhóm: cả nhóm trở lại chưa làm, mỗi con có thông báo kèm lý do", async () => {
@@ -352,7 +376,7 @@ describe("5.4 Nhiệm vụ cả nhóm làm chung", () => {
       expect((await today(id))[0]).toMatchObject({ status: "todo", rejectReason: "Còn đồ chơi dưới gầm giường" });
       expect((await getUnreadSummary(t.db, id)).items[0]).toMatchObject({ kind: "rejected", reason: "Còn đồ chơi dưới gầm giường" });
     }
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
   });
 
   it("Bố mẹ tự đánh dấu nhiệm vụ nhóm chưa báo, cho những con được chọn", async () => {

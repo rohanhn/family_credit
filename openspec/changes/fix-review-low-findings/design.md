@@ -69,7 +69,8 @@ Change này gồm nhiều sửa nhỏ, độc lập nhau. Mỗi nhóm có thể 
 - `setRewardHidden` cập nhật dòng phần thưởng, tức là lấy khóa ghi, nên hai thao tác này chạy lần lượt.
 
 ### D7. Tương phản khi dùng opacity
-- Thẻ rule hoặc phần thưởng đang ẩn: bỏ `opacity-70`. Thay bằng nền `bg-soft`, viền nét đứt và nhãn "Đang ẩn". Màu chữ vẫn là token đã được test.
+- Thẻ rule hoặc phần thưởng đang ẩn: bỏ `opacity-70`. Thay bằng viền nét đứt và nhãn "Đang ẩn", giữ nền `card`. Màu chữ vẫn là token đã được test.
+  - Không dùng nền `bg-soft`: chữ điểm `plus` (#15803d) trên `soft` chỉ đạt 3.7–4.1:1 ở các theme, dưới 4.5:1.
 - "Con đang có": bỏ `opacity-90`.
 - Thêm test lint đơn giản: tìm `opacity-` trên phần tử có chữ trong `src/app`, so với một danh sách cho phép (icon, trang trí), để lỗi này không quay lại.
 

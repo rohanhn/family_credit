@@ -65,11 +65,15 @@ export type DayItem = {
   members: { id: number; name: string }[];
   status: TaskDayStatus;
   reportedByChildId: number | null;
+  /** Tên con đã báo xong, tra trong mọi con của gia đình (kể cả đã lưu trữ). */
+  reporterName: string | null;
+  /** Nhiệm vụ riêng của một con đã lưu trữ (hàng chờ duyệt gắn nhãn "đã lưu trữ"). */
+  childArchived: boolean;
   rejectReason: string | null;
 };
 
 /** Các con được giao một nhiệm vụ trong ngày `date` (design D3 "Con được giao trong một ngày"). */
-function membersOn(task: Task, date: string, kids: Kid[], assignees: (typeof taskAssignees.$inferSelect)[], tz: string): Kid[] {
+function membersOn<K extends Kid>(task: Task, date: string, kids: K[], assignees: (typeof taskAssignees.$inferSelect)[], tz: string): K[] {
   if (task.assignAll) {
     // "Tất cả các con": con mới được giao từ ngày hôm sau ngày tạo hồ sơ.
     return kids.filter((k) => dateInZone(k.createdAt, tz) < date);
@@ -118,6 +122,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
   // duyệt được việc con đã làm.
   const archivedToday = allKids.filter((k) => k.archivedAt !== null && date === dateInZone(k.archivedAt, tz));
 
+  const nameOf = (id: number | null | undefined) => (id == null ? null : (allKids.find((k) => k.id === id)?.name ?? null));
+
   const items: DayItem[] = [];
   for (const task of active) {
     const members = membersOn(task, date, kids, assignees, tz);
@@ -137,6 +143,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
         members: members.map((m) => ({ id: m.id, name: m.name })),
         status: row?.status ?? "todo",
         reportedByChildId: row?.reportedByChildId ?? null,
+        reporterName: nameOf(row?.reportedByChildId),
+        childArchived: false,
         rejectReason: row?.status === "todo" ? (row?.rejectReason ?? null) : null,
       });
     } else {
@@ -149,6 +157,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
           members: [{ id: m.id, name: m.name }],
           status: row?.status ?? "todo",
           reportedByChildId: row?.reportedByChildId ?? null,
+          reporterName: nameOf(row?.reportedByChildId),
+          childArchived: m.archivedAt !== null,
           rejectReason: row?.status === "todo" ? (row?.rejectReason ?? null) : null,
         });
       }
@@ -366,9 +376,26 @@ export async function reportDone(db: DbOrTx, kid: { familyId: number; childId: n
       setWhere: sql`${taskDays.status} = 'todo'`,
     })
     .returning({ id: taskDays.id });
-  // Nhóm đã có người báo trước: giữ nguyên tên người báo đầu tiên.
-  if (rows.length === 0 && item.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DONE);
-  return { ...item, status: "pending", reportedByChildId: item.status === "pending" ? item.reportedByChildId : kid.childId, rejectReason: null };
+  if (rows.length === 0) {
+    // Không ghi được: dòng đã ở "chờ duyệt" hoặc "xong", có thể vừa đổi sau lần đọc ở trên (con khác trong nhóm
+    // báo cùng lúc). Đọc lại trạng thái hiện tại thay vì dựa vào lần đọc cũ (design D8).
+    const [row] = await db
+      .select({ status: taskDays.status, reportedByChildId: taskDays.reportedByChildId })
+      .from(taskDays)
+      .where(
+        and(
+          eq(taskDays.taskId, taskId),
+          eq(taskDays.date, today),
+          item.childId === null ? isNull(taskDays.childId) : eq(taskDays.childId, item.childId),
+        ),
+      );
+    if (row?.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DONE);
+    // Đã có người báo trước: giữ nguyên tên người báo đầu tiên.
+    const reporterName = row.reportedByChildId === null ? null : (item.members.find((m) => m.id === row.reportedByChildId)?.name ?? item.reporterName);
+    return { ...item, status: "pending", reportedByChildId: row.reportedByChildId, reporterName, rejectReason: null };
+  }
+  const reporterName = item.members.find((m) => m.id === kid.childId)?.name ?? null;
+  return { ...item, status: "pending", reportedByChildId: kid.childId, reporterName, rejectReason: null };
 }
 
 /** Con hủy báo khi bố mẹ chưa duyệt (nhóm: bất kỳ thành viên nào). */
@@ -440,6 +467,7 @@ export async function approveTaskDay(
           actorParentId: input.actorParentId,
           refType: "task_day",
           refId: rows[0].id,
+          allowArchived: true,
           notifyTitle: item.name,
         }),
       );

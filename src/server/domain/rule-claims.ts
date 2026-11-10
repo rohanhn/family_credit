@@ -46,12 +46,12 @@ export function listChildClaims(db: DbOrTx, childId: number, status: RuleClaim["
 /** Yêu cầu khai rule đang chờ của cả gia đình (cho hàng chờ duyệt chung). */
 export async function listPendingClaims(db: DbOrTx, familyId: number) {
   const rows = await db
-    .select({ claim: ruleClaims, childName: children.name })
+    .select({ claim: ruleClaims, childName: children.name, childArchivedAt: children.archivedAt })
     .from(ruleClaims)
     .innerJoin(children, eq(children.id, ruleClaims.childId))
     .where(and(eq(children.familyId, familyId), eq(ruleClaims.status, "pending")))
     .orderBy(asc(ruleClaims.id));
-  return rows.map((r) => ({ ...r.claim, childName: r.childName }));
+  return rows.map((r) => ({ ...r.claim, childName: r.childName, childArchived: r.childArchivedAt !== null }));
 }
 
 /** Khóa yêu cầu của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
@@ -89,6 +89,7 @@ export async function approveClaim(
       actorParentId: input.actorParentId,
       refType: "rule_claim",
       refId: claim.id,
+      allowArchived: true,
       notifyTitle: claim.nameSnapshot,
     });
   });

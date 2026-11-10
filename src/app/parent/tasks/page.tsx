@@ -128,7 +128,7 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
               <Card className="font-semibold text-muted">Không có nhiệm vụ nào trong ngày này.</Card>
             ) : (
               day.map((i) => {
-                const reporter = i.members.find((m) => m.id === i.reportedByChildId)?.name;
+                const reporter = i.reporterName;
                 return (
                   <Card key={i.key} className="flex flex-wrap items-center gap-x-4 gap-y-3">
                     <div className="flex min-w-0 flex-[1_1_240px] flex-col gap-1">

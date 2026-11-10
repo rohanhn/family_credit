@@ -11,8 +11,9 @@ import { rewardIcon } from "@/lib/reward-icons";
 import { Mascot } from "@/ui/chibi";
 import { CurrencyIcon } from "@/ui/currency-icon";
 import { Icon } from "@/ui/icons";
-import { Card, ProgressBar } from "@/ui/primitives";
+import { Card, Chip, ProgressBar } from "@/ui/primitives";
 import { effectiveTheme, THEMES } from "@/ui/themes";
+import { RedeemButton } from "../shop/shop-buttons";
 import { TodayTasks } from "./today-tasks";
 
 export const metadata: Metadata = { title: "Trang chính · Sao nhà mình" };
@@ -38,7 +39,7 @@ async function KidHome() {
         <div className="relative flex min-h-36 items-center gap-4 overflow-hidden rounded-[28px] bg-primary px-5 py-5 text-on-primary md:px-6">
           <CurrencyIcon icon={currency.icon} size={64} />
           <span className="relative z-10 flex flex-col">
-            <span className="font-bold opacity-90">Con đang có</span>
+            <span className="font-bold">Con đang có</span>
             <span className="font-display text-[52px] font-extrabold leading-none md:text-6xl">
               {balance} <span className="text-2xl md:text-[26px]">{currency.name}</span>
             </span>
@@ -67,6 +68,14 @@ async function KidHome() {
             <span className="text-sm font-bold text-muted md:text-[15px]">
               {Math.min(balance, goal.price)} / {goal.price} {currency.name} · {goal.reached ? "Đủ rồi, đổi quà thôi!" : `Còn ${goal.remaining} nữa`}
             </span>
+            {goal.reached &&
+              (goal.pendingRedemptionId !== null ? (
+                <Chip tone="wait" className="!px-3 !py-2 text-sm">
+                  Chờ duyệt
+                </Chip>
+              ) : (
+                <RedeemButton rewardId={goal.id} highlight />
+              ))}
           </Card>
         ) : (
           <Link href="/kid/shop" className="no-underline">

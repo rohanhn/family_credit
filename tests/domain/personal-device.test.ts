@@ -214,3 +214,39 @@ describe("Con đổi PIN", () => {
     expect(row.pinChangedAt?.toISOString()).toBe(clock.now().toISOString());
   });
 });
+
+describe("Thay phiên cũ của chính thiết bị (task 6.2, design D9)", () => {
+  it("Bật lại chế độ gia đình trên cùng thiết bị: danh sách thiết bị không tăng, phiên cũ hết hiệu lực", async () => {
+    const { family, parent } = await seedFamily(t.db);
+    const auth = { parentId: parent.id, familyId: family.id };
+    const first = await enableFamilyMode(t.db, auth, clock);
+    const other = await enableFamilyMode(t.db, auth, clock);
+    expect(await listDevices(t.db, family.id, clock)).toHaveLength(2);
+
+    const again = await enableFamilyMode(t.db, auth, clock, { currentDeviceToken: first.token });
+    expect(await listDevices(t.db, family.id, clock)).toHaveLength(2);
+    expect(await authenticateDevice(t.db, first.token, clock)).toBeNull();
+    expect(await authenticateDevice(t.db, again.token, clock)).not.toBeNull();
+    expect(await authenticateDevice(t.db, other.token, clock)).not.toBeNull();
+  });
+
+  it("Đăng nhập PIN xóa phiên con cũ của thiết bị", async () => {
+    const { family } = await seedFamily(t.db, { kids: [] });
+    const bin = await createChild(t.db, family.id, { name: "Bin", avatar: "boy-brown", pin: "1234" });
+    const na = await createChild(t.db, family.id, { name: "Na", avatar: "girl-black", pin: "5678" });
+    const old = await loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234" }, clock);
+    const next = await loginChildWithPin(t.db, { familyId: family.id, childId: na.id, pin: "5678", previousChildToken: old.token }, clock);
+    expect(await resolveSession(t.db, old.token, "child", clock)).toBeNull();
+    expect(await resolveSession(t.db, next.token, "child", clock)).not.toBeNull();
+  });
+
+  it("PIN sai không xóa phiên con cũ", async () => {
+    const { family } = await seedFamily(t.db, { kids: [] });
+    const bin = await createChild(t.db, family.id, { name: "Bin", avatar: "boy-brown", pin: "1234" });
+    const old = await loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234" }, clock);
+    await expect(loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "0000", previousChildToken: old.token }, clock)).rejects.toMatchObject({
+      code: "INVALID_CREDENTIALS",
+    });
+    expect(await resolveSession(t.db, old.token, "child", clock)).not.toBeNull();
+  });
+});

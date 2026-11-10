@@ -72,7 +72,7 @@ describe("Quản lý hồ sơ con", () => {
     expect(await authenticateChild(t.db, device.token, session.token, clock)).toBeNull();
     await expect(loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234" }, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await listKidsForDevice(t.db, { familyId: family.id, childId: null }, clock)).toEqual([]);
-    expect(await listTransactions(t.db, { familyId: family.id, childId: bin.id })).toHaveLength(1);
+    expect((await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows).toHaveLength(1);
     expect(await listChildren(t.db, family.id, { includeArchived: true })).toHaveLength(1);
   });
 });
@@ -88,7 +88,7 @@ describe("Đăng nhập con bằng avatar và PIN", () => {
   it("Bật chế độ gia đình kết thúc phiên bố mẹ trên thiết bị đó", async () => {
     const { family, parent } = await seedFamily(t.db, { kids: [] });
     const parentSession = await createSession(t.db, "parent", parent.id, clock);
-    await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock, parentSession.token);
+    await enableFamilyMode(t.db, { parentId: parent.id, familyId: family.id }, clock, { parentToken: parentSession.token });
     expect(await resolveSession(t.db, parentSession.token, "parent", clock)).toBeNull();
   });
 

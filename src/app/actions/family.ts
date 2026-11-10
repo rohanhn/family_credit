@@ -21,7 +21,7 @@ export async function createInviteAction(): Promise<ActionState> {
     const base = process.env.APP_URL?.replace(/\/$/, "") ?? "";
     return { ok: true, data: { url: `${base}/invite/${token}`, expiresAt: expiresAt.toISOString() } };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "createInviteAction", auth: auth });
   }
 }
 
@@ -32,7 +32,7 @@ export async function addChildAction(_prev: ActionState, form: FormData): Promis
     refresh();
     return { ok: true, message: `Đã thêm ${child.name}` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "addChildAction", auth: auth, form });
   }
 }
 
@@ -47,7 +47,7 @@ export async function updateChildAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: `Đã lưu hồ sơ của ${child.name}` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "updateChildAction", auth: auth, form });
   }
 }
 
@@ -58,7 +58,7 @@ export async function archiveChildAction(_prev: ActionState, form: FormData): Pr
     refresh();
     return { ok: true, message: "Đã lưu trữ hồ sơ. Lịch sử vẫn được giữ." };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "archiveChildAction", auth: auth, form });
   }
 }
 
@@ -69,14 +69,17 @@ export async function updateCurrencyAction(_prev: ActionState, form: FormData): 
     refresh();
     return { ok: true, message: `Đơn vị tiền tệ giờ là "${c.name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "updateCurrencyAction", auth: auth, form });
   }
 }
 
 /** Bật chế độ gia đình trên thiết bị đang dùng rồi chuyển sang màn chọn avatar. */
 export async function enableFamilyModeAction(): Promise<void> {
   const auth = await requireParentWithFamily();
-  const session = await enableFamilyMode(getDb(), auth, undefined, await readCookie("parent"));
+  const session = await enableFamilyMode(getDb(), auth, undefined, {
+    parentToken: await readCookie("parent"),
+    currentDeviceToken: await readCookie("device"),
+  });
   await clearSessionCookie("parent");
   await setSessionCookie("device", session.token, session.expiresAt);
   redirect("/kid");
@@ -101,7 +104,7 @@ export async function revokeDeviceAction(_prev: ActionState, form: FormData): Pr
     refresh();
     return { ok: true, message: "Đã thu hồi thiết bị" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "revokeDeviceAction", auth: auth, form });
   }
 }
 
@@ -113,7 +116,7 @@ export async function setFamilyThemeAction(_prev: ActionState, form: FormData): 
     refresh();
     return { ok: true, message: `Theme gia đình giờ là "${THEMES[theme].name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "setFamilyThemeAction", auth: auth, form });
   }
 }
 
@@ -125,6 +128,6 @@ export async function setFamilySoundAction(_prev: ActionState, form: FormData): 
     refresh();
     return { ok: true, message: enabled ? "Đã bật âm thanh cho cả gia đình" : "Đã tắt âm thanh trên mọi thiết bị của gia đình" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "setFamilySoundAction", auth: auth, form });
   }
 }

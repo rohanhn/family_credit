@@ -89,7 +89,7 @@ export function UiDemo() {
         <div className="relative flex min-h-36 items-center gap-4 overflow-hidden rounded-[28px] bg-primary px-6 py-5 text-on-primary">
           <CoinIcon size={64} />
           <span className="flex flex-col">
-            <span className="font-bold opacity-90">Con đang có</span>
+            <span className="font-bold">Con đang có</span>
             <span className="font-display text-[52px] font-extrabold leading-none">
               120 <span className="text-2xl">Sao</span>
             </span>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { formatDateTime, signed } from "@/lib/time";
 
 // Danh sách giao dịch dùng chung cho bố mẹ và con (spec currency-ledger "Xem lịch sử giao dịch").
@@ -53,11 +54,38 @@ export function HistoryList({
             </span>
           </span>
           <span className={`font-display text-lg font-extrabold ${r.appliedAmount > 0 ? "text-plus" : r.appliedAmount < 0 ? "text-minus" : "text-muted"}`}>
-            {signed(r.appliedAmount)} <span className="sr-only">{currency}</span>
+            {signed(r.appliedAmount)} <span className="text-sm font-bold text-muted">{currency}</span>
           </span>
           {rowAction?.(r)}
         </li>
       ))}
     </ol>
+  );
+}
+
+/** Phân trang lịch sử (design D2): link tới trang cũ hơn giữ nguyên bộ lọc trên URL, không cần JavaScript. */
+export function HistoryPager({ basePath, params, nextBeforeId, isFirstPage }: { basePath: string; params: Record<string, string | undefined>; nextBeforeId: number | null; isFirstPage: boolean }) {
+  if (nextBeforeId === null && isFirstPage) return null;
+  const href = (before?: number) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
+    if (before !== undefined) q.set("before", String(before));
+    const qs = q.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
+  const linkClass = "inline-flex min-h-11 items-center rounded-full bg-soft px-5 font-extrabold text-ink";
+  return (
+    <nav aria-label="Phân trang lịch sử" className="flex flex-wrap justify-center gap-3">
+      {!isFirstPage && (
+        <Link href={href()} className={linkClass}>
+          Về mới nhất
+        </Link>
+      )}
+      {nextBeforeId !== null && (
+        <Link href={href(nextBeforeId)} className={linkClass}>
+          Xem thêm
+        </Link>
+      )}
+    </nav>
   );
 }

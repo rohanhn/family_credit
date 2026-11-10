@@ -40,7 +40,7 @@ describe("Phân quyền bố mẹ và con", () => {
       applyLedgerEntry(t.db, { familyId: b.family.id, childId: a.kids[0].id, kind: "adhoc", amount: 5, description: "x", actorParentId: b.parent.id }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(recordAdjustment(t.db, { familyId: b.family.id, originalTransactionId: txn.id, reason: "x", actorParentId: b.parent.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(await listTransactions(t.db, { familyId: b.family.id, childId: a.kids[0].id })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId: b.family.id, childId: a.kids[0].id })).rows).toEqual([]);
   });
 
   it("Con cố thực hiện thao tác của bố mẹ: phiên con không qua được guard bố mẹ", async () => {

@@ -1,16 +1,17 @@
 # syntax=docker/dockerfile:1
 # Image production (design D8): next build standalone, chạy bằng user không phải root, không volume.
 
-ARG NODE_IMAGE=node:22-alpine
+# Image gốc ghi thẳng tên kèm digest ở mỗi stage (không qua ARG) để Dependabot đọc và mở PR cập nhật được.
+# Đổi digest thì đổi ở cả ba dòng FROM.
 
 # --- Cài dependency (cả dev, để build) ---
-FROM ${NODE_IMAGE} AS deps
+FROM node:22-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 # --- Build app và các script vận hành ---
-FROM ${NODE_IMAGE} AS build
+FROM node:22-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS build
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 # APP_URL được đóng gói vào cấu hình lúc build (allowedOrigins của Server Actions).
@@ -21,7 +22,7 @@ COPY . .
 RUN npm run build && npm run build:scripts
 
 # --- Image chạy ---
-FROM ${NODE_IMAGE} AS runner
+FROM node:22-alpine@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \

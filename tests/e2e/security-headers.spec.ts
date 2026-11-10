@@ -20,6 +20,12 @@ test("trang đăng nhập có header bảo mật và không lỗi CSP", async ({
   expect(h["x-content-type-options"]).toBe("nosniff");
   expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(h["permissions-policy"]).toContain("camera=()");
+  // Bản production không cho eval (dev cần 'unsafe-eval' cho React Refresh).
+  if (process.env.E2E_PROD === "1") {
+    expect(h["content-security-policy"]).not.toContain("'unsafe-eval'");
+    expect(h["content-security-policy"]).toContain("upgrade-insecure-requests");
+    expect(h["strict-transport-security"]).toBe("max-age=31536000; includeSubDomains");
+  }
   await expect(page.getByRole("button", { name: "Đăng nhập" })).toBeVisible();
   expect(cspErrors).toEqual([]);
 });

@@ -6,6 +6,7 @@ import { getFamily } from "@/server/domain/families";
 import { DeviceMenu } from "./device-menu";
 import { ParentShell } from "@/ui/parent-shell";
 import { SoundProvider } from "@/ui/sound";
+import { SoundToggle } from "@/ui/sound-toggle";
 import { effectiveTheme } from "@/ui/themes";
 
 // Khu vực bố mẹ: đọc phiên trong <Suspense> (Cache Components), mọi trang con đều đã qua guard.
@@ -20,7 +21,11 @@ async function ParentFrame({ children }: { children: ReactNode }) {
         theme={effectiveTheme(null, family.defaultTheme)}
         familyName={family.name}
         actions={
-          <DeviceMenu kids={kids.map((k) => ({ id: k.id, name: k.name }))} />
+          // Nút loa theo thiết bị, cùng khóa localStorage với phía con (design D5).
+          <div className="flex items-center gap-2">
+            <SoundToggle variant="icon" />
+            <DeviceMenu kids={kids.map((k) => ({ id: k.id, name: k.name }))} />
+          </div>
         }
       >
         {children}
