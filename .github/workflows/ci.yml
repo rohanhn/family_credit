@@ -1,7 +1,8 @@
 # CI/CD (design D8/D9).
 # - Pull request: lint, typecheck, npm audit, unit test, test chống race và e2e trên Postgres thật.
 #   E2E chạy trên bản build production (E2E_PROD=1) để kiểm tra đúng CSP và HSTS.
-# - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, quét Trivy, rồi push lên GHCR
+# - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, chạy thử image với Postgres
+#   (migration, /api/health, reset-password.js), quét Trivy, rồi push lên GHCR
 #   với tag sha-<short>, latest (master) và vX.Y.Z (tag).
 # Biến của repo: vars.APP_URL (ví dụ https://app3.domain.xyz) được đóng gói vào image lúc build.
 # Các action được ghim theo commit SHA; Dependabot cập nhật hằng tuần.
@@ -104,6 +105,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Postgres cho bước chạy thử image trước khi push.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: my_credit
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: my_credit
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U my_credit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -139,6 +154,11 @@ jobs:
           tags: my-credit:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Chạy thử image (migration, /api/health, reset-password.js)
+        env:
+          DATABASE_URL: postgres://my_credit:ci-only-password@localhost:5432/my_credit
+        run: scripts/ci-smoke-image.sh my-credit:scan
 
       - name: Quét lỗ hổng bằng Trivy (dừng nếu có HIGH/CRITICAL đã có bản vá)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
