@@ -8,13 +8,13 @@ import { getFamily } from "@/server/domain/families";
 import { listTransactions, type TransactionKind } from "@/server/domain/ledger";
 import { TRANSACTION_KINDS } from "@/server/db/schema";
 import { addDays, isDateString, startOfDayInZone } from "@/lib/time";
-import { HistoryList, KIND_LABELS } from "@/ui/history-list";
+import { HistoryList, HistoryPager, KIND_LABELS } from "@/ui/history-list";
 import { Button } from "@/ui/primitives";
 import { AdjustButton } from "./adjust-button";
 
 export const metadata: Metadata = { title: "Lịch sử · Sao nhà mình" };
 
-type SearchParams = Promise<{ child?: string; kind?: string; from?: string; to?: string }>;
+type SearchParams = Promise<{ child?: string; kind?: string; from?: string; to?: string; before?: string }>;
 
 const selectClass = "min-h-11 rounded-xl border-2 border-black/15 bg-card px-3 text-base font-bold text-ink";
 const inputLabel = "flex flex-col gap-1 text-[13px] font-extrabold text-muted";
@@ -29,8 +29,10 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
   const kind = (TRANSACTION_KINDS as readonly string[]).includes(sp.kind ?? "") ? (sp.kind as TransactionKind) : undefined;
   const from = sp.from && isDateString(sp.from) ? sp.from : "";
   const to = sp.to && isDateString(sp.to) ? sp.to : "";
-  const { rows } = await listTransactions(db, {
+  const before = /^[1-9]\d{0,9}$/.test(sp.before ?? "") ? Number(sp.before) : undefined;
+  const { rows, nextBeforeId } = await listTransactions(db, {
     familyId: auth.familyId,
+    beforeId: before,
     childId,
     kinds: kind ? [kind] : undefined,
     from: from ? startOfDayInZone(from, family.timezone) : undefined,
@@ -82,6 +84,12 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
         currency={currency.name}
         showChild
         rowAction={(r) => (r.kind !== "adjust" && !r.adjusted && r.appliedAmount !== 0 ? <AdjustButton transactionId={r.id} /> : null)}
+      />
+      <HistoryPager
+        basePath="/parent/history"
+        params={{ child: childId ? String(childId) : undefined, kind, from, to }}
+        nextBeforeId={nextBeforeId}
+        isFirstPage={before === undefined}
       />
     </div>
   );
