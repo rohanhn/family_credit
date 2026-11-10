@@ -10,7 +10,8 @@ import {
   registerParent,
   resetPasswordByEmail,
 } from "@/server/auth/parent-auth";
-import { resolveSession } from "@/server/auth/sessions";
+import { createSession, resolveSession } from "@/server/auth/sessions";
+import { seedFamily } from "../helpers/seed";
 import { sha256 } from "@/server/auth/crypto";
 import { setSecurityLogSink } from "@/server/log";
 import { createTestDb, type TestDb } from "../helpers/db";
@@ -201,6 +202,51 @@ describe("Phiên", () => {
   it("Token sai loại phiên không dùng được", async () => {
     const r = await register();
     expect(await resolveSession(t.db, r.token, "child", clock)).toBeNull();
+  });
+});
+
+describe("Phiên bố mẹ trên máy của con", () => {
+  const ttlOf = async (token: string) => {
+    const [row] = await t.db.select({ ttlMs: sessions.ttlMs }).from(sessions).where(eq(sessions.idHash, sha256(token)));
+    return row.ttlMs;
+  };
+  const deviceToken = async (opts: { personal?: boolean } = {}) => {
+    const { family, kids } = await seedFamily(t.db);
+    return (await createSession(t.db, "device", family.id, clock, { deviceChildId: opts.personal ? kids[0].id : null })).token;
+  };
+  const login = (deviceToken?: string) => loginParent(t.db, { email: "me@example.com", password: "matkhau123" }, { ...ctx, deviceToken });
+
+  it("Đăng nhập trên máy dùng chung đang bật chế độ gia đình: phiên 15 phút, hết hạn khi bỏ quên", async () => {
+    await register();
+    const r = await login(await deviceToken());
+    expect(await ttlOf(r.token)).toBe(15 * MINUTE);
+    expect(r.expiresAt.getTime() - clock.now().getTime()).toBe(15 * MINUTE);
+    clock.advance(15 * MINUTE);
+    expect(await resolveSession(t.db, r.token, "parent", clock)).toBeNull();
+  });
+
+  it("Đăng nhập trên máy riêng của con: phiên 15 phút", async () => {
+    await register();
+    const r = await login(await deviceToken({ personal: true }));
+    expect(await ttlOf(r.token)).toBe(15 * MINUTE);
+  });
+
+  it("Đăng ký trên máy của con: phiên 15 phút", async () => {
+    const token = await deviceToken();
+    const r = await registerParent(t.db, { email: "new@example.com", password: "matkhau123", displayName: "Bố" }, { ...ctx, deviceToken: token });
+    expect(await ttlOf(r.token)).toBe(15 * MINUTE);
+  });
+
+  it("Máy thường, cookie mc_device giả hoặc đã hết hạn: phiên 30 ngày", async () => {
+    await register();
+    expect(await ttlOf((await login()).token)).toBeNull();
+    expect(await ttlOf((await login("token-gia")).token)).toBeNull();
+    const expired = await deviceToken();
+    clock.advance(91 * DAY);
+    const r = await login(expired);
+    expect(await ttlOf(r.token)).toBeNull();
+    clock.advance(HOUR);
+    expect(await resolveSession(t.db, r.token, "parent", clock)).not.toBeNull();
   });
 });
 
