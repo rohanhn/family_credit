@@ -5,7 +5,7 @@
 # - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, chạy thử image với Postgres
 #   (migration, /api/health, reset-password.js), quét Trivy, rồi push lên GHCR
 #   với tag sha-<short>, latest (master) và vX.Y.Z (tag).
-# Biến của repo: vars.APP_URL (ví dụ https://app3.domain.xyz) được đóng gói vào image lúc build.
+# Image không phụ thuộc domain: APP_URL chỉ đặt lúc chạy (.env trên VPS).
 # Các action được ghim theo commit SHA; Dependabot cập nhật hằng tuần.
 name: CI
 
@@ -126,14 +126,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Kiểm tra biến APP_URL
-        env:
-          APP_URL: ${{ vars.APP_URL }}
-        run: |
-          if [ -z "$APP_URL" ]; then
-            echo "::warning::Chưa đặt biến repo APP_URL: image sẽ không có allowedOrigins cho Server Actions"
-          fi
-
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Tính tag image
@@ -151,7 +143,6 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          build-args: APP_URL=${{ vars.APP_URL }}
           load: true
           tags: my-credit:scan
           cache-from: type=gha
@@ -185,7 +176,6 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          build-args: APP_URL=${{ vars.APP_URL }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
