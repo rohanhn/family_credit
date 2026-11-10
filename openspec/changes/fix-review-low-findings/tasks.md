@@ -24,7 +24,7 @@
 
 ## 5. Nhiệm vụ nhóm
 
-- [ ] 5.1 `reportDone` đọc lại `task_days` khi upsert trả 0 dòng (design D8): đang chờ duyệt thì trả mục đó, không báo lỗi. Kiểm tra bằng test race trên Postgres thật: hai con báo xong cùng một nhiệm vụ nhóm đồng thời, cả hai đều thành công, chỉ có một dòng `pending`, tên người báo là con đến trước
+- [x] 5.1 `reportDone` đọc lại `task_days` khi upsert trả 0 dòng (design D8): đang chờ duyệt thì trả mục đó, không báo lỗi. Kiểm tra bằng test race trên Postgres thật: hai con báo xong cùng một nhiệm vụ nhóm đồng thời, cả hai đều thành công, chỉ có một dòng `pending`, tên người báo là con đến trước
 
 ## 6. Phiên và log bảo mật
 

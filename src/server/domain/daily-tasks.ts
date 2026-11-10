@@ -376,9 +376,24 @@ export async function reportDone(db: DbOrTx, kid: { familyId: number; childId: n
       setWhere: sql`${taskDays.status} = 'todo'`,
     })
     .returning({ id: taskDays.id });
-  // Nhóm đã có người báo trước: giữ nguyên tên người báo đầu tiên.
-  if (rows.length === 0 && item.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DONE);
-  if (item.status === "pending") return { ...item, rejectReason: null };
+  if (rows.length === 0) {
+    // Không ghi được: dòng đã ở "chờ duyệt" hoặc "xong", có thể vừa đổi sau lần đọc ở trên (con khác trong nhóm
+    // báo cùng lúc). Đọc lại trạng thái hiện tại thay vì dựa vào lần đọc cũ (design D8).
+    const [row] = await db
+      .select({ status: taskDays.status, reportedByChildId: taskDays.reportedByChildId })
+      .from(taskDays)
+      .where(
+        and(
+          eq(taskDays.taskId, taskId),
+          eq(taskDays.date, today),
+          item.childId === null ? isNull(taskDays.childId) : eq(taskDays.childId, item.childId),
+        ),
+      );
+    if (row?.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DONE);
+    // Đã có người báo trước: giữ nguyên tên người báo đầu tiên.
+    const reporterName = row.reportedByChildId === null ? null : (item.members.find((m) => m.id === row.reportedByChildId)?.name ?? item.reporterName);
+    return { ...item, status: "pending", reportedByChildId: row.reportedByChildId, reporterName, rejectReason: null };
+  }
   const reporterName = item.members.find((m) => m.id === kid.childId)?.name ?? null;
   return { ...item, status: "pending", reportedByChildId: kid.childId, reporterName, rejectReason: null };
 }
