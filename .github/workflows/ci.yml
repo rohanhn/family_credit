@@ -1,5 +1,6 @@
 # CI/CD (design D8/D9).
 # - Pull request: lint, typecheck, npm audit, unit test, test chống race và e2e trên Postgres thật.
+#   E2E chạy trên bản build production (E2E_PROD=1) để kiểm tra đúng CSP và HSTS.
 # - Push lên master và tag v*: chạy lại các kiểm tra trên, build image, quét Trivy, rồi push lên GHCR
 #   với tag sha-<short>, latest (master) và vX.Y.Z (tag).
 # Biến của repo: vars.APP_URL (ví dụ https://app3.domain.xyz) được đóng gói vào image lúc build.
@@ -79,7 +80,9 @@ jobs:
       - name: Cài trình duyệt cho Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: E2E
+      - name: E2E (trên bản build production)
+        env:
+          E2E_PROD: "1"
         run: npm run test:e2e
 
       - name: Lưu báo cáo Playwright khi lỗi
