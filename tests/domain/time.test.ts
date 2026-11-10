@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dateInZone, signed, startOfDayInZone, weekdayIndex } from "@/lib/time";
+import { addDays, dateInZone, formatNotificationTime, signed, startOfDayInZone, weekdayIndex } from "@/lib/time";
 
 describe("ngày theo múi giờ gia đình", () => {
   const VN = "Asia/Ho_Chi_Minh";
@@ -22,5 +22,20 @@ describe("ngày theo múi giờ gia đình", () => {
 
   it("signed", () => {
     expect([signed(5), signed(-5), signed(0)]).toEqual(["+5", "−5", "0"]);
+  });
+});
+
+describe("giờ thông báo theo múi giờ gia đình", () => {
+  // 20:00 giờ Việt Nam ngày 9/11 = 13:00 UTC. Kết quả không phụ thuộc múi giờ của máy chạy test.
+  const at = new Date("2026-11-09T13:00:00Z");
+
+  it("Cùng ngày theo múi giờ gia đình: hôm nay 20:00", () => {
+    expect(formatNotificationTime(at, "Asia/Ho_Chi_Minh", new Date("2026-11-09T16:00:00Z"))).toBe("hôm nay 20:00");
+  });
+
+  it("Ngày khác: kèm ngày/tháng theo múi giờ gia đình", () => {
+    expect(formatNotificationTime(at, "Asia/Ho_Chi_Minh", new Date("2026-11-10T03:00:00Z"))).toBe("9/11 20:00");
+    // Cùng thời điểm, xem theo múi giờ New York thì là 08:00.
+    expect(formatNotificationTime(at, "America/New_York", new Date("2026-11-11T03:00:00Z"))).toBe("9/11 08:00");
   });
 });

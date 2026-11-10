@@ -12,7 +12,7 @@
 
 ## 3. Chuông và màn phản hồi (kid-notifications, ui-theme)
 
-- [ ] 3.1 Sửa ba chỗ trong chuông theo design D3: thông báo bị trừ hiện mức thực trừ; giờ theo múi giờ gia đình; số chưa đọc chỉ đếm 30 ngày. Thêm việc `cleanupNotifications` xóa mọi thông báo quá 30 ngày. Kiểm tra bằng unit test cho `getUnreadSummary`, `cleanupNotifications` và hàm định dạng giờ có múi giờ
+- [x] 3.1 Sửa ba chỗ trong chuông theo design D3: thông báo bị trừ hiện mức thực trừ; giờ theo múi giờ gia đình; số chưa đọc chỉ đếm 30 ngày. Thêm việc `cleanupNotifications` xóa mọi thông báo quá 30 ngày. Kiểm tra bằng unit test cho `getUnreadSummary`, `cleanupNotifications` và hàm định dạng giờ có múi giờ
 - [ ] 3.2 Giữ màn phản hồi đang hiện khi có thông báo mới (design D4), và chỉ phát âm một lần cho mỗi màn. Kiểm tra bằng unit test cho logic hàng đợi (màn đang hiện không đổi khi danh sách thông báo cập nhật), và kiểm tra thủ công: đang xem màn bị trừ, bố mẹ duyệt quà thì màn bị trừ vẫn còn, đóng xong mới tới màn quà, âm phạt không phát lại
 
 ## 4. Âm thanh, mục tiêu và tương phản (ui-theme, reward-shop)

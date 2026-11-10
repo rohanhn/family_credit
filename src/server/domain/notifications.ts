@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
 import { systemClock, type Clock, DAY } from "../clock";
 import { notifications, parents, transactions } from "../db/schema";
 import type { DbOrTx, Tx } from "../db/types";
@@ -63,14 +63,21 @@ const withRequested = {
   actorName: parents.displayName,
 };
 
-/** Số chưa đọc và danh sách thông báo chưa đọc (cũ nhất trước, để màn nhận quà hiện theo thứ tự). */
-export async function getUnreadSummary(db: DbOrTx, childId: number): Promise<{ count: number; items: NotificationView[] }> {
+function retentionCutoff(clock: Clock): Date {
+  return new Date(clock.now().getTime() - NOTIFICATION_RETENTION_DAYS * DAY);
+}
+
+/**
+ * Số chưa đọc và danh sách thông báo chưa đọc (cũ nhất trước, để màn nhận quà hiện theo thứ tự).
+ * Chỉ tính thông báo trong 30 ngày, để số chưa đọc khớp với danh sách trong chuông (spec "Số chưa đọc khớp danh sách").
+ */
+export async function getUnreadSummary(db: DbOrTx, childId: number, clock: Clock = systemClock): Promise<{ count: number; items: NotificationView[] }> {
   const rows = await db
     .select(withRequested)
     .from(notifications)
     .leftJoin(transactions, eq(transactions.id, notifications.transactionId))
     .leftJoin(parents, eq(parents.id, transactions.actorParentId))
-    .where(and(eq(notifications.childId, childId), isNull(notifications.readAt)))
+    .where(and(eq(notifications.childId, childId), isNull(notifications.readAt), gte(notifications.createdAt, retentionCutoff(clock))))
     .orderBy(asc(notifications.id));
   const items = rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount, actorName: r.actorName }));
   return { count: items.length, items };
@@ -78,7 +85,7 @@ export async function getUnreadSummary(db: DbOrTx, childId: number): Promise<{ c
 
 /** Thông báo trong 30 ngày gần nhất của chính con đó, mới nhất trước. */
 export async function listNotifications(db: DbOrTx, childId: number, clock: Clock = systemClock): Promise<NotificationView[]> {
-  const since = new Date(clock.now().getTime() - NOTIFICATION_RETENTION_DAYS * DAY);
+  const since = retentionCutoff(clock);
   const rows = await db
     .select(withRequested)
     .from(notifications)
@@ -101,21 +108,11 @@ export async function markRead(db: DbOrTx, childId: number, ids: number[], clock
   return rows.length;
 }
 
-/** Dọn thông báo đã đọc quá 30 ngày (chạy lúc khởi động). Không đụng tới sổ cái. */
+/** Dọn mọi thông báo quá 30 ngày, kể cả chưa đọc (design D3; chạy lúc khởi động và định kỳ). Không đụng tới sổ cái. */
 export async function cleanupNotifications(db: DbOrTx, clock: Clock = systemClock): Promise<number> {
-  const cutoff = new Date(clock.now().getTime() - NOTIFICATION_RETENTION_DAYS * DAY);
   const rows = await db
     .delete(notifications)
-    .where(and(isNotNull(notifications.readAt), lt(notifications.createdAt, cutoff)))
+    .where(lt(notifications.createdAt, retentionCutoff(clock)))
     .returning({ id: notifications.id });
   return rows.length;
-}
-
-/** Số chưa đọc (dùng cho chuông). */
-export async function countUnread(db: DbOrTx, childId: number): Promise<number> {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(notifications)
-    .where(and(eq(notifications.childId, childId), isNull(notifications.readAt)));
-  return row?.n ?? 0;
 }

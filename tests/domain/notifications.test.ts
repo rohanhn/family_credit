@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { fixedClock, DAY } from "@/server/clock";
-import { notifications } from "@/server/db/schema";
+import { notifications, transactions } from "@/server/db/schema";
 import { applyLedgerEntry } from "@/server/domain/ledger";
 import {
   cleanupNotifications,
@@ -89,17 +89,42 @@ describe("spec kid-notifications: đọc và lưu giữ thông báo", () => {
     expect((await listNotifications(t.db, bin.id)).map((n) => n.title)).toEqual(["Hai", "Một"]);
   });
 
-  it("Dọn thông báo đã đọc quá 30 ngày, giữ thông báo chưa đọc và sổ cái", async () => {
+  it("Dọn mọi thông báo quá 30 ngày, kể cả chưa đọc; giữ thông báo mới và sổ cái", async () => {
     const { bin, record } = await setup();
     await record(bin.id, 5, "Cũ đã đọc");
     await record(bin.id, 5, "Cũ chưa đọc");
     const { items } = await getUnreadSummary(t.db, bin.id);
     await markRead(t.db, bin.id, [items[0].id]);
     const later = fixedClock(new Date(Date.now() + 31 * DAY));
-    expect(await cleanupNotifications(t.db, later)).toBe(1);
+    await t.db.insert(notifications).values({ childId: bin.id, kind: "gift", title: "Mới", amount: 1, createdAt: later.now() });
+    expect(await cleanupNotifications(t.db, later)).toBe(2);
     const left = await t.db.select().from(notifications);
-    expect(left.map((n) => n.title)).toEqual(["Cũ chưa đọc"]);
+    expect(left.map((n) => n.title)).toEqual(["Mới"]);
+    expect(await t.db.select().from(transactions)).toHaveLength(2);
     // Danh sách 30 ngày không hiện thông báo quá cũ.
-    expect(await listNotifications(t.db, bin.id, later)).toEqual([]);
+    expect((await listNotifications(t.db, bin.id, later)).map((n) => n.title)).toEqual(["Mới"]);
+  });
+
+  it("Số chưa đọc chỉ đếm thông báo trong 30 ngày, khớp danh sách", async () => {
+    const { bin } = await setup();
+    const now = fixedClock("2026-11-10T03:00:00Z");
+    await t.db.insert(notifications).values([
+      { childId: bin.id, kind: "gift", title: "Quá cũ", amount: 1, createdAt: new Date(now.now().getTime() - 31 * DAY) },
+      { childId: bin.id, kind: "gift", title: "Mới 1", amount: 1, createdAt: new Date(now.now().getTime() - DAY) },
+      { childId: bin.id, kind: "gift", title: "Mới 2", amount: 1, createdAt: now.now() },
+    ]);
+    const summary = await getUnreadSummary(t.db, bin.id, now);
+    expect(summary.count).toBe(2);
+    expect(summary.items.map((n) => n.title)).toEqual(["Mới 1", "Mới 2"]);
+    const unreadInList = (await listNotifications(t.db, bin.id, now)).filter((n) => n.readAt === null);
+    expect(unreadInList).toHaveLength(2);
+  });
+
+  it("Phạt vượt số dư: thông báo lưu mức thực trừ để chuông hiện −3", async () => {
+    const { bin, record } = await setup();
+    await record(bin.id, 3, "Thưởng");
+    await record(bin.id, -10, "Nói dối");
+    const [penalty] = (await listNotifications(t.db, bin.id)).filter((n) => n.kind === "penalty");
+    expect(penalty).toMatchObject({ amount: -3, requestedAmount: -10 });
   });
 });

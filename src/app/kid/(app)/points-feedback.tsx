@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import confetti from "canvas-confetti";
 import { formatPoints, isRedeem, type FeedbackScreen, type NotificationItem } from "@/lib/notification-screens";
+import { formatNotificationTime } from "@/lib/time";
 import { ChibiAvatar, Mascot } from "@/ui/chibi";
 import { CurrencyIcon } from "@/ui/currency-icon";
 import { Icon } from "@/ui/icons";
@@ -15,11 +16,7 @@ import type { KidProfile } from "./kid-notifications";
 // toàn màn hình dưới 768px, popup từ 768px. Đóng màn nào thì đánh dấu đã đọc thông báo của màn đó.
 
 function formatWhen(iso: string, timeZone: string): string {
-  const d = new Date(iso);
-  const day = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone }).format(x);
-  const time = new Intl.DateTimeFormat("vi-VN", { timeZone, hour: "2-digit", minute: "2-digit" }).format(d);
-  if (day(d) === day(new Date())) return `hôm nay ${time}`;
-  return `${new Intl.DateTimeFormat("vi-VN", { timeZone, day: "numeric", month: "numeric" }).format(d)} ${time}`;
+  return formatNotificationTime(new Date(iso), timeZone);
 }
 
 export function PointsFeedback({

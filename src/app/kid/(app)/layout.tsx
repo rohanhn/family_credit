@@ -37,7 +37,7 @@ async function KidFrame({ children }: { children: ReactNode }) {
           actions={
             <>
               <SoundToggle variant="icon" />
-            <NotificationBell variant="icon" currencyName={currency.name} />
+            <NotificationBell variant="icon" currencyName={currency.name} timezone={family.timezone} />
               <form action={kidLogoutAction}>
                 <button type="submit" aria-label="Thoát" className={ICON_BUTTON_CLASS}>
                   <Icon name="logout" />
@@ -47,7 +47,7 @@ async function KidFrame({ children }: { children: ReactNode }) {
           }
           sidebarActions={
             <>
-              <NotificationBell variant="sidebar" currencyName={currency.name} />
+              <NotificationBell variant="sidebar" currencyName={currency.name} timezone={family.timezone} />
             <SoundToggle variant="sidebar" />
               <form action={kidLogoutAction}>
                 <Button type="submit" variant="outline" className="w-full">

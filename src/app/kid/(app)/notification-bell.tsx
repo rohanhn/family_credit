@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { kidNotificationListAction } from "@/app/actions/notifications";
 import { formatPoints, type NotificationItem } from "@/lib/notification-screens";
+import { formatNotificationTime } from "@/lib/time";
 import { Icon, type IconName } from "@/ui/icons";
 import { ICON_BUTTON_CLASS } from "@/ui/kid-shell";
 import { useKidNotifications } from "./kid-notifications";
@@ -16,11 +17,7 @@ const KIND: Record<NotificationItem["kind"], { label: string; icon: IconName; to
   rejected: { label: "Bị từ chối", icon: "info", tone: "bg-wait-bg text-wait-fg" },
 };
 
-function formatWhen(iso: string): string {
-  return new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
-}
-
-export function NotificationBell({ variant, currencyName }: { variant: "icon" | "sidebar"; currencyName: string }) {
+export function NotificationBell({ variant, currencyName, timezone }: { variant: "icon" | "sidebar"; currencyName: string; timezone: string }) {
   const { count } = useKidNotifications();
   const [open, setOpen] = useState(false);
   const [list, setList] = useState<NotificationItem[] | null>(null);
@@ -131,7 +128,8 @@ export function NotificationBell({ variant, currencyName }: { variant: "icon" | 
               <ul className="flex flex-col">
                 {list.map((n) => {
                   const k = KIND[n.kind];
-                  const shown = n.kind === "penalty" ? (n.requestedAmount ?? n.amount) : n.amount;
+                  // Bị trừ điểm: hiện mức thực trừ (amount), không hiện mức gốc (spec "Phạt vượt số dư trong chuông").
+                  const shown = n.amount;
                   return (
                     <li key={n.id} className={`flex gap-3 border-b border-black/5 px-4 py-3 last:border-0 ${n.read ? "" : "bg-soft/50"}`}>
                       <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${k.tone}`}>
@@ -149,7 +147,7 @@ export function NotificationBell({ variant, currencyName }: { variant: "icon" | 
                         </span>
                         {n.reason && <span className="text-sm font-bold text-muted">Lý do: {n.reason}</span>}
                         <span className="text-xs font-bold text-muted">
-                          {k.label} · {formatWhen(n.createdAt)}
+                          {k.label} · {formatNotificationTime(new Date(n.createdAt), timezone)}
                           {!n.read && <span className="font-extrabold text-ink"> · Mới</span>}
                         </span>
                       </span>
