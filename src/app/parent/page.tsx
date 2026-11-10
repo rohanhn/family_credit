@@ -33,7 +33,7 @@ async function Overview() {
   const [balances, queue, recent] = await Promise.all([
     Promise.all(kids.map((k) => getBalance(db, k.id))),
     loadQueue(db, auth.familyId, family.timezone),
-    listTransactions(db, { familyId: auth.familyId, limit: 6 }),
+    listTransactions(db, { familyId: auth.familyId, limit: 6 }).then((p) => p.rows),
   ]);
 
   return (

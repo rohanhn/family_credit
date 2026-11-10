@@ -133,16 +133,34 @@ export async function recordAdjustment(
 /** `adjusted`: giao dịch đã có một giao dịch điều chỉnh tham chiếu tới nó. */
 export type TransactionView = Transaction & { childName: string; actorName: string; adjusted: boolean };
 
-/** Lịch sử giao dịch, mới nhất trước; lọc theo con, khoảng thời gian [from, to) và loại. */
+export const HISTORY_PAGE_SIZE = 50;
+
+export type TransactionPage = { rows: TransactionView[]; nextBeforeId: number | null };
+
+/**
+ * Lịch sử giao dịch, mới nhất trước; lọc theo con, khoảng thời gian [from, to) và loại.
+ * Phân trang theo con trỏ (design D2): `beforeId` lấy các giao dịch có id nhỏ hơn; `nextBeforeId` là con trỏ của
+ * trang sau, hoặc null khi đã hết. Sổ cái chỉ ghi thêm nên giao dịch mới chen vào không làm trùng dòng giữa các trang.
+ */
 export async function listTransactions(
   db: DbOrTx,
-  filter: { familyId: number; childId?: number; from?: Date; to?: Date; kinds?: TransactionKind[]; limit?: number },
-): Promise<TransactionView[]> {
+  filter: {
+    familyId: number;
+    childId?: number;
+    from?: Date;
+    to?: Date;
+    kinds?: TransactionKind[];
+    beforeId?: number;
+    limit?: number;
+  },
+): Promise<TransactionPage> {
   const conditions = [eq(transactions.familyId, filter.familyId)];
   if (filter.childId !== undefined) conditions.push(eq(transactions.childId, filter.childId));
   if (filter.from) conditions.push(gte(transactions.createdAt, filter.from));
   if (filter.to) conditions.push(lt(transactions.createdAt, filter.to));
   if (filter.kinds?.length) conditions.push(inArray(transactions.kind, filter.kinds));
+  if (filter.beforeId !== undefined) conditions.push(lt(transactions.id, filter.beforeId));
+  const limit = Math.max(1, Math.min(filter.limit ?? HISTORY_PAGE_SIZE, 200));
 
   const rows = await db
     .select({
@@ -156,6 +174,7 @@ export async function listTransactions(
     .innerJoin(parents, eq(parents.id, transactions.actorParentId))
     .where(and(...conditions))
     .orderBy(desc(transactions.id))
-    .limit(Math.min(filter.limit ?? 200, 500));
-  return rows.map((r) => ({ ...r.txn, childName: r.childName, actorName: r.actorName, adjusted: Boolean(r.adjusted) }));
+    .limit(limit + 1);
+  const page = rows.slice(0, limit).map((r) => ({ ...r.txn, childName: r.childName, actorName: r.actorName, adjusted: Boolean(r.adjusted) }));
+  return { rows: page, nextBeforeId: rows.length > limit ? page[page.length - 1].id : null };
 }

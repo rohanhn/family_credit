@@ -13,10 +13,10 @@ export const metadata: Metadata = { title: "Lịch sử · Sao nhà mình" };
 async function KidHistory() {
   const kid = await requireChild();
   const db = getDb();
-  const [family, currency, rows] = await Promise.all([
+  const [family, currency, { rows }] = await Promise.all([
     getFamily(db, kid.familyId),
     getCurrency(db, kid.familyId),
-    listTransactions(db, { familyId: kid.familyId, childId: kid.childId, limit: 100 }),
+    listTransactions(db, { familyId: kid.familyId, childId: kid.childId }),
   ]);
   return (
     <>

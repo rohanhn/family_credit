@@ -24,7 +24,7 @@ describe("spec currency-ledger: Đơn vị tiền tệ của gia đình", () => 
     await updateCurrency(t.db, family.id, { name: "Phút game", icon: "game" });
     expect(await getCurrency(t.db, family.id)).toEqual({ name: "Phút game", icon: "game" });
     expect(await getBalance(t.db, kids[0].id)).toBe(15);
-    expect((await listTransactions(t.db, { familyId: family.id }))[0].appliedAmount).toBe(15);
+    expect(((await listTransactions(t.db, { familyId: family.id })).rows)[0].appliedAmount).toBe(15);
   });
 
   it("Tên phải dài 1–20 ký tự (tính theo ký tự, kể cả tiếng Việt có dấu)", () => {

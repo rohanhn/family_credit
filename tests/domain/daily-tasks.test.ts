@@ -267,7 +267,7 @@ describe("5.3 Nhiệm vụ riêng", () => {
     await rejectTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10", childId: bin.id, reason: "Chưa làm xong bài toán" }, clock);
     expect((await today(bin.id))[0]).toMatchObject({ status: "todo", rejectReason: "Chưa làm xong bài toán" });
     expect((await getUnreadSummary(t.db, bin.id)).items[0]).toMatchObject({ kind: "rejected", reason: "Chưa làm xong bài toán" });
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
     // Báo lại thì lý do cũ biến mất.
     await reportDone(t.db, kid(bin.id), tk.id, clock);
     expect((await today(bin.id))[0].rejectReason).toBeNull();
@@ -365,7 +365,7 @@ describe("5.4 Nhiệm vụ cả nhóm làm chung", () => {
     const { tk, familyId, parentInput } = await group();
     await approveTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10" }, clock);
     await expect(approveTaskDay(t.db, { ...parentInput, taskId: tk.id, date: "2026-11-10" }, clock)).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await listTransactions(t.db, { familyId })).toHaveLength(3);
+    expect((await listTransactions(t.db, { familyId })).rows).toHaveLength(3);
   });
 
   it("Từ chối nhiệm vụ nhóm: cả nhóm trở lại chưa làm, mỗi con có thông báo kèm lý do", async () => {
@@ -376,7 +376,7 @@ describe("5.4 Nhiệm vụ cả nhóm làm chung", () => {
       expect((await today(id))[0]).toMatchObject({ status: "todo", rejectReason: "Còn đồ chơi dưới gầm giường" });
       expect((await getUnreadSummary(t.db, id)).items[0]).toMatchObject({ kind: "rejected", reason: "Còn đồ chơi dưới gầm giường" });
     }
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
   });
 
   it("Bố mẹ tự đánh dấu nhiệm vụ nhóm chưa báo, cho những con được chọn", async () => {

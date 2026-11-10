@@ -67,7 +67,7 @@ describe("Sửa rule không ảnh hưởng giao dịch cũ", () => {
     await applyRule(t.db, { familyId, actorParentId: actor, childId: bin.id, ruleId: rule.id });
     await updateRule(t.db, familyId, rule.id, { points: 8, name: "Đánh răng buổi tối" });
     await applyRule(t.db, { familyId, actorParentId: actor, childId: bin.id, ruleId: rule.id });
-    const rows = await listTransactions(t.db, { familyId, childId: bin.id });
+    const rows = (await listTransactions(t.db, { familyId, childId: bin.id })).rows;
     expect(rows.map((r) => [r.description, r.appliedAmount])).toEqual([
       ["Đánh răng buổi tối", 8],
       ["Đánh răng tối", 5],
@@ -106,7 +106,7 @@ describe("Thưởng/phạt đột xuất", () => {
     for (const kind of ["reward", "penalty"]) {
       await expect(applyAdhoc(t.db, { familyId, actorParentId: actor, childId: bin.id, kind, points: 5, reason: "   " })).rejects.toMatchObject({ message: "Cần nhập lý do" });
     }
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
   });
 });
 
@@ -141,7 +141,7 @@ describe("Con khai rule thưởng", () => {
     await expect(cancelClaim(t.db, { childId: na.id, claimId: claim.id })).rejects.toMatchObject({ code: "CONFLICT" });
     await cancelClaim(t.db, { childId: bin.id, claimId: claim.id });
     expect(await listChildClaims(t.db, bin.id, "cancelled")).toHaveLength(1);
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
   });
 
   it("Khai rule phạt: từ chối", async () => {
@@ -184,7 +184,7 @@ describe("Bố mẹ duyệt khai rule", () => {
     await rejectClaim(t.db, { familyId, actorParentId: actor, claimId: claim.id, reason: "Con chưa đánh răng" });
     expect((await listChildClaims(t.db, bin.id, "rejected"))[0]).toMatchObject({ reason: "Con chưa đánh răng" });
     expect((await getUnreadSummary(t.db, bin.id)).items[0]).toMatchObject({ kind: "rejected", title: "Đánh răng tối", reason: "Con chưa đánh răng" });
-    expect(await listTransactions(t.db, { familyId })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId })).rows).toEqual([]);
   });
 
   it("Duyệt lần hai: từ chối, không ghi thêm giao dịch", async () => {
@@ -192,7 +192,7 @@ describe("Bố mẹ duyệt khai rule", () => {
     await approveClaim(t.db, { familyId, actorParentId: actor, claimId: claim.id });
     await expect(approveClaim(t.db, { familyId, actorParentId: actor, claimId: claim.id })).rejects.toMatchObject({ code: "CONFLICT" });
     await expect(rejectClaim(t.db, { familyId, actorParentId: actor, claimId: claim.id })).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await listTransactions(t.db, { familyId })).toHaveLength(1);
+    expect((await listTransactions(t.db, { familyId })).rows).toHaveLength(1);
   });
 
   it("Không duyệt được yêu cầu của gia đình khác", async () => {

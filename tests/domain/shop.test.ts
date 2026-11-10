@@ -107,7 +107,7 @@ describe("Con gửi yêu cầu đổi thưởng", () => {
     const req = await createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id });
     expect(req).toMatchObject({ status: "pending", priceSnapshot: 50, nameSnapshot: "Game" });
     expect(await getBalance(t.db, bin.id)).toBe(60);
-    expect(await listTransactions(t.db, { familyId, childId: bin.id, kinds: ["redeem"] })).toEqual([]);
+    expect((await listTransactions(t.db, { familyId, childId: bin.id, kinds: ["redeem"] })).rows).toEqual([]);
   });
 
   it("Không đủ điểm: 30 điểm đổi phần thưởng giá 50 bị từ chối", async () => {

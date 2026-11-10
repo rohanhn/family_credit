@@ -7,7 +7,7 @@
 
 ## 2. Lịch sử giao dịch (currency-ledger)
 
-- [ ] 2.1 Phân trang `listTransactions` theo con trỏ `beforeId` (design D2, trang 50 dòng, trả `nextBeforeId`). Kiểm tra bằng unit test: 120 giao dịch qua 3 trang, không trùng, không thiếu; bộ lọc loại và ngày giữ nguyên qua các trang
+- [x] 2.1 Phân trang `listTransactions` theo con trỏ `beforeId` (design D2, trang 50 dòng, trả `nextBeforeId`). Kiểm tra bằng unit test: 120 giao dịch qua 3 trang, không trùng, không thiếu; bộ lọc loại và ngày giữ nguyên qua các trang
 - [ ] 2.2 Thêm link "Xem thêm" trên trang lịch sử của bố mẹ và của con, giữ tham số lọc trên URL. `HistoryList` hiện tên đơn vị tiền tệ cạnh số điểm, không để trong `sr-only`. Kiểm tra bằng e2e hoặc thủ công: tạo hơn 50 giao dịch thì thấy "Xem thêm" và trang 2; đổi tên đơn vị thì lịch sử cũ hiện tên mới
 
 ## 3. Chuông và màn phản hồi (kid-notifications, ui-theme)

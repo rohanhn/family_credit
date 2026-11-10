@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { applyLedgerEntry, getBalance, listTransactions, recordAdjustment } from "@/server/domain/ledger";
+import { transactions } from "@/server/db/schema";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
 
@@ -59,7 +60,7 @@ describe("spec currency-ledger", () => {
     expect(adj.description).toContain("bấm nhầm");
     expect(await getBalance(t.db, bin.id)).toBe(0);
     // Giao dịch gốc vẫn còn trong lịch sử.
-    expect(await listTransactions(t.db, { familyId: family.id, childId: bin.id })).toHaveLength(2);
+    expect((await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows).toHaveLength(2);
   });
 
   it("Một giao dịch chỉ điều chỉnh được một lần, không điều chỉnh giao dịch điều chỉnh", async () => {
@@ -71,7 +72,7 @@ describe("spec currency-ledger", () => {
     await expect(adjust(wrong.id)).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await expect(adjust(adj.id)).rejects.toMatchObject({ code: "INVALID_INPUT" });
     expect(await getBalance(t.db, bin.id)).toBe(20);
-    const rows = await listTransactions(t.db, { familyId: family.id, childId: bin.id });
+    const rows = (await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows;
     expect(rows.find((r) => r.id === wrong.id)?.adjusted).toBe(true);
     expect(rows.filter((r) => r.id !== wrong.id).every((r) => !r.adjusted)).toBe(true);
   });
@@ -89,20 +90,78 @@ describe("spec currency-ledger", () => {
     await give(bin.id, 10, "Một");
     await give(na.id, 7, "Của Na");
     await give(bin.id, 5, "Hai");
-    const rows = await listTransactions(t.db, { familyId: family.id, childId: bin.id });
+    const rows = (await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows;
     expect(rows.map((r) => r.description)).toEqual(["Hai", "Một"]);
     expect(rows[0]).toMatchObject({ actorName: "Bố", childName: "Bin" });
-    expect(await listTransactions(t.db, { familyId: family.id })).toHaveLength(3);
+    expect((await listTransactions(t.db, { familyId: family.id })).rows).toHaveLength(3);
   });
 
   it("Lọc theo loại và theo khoảng thời gian", async () => {
     const { family, bin, give } = await setup();
     await give(bin.id, 60, "Thưởng");
     await give(bin.id, -50, "30 phút chơi game", "redeem");
-    const redeem = await listTransactions(t.db, { familyId: family.id, kinds: ["redeem"] });
+    const redeem = (await listTransactions(t.db, { familyId: family.id, kinds: ["redeem"] })).rows;
     expect(redeem.map((r) => r.description)).toEqual(["30 phút chơi game"]);
-    const future = await listTransactions(t.db, { familyId: family.id, from: new Date(Date.now() + 60_000) });
+    const future = (await listTransactions(t.db, { familyId: family.id, from: new Date(Date.now() + 60_000) })).rows;
     expect(future).toEqual([]);
+  });
+
+  it("Phân trang 50 dòng: 120 giao dịch qua 3 trang, không trùng, không thiếu", async () => {
+    const { family, parent, bin } = await setup();
+    await t.db.insert(transactions).values(
+      Array.from({ length: 120 }, (_, i) => ({
+        familyId: family.id,
+        childId: bin.id,
+        kind: "adhoc" as const,
+        requestedAmount: i + 1,
+        appliedAmount: i + 1,
+        description: `#${i + 1}`,
+        actorParentId: parent.id,
+      })),
+    );
+    const seen: number[] = [];
+    const sizes: number[] = [];
+    let beforeId: number | undefined;
+    for (;;) {
+      const page = await listTransactions(t.db, { familyId: family.id, childId: bin.id, beforeId });
+      sizes.push(page.rows.length);
+      seen.push(...page.rows.map((r) => r.requestedAmount));
+      if (page.nextBeforeId === null) break;
+      beforeId = page.nextBeforeId;
+    }
+    expect(sizes).toEqual([50, 50, 20]);
+    expect(seen).toEqual(Array.from({ length: 120 }, (_, i) => 120 - i));
+  });
+
+  it("Phân trang giữ bộ lọc loại và ngày qua các trang", async () => {
+    const { family, parent, bin } = await setup();
+    const day = (d: number) => new Date(`2026-11-${String(d).padStart(2, "0")}T05:00:00Z`);
+    // 3 ngày × (40 adhoc + 20 redeem), xen kẽ.
+    await t.db.insert(transactions).values(
+      [8, 9, 10].flatMap((d) =>
+        Array.from({ length: 60 }, (_, i) => ({
+          familyId: family.id,
+          childId: bin.id,
+          kind: (i % 3 === 2 ? "redeem" : "adhoc") as "redeem" | "adhoc",
+          requestedAmount: 1,
+          appliedAmount: 1,
+          description: `${d}-${i}`,
+          actorParentId: parent.id,
+          createdAt: day(d),
+        })),
+      ),
+    );
+    const filter = { familyId: family.id, kinds: ["adhoc" as const], from: day(9), to: day(11) };
+    const all = [];
+    let beforeId: number | undefined;
+    do {
+      const page = await listTransactions(t.db, { ...filter, beforeId });
+      all.push(...page.rows);
+      beforeId = page.nextBeforeId ?? undefined;
+    } while (beforeId !== undefined);
+    expect(all).toHaveLength(80);
+    expect(new Set(all.map((r) => r.id)).size).toBe(80);
+    expect(all.every((r) => r.kind === "adhoc" && r.createdAt >= day(9))).toBe(true);
   });
 
   it("Không ghi được cho con của gia đình khác", async () => {

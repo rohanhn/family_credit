@@ -72,7 +72,7 @@ describe("Quản lý hồ sơ con", () => {
     expect(await authenticateChild(t.db, device.token, session.token, clock)).toBeNull();
     await expect(loginChildWithPin(t.db, { familyId: family.id, childId: bin.id, pin: "1234" }, clock)).rejects.toMatchObject({ code: "NOT_FOUND" });
     expect(await listKidsForDevice(t.db, { familyId: family.id, childId: null }, clock)).toEqual([]);
-    expect(await listTransactions(t.db, { familyId: family.id, childId: bin.id })).toHaveLength(1);
+    expect((await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows).toHaveLength(1);
     expect(await listChildren(t.db, family.id, { includeArchived: true })).toHaveLength(1);
   });
 });

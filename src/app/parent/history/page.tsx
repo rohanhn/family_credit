@@ -29,7 +29,7 @@ async function History({ searchParams }: { searchParams: SearchParams }) {
   const kind = (TRANSACTION_KINDS as readonly string[]).includes(sp.kind ?? "") ? (sp.kind as TransactionKind) : undefined;
   const from = sp.from && isDateString(sp.from) ? sp.from : "";
   const to = sp.to && isDateString(sp.to) ? sp.to : "";
-  const rows = await listTransactions(db, {
+  const { rows } = await listTransactions(db, {
     familyId: auth.familyId,
     childId,
     kinds: kind ? [kind] : undefined,
