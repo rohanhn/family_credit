@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, lt, ne } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
 import { sessions } from "../db/schema";
 import { SESSION_TTL_MS, SLIDING, type SessionSubject } from "./session-cookies";
@@ -65,5 +65,11 @@ export async function deleteSessionsFor(db: DbOrTx, subjectType: SessionSubject,
   const conditions = [eq(sessions.subjectType, subjectType), eq(sessions.subjectId, subjectId)];
   if (exceptIdHash) conditions.push(ne(sessions.idHash, exceptIdHash));
   const rows = await db.delete(sessions).where(and(...conditions)).returning({ id: sessions.idHash });
+  return rows.length;
+}
+
+/** Xóa các phiên đã hết hạn (job dọn dẹp lúc khởi động và mỗi 24 giờ, design D9). Trả về số phiên đã xóa. */
+export async function cleanupExpiredSessions(db: DbOrTx, clock: Clock = systemClock): Promise<number> {
+  const rows = await db.delete(sessions).where(lt(sessions.expiresAt, clock.now())).returning({ id: sessions.idHash });
   return rows.length;
 }
