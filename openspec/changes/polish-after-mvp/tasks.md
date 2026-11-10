@@ -8,7 +8,7 @@
 ## 2. Lịch sử phía con (currency-ledger)
 
 - [x] 2.1 Tách `parseHistoryParams` và component `HistoryFilters` (tham số `showChild`) từ trang lịch sử bố mẹ sang `src/ui/history-list.tsx`; trang bố mẹ dùng lại, hành vi không đổi (design D3). Kiểm tra bằng unit test cho `parseHistoryParams` (loại sai, ngày sai, `from` sau `to`) và e2e lịch sử bố mẹ hiện có vẫn xanh
-- [ ] 2.2 Trang lịch sử phía con nhận `searchParams`, hiện `HistoryFilters` không có ô chọn con, luôn lọc theo con của phiên; "Xem thêm" giữ bộ lọc. Kiểm tra bằng e2e: con lọc theo loại và khoảng ngày thấy đúng giao dịch; thêm `child=<id con khác>` trên URL không lộ giao dịch của con khác
+- [x] 2.2 Trang lịch sử phía con nhận `searchParams`, hiện `HistoryFilters` không có ô chọn con, luôn lọc theo con của phiên; "Xem thêm" giữ bộ lọc. Kiểm tra bằng e2e: con lọc theo loại và khoảng ngày thấy đúng giao dịch; thêm `child=<id con khác>` trên URL không lộ giao dịch của con khác
 
 ## 3. Danh sách nhiệm vụ trên màn hình hẹp (ui-theme)
 
