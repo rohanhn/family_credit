@@ -78,9 +78,20 @@
   - Cách sửa: các helper trong `src/server/auth/next.ts` gọi `await connection()` sau khi đọc cookie, trước khi kiểm tra phiên. Như vậy lượt prerender dừng trước mọi chỗ đọc giờ và không ghi nhầm `authz_denied`.
 - Ngày bật và ngày hết hạn của thiết bị định dạng ở server bằng múi giờ của gia đình (`formatDate` hoặc `Intl` có `timeZone`), rồi truyền chuỗi đã định dạng cho component client.
 
+### D6. Proxy chỉ gia hạn cookie ở request tải trang
+- Hiện trạng: `src/proxy.ts` đặt lại cookie phiên ở mọi GET, kể cả request RSC và prefetch của client router.
+  - Request như vậy xuất phát trước khi Server Action "bật chế độ gia đình" xóa `mc_parent`, nhưng trả về sau, sẽ ghi lại cookie.
+  - Phiên trong DB đã bị xóa nên cookie không mở được gì, nhưng máy của con vẫn giữ cookie bố mẹ, và e2e `action-authz` lỗi lúc có lúc không (cả trên `master`).
+- Quyết định: chỉ gia hạn khi request không có header `RSC` và không phải prefetch (`Next-Router-Prefetch`, `Sec-Purpose`/`Purpose: prefetch`).
+  - Trong một tab, request tải trang không chạy song song với Server Action, nên race không còn.
+- Phương án thay thế đã loại:
+  - Proxy đọc DB để kiểm tra phiên: proxy cố ý không đọc DB.
+  - Bỏ hẳn việc gia hạn cookie: trình duyệt sẽ xóa cookie sớm hơn hạn trong DB với phiên đang được dùng.
+
 ## Risks / Trade-offs
 
 - [15 phút có thể làm bố mẹ phải đăng nhập lại nhiều khi duyệt trên máy chung] → Mốc là một hằng số; đổi sau khi dùng thật. Mỗi thao tác đều gia hạn.
 - [Gia hạn phiên ngắn ghi DB thường hơn: sau mỗi 1,5 phút có request] → Chỉ ảnh hưởng phiên bố mẹ trên máy của con, quy mô gia đình nên không đáng kể.
 - [Render cả bảng lẫn thẻ làm trang lớn hơn một chút] → Số nhiệm vụ của một gia đình nhỏ; đổi lại không cần JavaScript để đổi cách trình bày.
 - [Chưa rõ chắc nguồn của `Date.now()`] → Task đầu tiên của nhóm này là tái hiện và đọc stack trace; test e2e trên bản build kiểm tra log không còn cảnh báo.
+- [Bố mẹ chỉ điều hướng trong app suốt 30 ngày mà không tải lại trang thì cookie hết hạn trước phiên trong DB] → Hiếm gặp; khi đó chỉ cần đăng nhập lại.

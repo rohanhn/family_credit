@@ -28,6 +28,7 @@ Mục quan trọng nhất là phiên bố mẹ trên máy của con. Bố mẹ �
 **Sửa lỗi**
 - Hết cảnh báo "unstable value `Date.now()` while prerendering" ở trang `/parent/settings`.
 - Ngày bật và ngày hết hạn của thiết bị trong cài đặt hiển thị theo múi giờ của gia đình, không theo múi giờ của trình duyệt.
+- Sau khi bật chế độ gia đình, máy của con không còn bị ghi lại cookie phiên bố mẹ bởi một request chạy dở.
 
 **Giả định (anh đã duyệt ngày 2026-11-10)**
 - Mốc 15 phút không thao tác là phương án đề xuất. Hai phương án khác đã cân nhắc: hết hạn cố định sau 1 giờ, hoặc phiên trình duyệt (mất khi đóng hẳn trình duyệt). Đổi mốc chỉ cần sửa một hằng số.
