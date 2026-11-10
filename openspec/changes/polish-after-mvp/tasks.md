@@ -17,7 +17,7 @@
 ## 4. Trang cài đặt (sửa lỗi)
 
 - [x] 4.1 Tái hiện cảnh báo `Date.now()` ở `/parent/settings` trên bản build, tìm chỗ gọi từ stack trace và sửa theo design D5. Kiểm tra bằng e2e chạy với `E2E_PROD=1`: mở trang cài đặt rồi log server không có chuỗi "unstable value"
-- [ ] 4.2 Định dạng ngày bật và ngày hết hạn của thiết bị ở server theo múi giờ của gia đình, truyền chuỗi đã định dạng cho component client. Kiểm tra bằng unit test hàm định dạng với múi giờ khác múi giờ máy chạy test
+- [x] 4.2 Định dạng ngày bật và ngày hết hạn của thiết bị ở server theo múi giờ của gia đình, truyền chuỗi đã định dạng cho component client. Kiểm tra bằng unit test hàm định dạng với múi giờ khác múi giờ máy chạy test
 
 ## 5. Kiểm tra tổng
 

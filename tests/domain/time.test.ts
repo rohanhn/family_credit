@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dateInZone, formatNotificationTime, signed, startOfDayInZone, weekdayIndex } from "@/lib/time";
+import { addDays, dateInZone, formatInstantDate, formatNotificationTime, signed, startOfDayInZone, weekdayIndex } from "@/lib/time";
 
 describe("ngày theo múi giờ gia đình", () => {
   const VN = "Asia/Ho_Chi_Minh";
@@ -37,5 +37,15 @@ describe("giờ thông báo theo múi giờ gia đình", () => {
     expect(formatNotificationTime(at, "Asia/Ho_Chi_Minh", new Date("2026-11-10T03:00:00Z"))).toBe("9/11 20:00");
     // Cùng thời điểm, xem theo múi giờ New York thì là 08:00.
     expect(formatNotificationTime(at, "America/New_York", new Date("2026-11-11T03:00:00Z"))).toBe("9/11 08:00");
+  });
+});
+
+describe("ngày của một thời điểm theo múi giờ gia đình (task 4.2 change polish-after-mvp)", () => {
+  it("Không phụ thuộc múi giờ của máy chạy", () => {
+    // 01:30 ngày 10/11 ở Việt Nam, vẫn là ngày 09/11 ở Los Angeles và UTC.
+    const instant = new Date("2026-11-09T18:30:00Z");
+    expect(formatInstantDate(instant, "Asia/Ho_Chi_Minh")).toBe("10/11/2026");
+    expect(formatInstantDate(instant, "America/Los_Angeles")).toBe("09/11/2026");
+    expect(formatInstantDate(instant, "UTC")).toBe("09/11/2026");
   });
 });
