@@ -24,6 +24,7 @@ backups
 openspec
 docs
 tests
+playwright.config.ts
 deploy
 Dockerfile
 .dockerignore
