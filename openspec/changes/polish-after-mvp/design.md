@@ -73,6 +73,9 @@
 - Sửa theo hướng Next khuyến nghị:
   - với dữ liệu phụ thuộc thời điểm request ở server, gọi `await connection()` trước khi đọc giờ;
   - hoặc chuyển phần đó vào trong ranh giới `Suspense` đã đọc cookie.
+- Kết quả khi làm (task 4.1):
+  - Nguồn đã xác nhận bằng stack trace trên bản build của `master`: `requireParent` gọi `logSecurityEvent("authz_denied")` khi phiên bố mẹ không hợp lệ mà có cookie phiên con. Logger pino lấy giờ bằng `Date.now()`. Việc này xảy ra trong lượt prefetch `/parent/settings` lúc chạy (cookie đã có giá trị), nên chỉ thấy ở máy có phiên con, ví dụ e2e `action-authz`.
+  - Cách sửa: các helper trong `src/server/auth/next.ts` gọi `await connection()` sau khi đọc cookie, trước khi kiểm tra phiên. Như vậy lượt prerender dừng trước mọi chỗ đọc giờ và không ghi nhầm `authz_denied`.
 - Ngày bật và ngày hết hạn của thiết bị định dạng ở server bằng múi giờ của gia đình (`formatDate` hoặc `Intl` có `timeZone`), rồi truyền chuỗi đã định dạng cho component client.
 
 ## Risks / Trade-offs
