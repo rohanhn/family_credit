@@ -82,7 +82,7 @@ Bố mẹ SHALL tạo được liên kết mời dùng một lần, có hạn 7 
 - **THEN** hệ thống từ chối và báo thử lại vào ngày mai
 
 ### Requirement: Quản lý hồ sơ con
-Bố mẹ SHALL tạo, sửa và lưu trữ hồ sơ con, gồm tên hiển thị, avatar chọn từ bộ có sẵn và PIN 4 chữ số. Hồ sơ đã lưu trữ MUST không còn hiện ở màn hình chọn avatar, nhưng lịch sử giao dịch vẫn được giữ.
+Bố mẹ SHALL tạo, sửa và lưu trữ hồ sơ con, gồm tên hiển thị, avatar chọn từ bộ có sẵn và PIN 4 chữ số. Hồ sơ đã lưu trữ MUST không còn hiện ở màn hình chọn avatar, nhưng lịch sử giao dịch vẫn được giữ. Bố mẹ MUST NOT ghi được điểm thưởng hoặc phạt mới cho con đã lưu trữ; các yêu cầu con đã gửi trước khi bị lưu trữ vẫn SHALL được duyệt hoặc từ chối, và giao dịch điều chỉnh vẫn ghi được để sửa sai.
 
 #### Scenario: Tạo hồ sơ con
 - **WHEN** bố mẹ nhập tên, chọn avatar và đặt PIN 4 chữ số
@@ -95,6 +95,14 @@ Bố mẹ SHALL tạo, sửa và lưu trữ hồ sơ con, gồm tên hiển th�
 #### Scenario: Lưu trữ hồ sơ con
 - **WHEN** bố mẹ lưu trữ một hồ sơ con
 - **THEN** con đó không còn đăng nhập được, còn lịch sử giao dịch vẫn xem được từ phía bố mẹ
+
+#### Scenario: Không ghi điểm mới cho con đã lưu trữ
+- **WHEN** bố mẹ áp dụng rule hoặc thưởng/phạt đột xuất cho một con đã lưu trữ
+- **THEN** hệ thống từ chối và số dư của con không đổi
+
+#### Scenario: Yêu cầu gửi trước khi lưu trữ
+- **WHEN** con khai một rule thưởng, sau đó bị lưu trữ trước khi bố mẹ duyệt
+- **THEN** yêu cầu vẫn nằm trong hàng chờ duyệt với tên con kèm nhãn "đã lưu trữ", và bố mẹ duyệt hoặc từ chối được
 
 ### Requirement: Đăng nhập con bằng avatar và PIN
 Trên thiết bị đã được bố mẹ kích hoạt "chế độ gia đình" hoặc "máy riêng của con", hệ thống SHALL hiển thị avatar của các con được phép đăng nhập trên thiết bị đó và cho con đăng nhập bằng PIN. Nhập sai 5 lần liên tiếp MUST khóa đăng nhập của con đó trong 5 phút.

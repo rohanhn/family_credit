@@ -30,7 +30,7 @@ Hệ thống SHALL tạo một thông báo cho con trong mỗi trường hợp: 
 - **THEN** con có một thông báo chưa đọc loại "bị từ chối" với tên mục và lý do
 
 ### Requirement: Chuông thông báo của con
-Màn hình của con SHALL hiển thị chuông thông báo kèm số thông báo chưa đọc. Mở chuông SHALL hiển thị danh sách thông báo mới nhất trước. Con MUST chỉ thấy thông báo của chính mình.
+Màn hình của con SHALL hiển thị chuông thông báo kèm số thông báo chưa đọc. Mở chuông SHALL hiển thị danh sách thông báo mới nhất trước. Con MUST chỉ thấy thông báo của chính mình. Số chưa đọc MUST chỉ đếm các thông báo có trong danh sách. Thông báo bị trừ điểm SHALL hiển thị số điểm thực trừ. Thời điểm SHALL hiển thị theo múi giờ của gia đình.
 
 #### Scenario: Có thông báo chưa đọc
 - **WHEN** con có 3 thông báo chưa đọc
@@ -39,6 +39,18 @@ Màn hình của con SHALL hiển thị chuông thông báo kèm số thông bá
 #### Scenario: Mở danh sách
 - **WHEN** con mở chuông thông báo
 - **THEN** con thấy các thông báo mới nhất trước, mỗi thông báo có loại, nội dung, số điểm (nếu có) và thời điểm
+
+#### Scenario: Số chưa đọc khớp danh sách
+- **WHEN** con có một thông báo chưa đọc đã quá 30 ngày và hai thông báo chưa đọc mới
+- **THEN** chuông hiển thị số 2 và danh sách có đúng hai thông báo chưa đọc đó
+
+#### Scenario: Phạt vượt số dư trong chuông
+- **WHEN** con có 3 điểm và bị phạt 10 điểm, rồi mở chuông
+- **THEN** thông báo bị trừ điểm hiển thị "−3"
+
+#### Scenario: Thiết bị ở múi giờ khác
+- **WHEN** gia đình dùng múi giờ Asia/Ho_Chi_Minh, thiết bị của con đặt múi giờ khác, và một thông báo được tạo lúc 20:00 giờ Việt Nam
+- **THEN** chuông hiển thị thời điểm 20:00
 
 ### Requirement: Hiển thị thông báo mới
 Thông báo chưa đọc SHALL là nguồn quyết định khi nào hiện phản hồi trực quan đã mô tả trong capability `ui-theme` ("Màn ăn mừng khi được cộng điểm", "Màn báo khi bị trừ điểm", "Thứ tự hiển thị phản hồi điểm"). Thông báo "nhận quà" hiện cùng màn ăn mừng; thông báo "bị trừ điểm" hiện cùng thông báo trừ điểm; thông báo "bị từ chối" hiện kèm lý do, không có hiệu ứng ăn mừng. Con xác nhận đã xem thì các thông báo được đánh dấu đã đọc.
