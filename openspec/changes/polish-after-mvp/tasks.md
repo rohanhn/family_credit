@@ -2,7 +2,7 @@
 
 ## 1. Phiên bố mẹ trên máy của con (family-accounts)
 
-- [ ] 1.1 Thêm cột `sessions.ttl_ms` (migration `0006`), cho `createSession` ghi thời hạn riêng và `resolveSession` dùng thứ tự `opts.ttlMs` → `row.ttlMs` → mặc định (design D1). Kiểm tra bằng unit test: phiên có `ttl_ms` 15 phút hết hạn sau 15 phút không dùng, được gia hạn khi còn dùng; phiên `ttl_ms` null vẫn sống 30 ngày
+- [x] 1.1 Thêm cột `sessions.ttl_ms` (migration `0006`), cho `createSession` ghi thời hạn riêng và `resolveSession` dùng thứ tự `opts.ttlMs` → `row.ttlMs` → mặc định (design D1). Kiểm tra bằng unit test: phiên có `ttl_ms` 15 phút hết hạn sau 15 phút không dùng, được gia hạn khi còn dùng; phiên `ttl_ms` null vẫn sống 30 ngày
 - [ ] 1.2 `loginAction` và `registerAction` kiểm tra phiên thiết bị còn hiệu lực rồi tạo phiên bố mẹ với `PARENT_ON_FAMILY_DEVICE_TTL_MS` (design D2). Kiểm tra bằng unit test hoặc e2e: đăng nhập trên máy đã bật chế độ gia đình thì phiên có `ttl_ms` 15 phút; trên máy thường hoặc với cookie `mc_device` giả thì `ttl_ms` null
 
 ## 2. Lịch sử phía con (currency-ledger)

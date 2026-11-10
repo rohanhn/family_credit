@@ -15,18 +15,25 @@ export type SessionOptions = {
   deviceChildId?: number | null;
   /** Thời hạn thay cho mặc định của loại phiên (phiên con trên máy riêng). */
   ttlMs?: number;
+  /**
+   * Lưu `ttlMs` vào DB để mọi lần gia hạn sau dùng đúng thời hạn này, không cần chỗ gọi
+   * `resolveSession` truyền lại (phiên bố mẹ trên máy của con, design D1 của change polish-after-mvp).
+   */
+  persistTtl?: boolean;
 };
 
 export async function createSession(db: DbOrTx, subjectType: SessionSubject, subjectId: number, clock: Clock = systemClock, opts: SessionOptions = {}) {
   const token = randomToken();
   const expiresAt = new Date(clock.now().getTime() + (opts.ttlMs ?? SESSION_TTL_MS[subjectType]));
-  await db.insert(sessions).values({ idHash: sha256(token), subjectType, subjectId, expiresAt, deviceChildId: opts.deviceChildId ?? null });
+  const ttlMs = opts.persistTtl && opts.ttlMs !== undefined ? opts.ttlMs : null;
+  await db.insert(sessions).values({ idHash: sha256(token), subjectType, subjectId, expiresAt, deviceChildId: opts.deviceChildId ?? null, ttlMs });
   return { token, expiresAt };
 }
 
 /**
  * Trả về phiên còn hạn đúng loại, hoặc null. Phiên hết hạn bị xóa; phiên trượt được gia hạn.
- * Phiên device của máy riêng cũng là phiên trượt. `ttlMs` thay thời hạn mặc định khi gia hạn.
+ * Phiên device của máy riêng cũng là phiên trượt. Thời hạn khi gia hạn lấy theo thứ tự: `opts.ttlMs`,
+ * thời hạn riêng lưu trong phiên, rồi thời hạn mặc định của loại phiên.
  */
 export async function resolveSession(
   db: DbOrTx,
@@ -44,7 +51,7 @@ export async function resolveSession(
     await db.delete(sessions).where(eq(sessions.idHash, idHash));
     return null;
   }
-  const ttl = opts.ttlMs ?? SESSION_TTL_MS[subjectType];
+  const ttl = opts.ttlMs ?? row.ttlMs ?? SESSION_TTL_MS[subjectType];
   const sliding = SLIDING[subjectType] || (subjectType === "device" && row.deviceChildId !== null);
   let expiresAt = row.expiresAt;
   // Gia hạn khi đã dùng hết hơn 10% thời hạn, để không ghi DB ở mọi request.
