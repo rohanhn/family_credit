@@ -11,8 +11,9 @@ import { rewardIcon } from "@/lib/reward-icons";
 import { Mascot } from "@/ui/chibi";
 import { CurrencyIcon } from "@/ui/currency-icon";
 import { Icon } from "@/ui/icons";
-import { Card, ProgressBar } from "@/ui/primitives";
+import { Card, Chip, ProgressBar } from "@/ui/primitives";
 import { effectiveTheme, THEMES } from "@/ui/themes";
+import { RedeemButton } from "../shop/shop-buttons";
 import { TodayTasks } from "./today-tasks";
 
 export const metadata: Metadata = { title: "Trang chính · Sao nhà mình" };
@@ -67,6 +68,14 @@ async function KidHome() {
             <span className="text-sm font-bold text-muted md:text-[15px]">
               {Math.min(balance, goal.price)} / {goal.price} {currency.name} · {goal.reached ? "Đủ rồi, đổi quà thôi!" : `Còn ${goal.remaining} nữa`}
             </span>
+            {goal.reached &&
+              (goal.pendingRedemptionId !== null ? (
+                <Chip tone="wait" className="!px-3 !py-2 text-sm">
+                  Chờ duyệt
+                </Chip>
+              ) : (
+                <RedeemButton rewardId={goal.id} highlight />
+              ))}
           </Card>
         ) : (
           <Link href="/kid/shop" className="no-underline">

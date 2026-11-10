@@ -7,6 +7,7 @@ import { getBalance, lockChild, recordTransaction, type Transaction } from "./le
 import { notifyRejected } from "./notifications";
 import { validatePoints } from "./rules";
 import { DEFAULT_REWARD_ICON, REWARD_ICONS, type RewardIcon } from "@/lib/reward-icons";
+import { progressPercent } from "@/lib/progress";
 
 // Cửa hàng đổi thưởng (spec reward-shop, design D3 "Đổi thưởng").
 // - Gửi yêu cầu không trừ điểm; tên và giá được chụp lại lúc gửi.
@@ -112,7 +113,7 @@ export async function getVisibleReward(db: DbOrTx, familyId: number, rewardId: n
 /** Tiến độ mục tiêu: số dư trên giá, giới hạn 100% (spec "Mục tiêu tiết kiệm"). */
 export function goalProgress(balance: number, price: number): { percent: number; remaining: number; reached: boolean } {
   const remaining = Math.max(0, price - balance);
-  const percent = price > 0 ? Math.min(100, Math.floor((Math.max(0, balance) * 100) / price)) : 0;
+  const percent = progressPercent(balance, price);
   return { percent, remaining, reached: remaining === 0 };
 }
 

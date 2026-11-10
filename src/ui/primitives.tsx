@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ButtonHTMLAttributes, ComponentProps, HTMLAttributes, ReactNode } from "react";
+import { progressPercent } from "@/lib/progress";
 
 // Component dùng chung theo docs/design/README.md §4.
 
@@ -86,7 +87,7 @@ export function ProgressBar({
   label: string;
   size?: "sm" | "md";
 }) {
-  const pct = max > 0 ? Math.min(100, Math.max(0, Math.round((value / max) * 100))) : 0;
+  const pct = progressPercent(value, max);
   return (
     <div
       role="progressbar"

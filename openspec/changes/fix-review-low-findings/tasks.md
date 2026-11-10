@@ -18,7 +18,7 @@
 ## 4. Âm thanh, mục tiêu và tương phản (ui-theme, reward-shop)
 
 - [x] 4.1 Đưa `SoundToggle` vào header phía bố mẹ (design D5). Kiểm tra thủ công: tắt loa ở phía bố mẹ rồi đăng nhập lại trên cùng thiết bị thì thao tác Thưởng/Phạt không phát âm, còn chữ "Đã ghi" vẫn hiện
-- [ ] 4.2 Thêm hàm `progressPercent` dùng chung cho `ProgressBar` và `goalProgress` (làm tròn xuống). Thêm nút "Đổi" nổi bật trên màn chính của con khi đạt mục tiêu ("Chờ duyệt" nếu đã gửi yêu cầu). Kiểm tra bằng unit test 199/200 → 99%, và kiểm tra thủ công nút trên màn chính
+- [x] 4.2 Thêm hàm `progressPercent` dùng chung cho `ProgressBar` và `goalProgress` (làm tròn xuống). Thêm nút "Đổi" nổi bật trên màn chính của con khi đạt mục tiêu ("Chờ duyệt" nếu đã gửi yêu cầu). Kiểm tra bằng unit test 199/200 → 99%, và kiểm tra thủ công nút trên màn chính
 - [ ] 4.3 `setGoal` chạy trong transaction có khóa phần thưởng (design D6). Kiểm tra bằng test race trên Postgres thật: chọn mục tiêu song song với ẩn phần thưởng thì không bao giờ còn `goal_reward_id` trỏ tới phần thưởng đang ẩn
 - [ ] 4.4 Bỏ `opacity` trên chữ ở thẻ rule hoặc phần thưởng đang ẩn và dòng "Con đang có" (design D7). Thêm test quét `opacity-` trên phần tử có chữ, đối chiếu danh sách cho phép. Kiểm tra bằng test đó và test tương phản hiện có
 
