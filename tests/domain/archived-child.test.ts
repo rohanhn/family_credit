@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { archiveChild } from "@/server/domain/children";
 import { applyLedgerEntry, CHILD_ARCHIVED_MESSAGE, getBalance, recordAdjustment } from "@/server/domain/ledger";
-import { approveClaim, createClaim, rejectClaim } from "@/server/domain/rule-claims";
+import { approveClaim, createClaim, listPendingClaims, rejectClaim } from "@/server/domain/rule-claims";
 import { applyAdhoc, applyRule, createRule } from "@/server/domain/rules";
-import { approveRedemption, createRedemption, createReward } from "@/server/domain/shop";
+import { approveRedemption, createRedemption, createReward, listPendingRedemptions } from "@/server/domain/shop";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
 
@@ -56,6 +56,10 @@ describe("Con đã lưu trữ", () => {
     const c1 = await createClaim(t.db, { familyId, childId: bin, ruleId: rule.id });
     const c2 = await createClaim(t.db, { familyId, childId: bin, ruleId: rule.id });
     await archiveChild(t.db, familyId, bin);
+    expect((await listPendingClaims(t.db, familyId)).map((c) => [c.childName, c.childArchived])).toEqual([
+      ["Bin", true],
+      ["Bin", true],
+    ]);
 
     await approveClaim(t.db, { familyId, actorParentId, claimId: c1.id });
     await rejectClaim(t.db, { familyId, actorParentId, claimId: c2.id });
@@ -68,6 +72,7 @@ describe("Con đã lưu trữ", () => {
     const reward = await createReward(t.db, familyId, { name: "Kem", price: 20 });
     const redemption = await createRedemption(t.db, { familyId, childId: bin, rewardId: reward.id });
     await archiveChild(t.db, familyId, bin);
+    expect((await listPendingRedemptions(t.db, familyId)).map((r) => [r.childName, r.childArchived])).toEqual([["Bin", true]]);
 
     await approveRedemption(t.db, { familyId, actorParentId, redemptionId: redemption.id });
     expect(await getBalance(t.db, bin)).toBe(10);

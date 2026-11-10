@@ -65,11 +65,15 @@ export type DayItem = {
   members: { id: number; name: string }[];
   status: TaskDayStatus;
   reportedByChildId: number | null;
+  /** Tên con đã báo xong, tra trong mọi con của gia đình (kể cả đã lưu trữ). */
+  reporterName: string | null;
+  /** Nhiệm vụ riêng của một con đã lưu trữ (hàng chờ duyệt gắn nhãn "đã lưu trữ"). */
+  childArchived: boolean;
   rejectReason: string | null;
 };
 
 /** Các con được giao một nhiệm vụ trong ngày `date` (design D3 "Con được giao trong một ngày"). */
-function membersOn(task: Task, date: string, kids: Kid[], assignees: (typeof taskAssignees.$inferSelect)[], tz: string): Kid[] {
+function membersOn<K extends Kid>(task: Task, date: string, kids: K[], assignees: (typeof taskAssignees.$inferSelect)[], tz: string): K[] {
   if (task.assignAll) {
     // "Tất cả các con": con mới được giao từ ngày hôm sau ngày tạo hồ sơ.
     return kids.filter((k) => dateInZone(k.createdAt, tz) < date);
@@ -118,6 +122,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
   // duyệt được việc con đã làm.
   const archivedToday = allKids.filter((k) => k.archivedAt !== null && date === dateInZone(k.archivedAt, tz));
 
+  const nameOf = (id: number | null | undefined) => (id == null ? null : (allKids.find((k) => k.id === id)?.name ?? null));
+
   const items: DayItem[] = [];
   for (const task of active) {
     const members = membersOn(task, date, kids, assignees, tz);
@@ -137,6 +143,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
         members: members.map((m) => ({ id: m.id, name: m.name })),
         status: row?.status ?? "todo",
         reportedByChildId: row?.reportedByChildId ?? null,
+        reporterName: nameOf(row?.reportedByChildId),
+        childArchived: false,
         rejectReason: row?.status === "todo" ? (row?.rejectReason ?? null) : null,
       });
     } else {
@@ -149,6 +157,8 @@ export async function getDay(db: DbOrTx, familyId: number, date: string): Promis
           members: [{ id: m.id, name: m.name }],
           status: row?.status ?? "todo",
           reportedByChildId: row?.reportedByChildId ?? null,
+          reporterName: nameOf(row?.reportedByChildId),
+          childArchived: m.archivedAt !== null,
           rejectReason: row?.status === "todo" ? (row?.rejectReason ?? null) : null,
         });
       }
@@ -368,7 +378,9 @@ export async function reportDone(db: DbOrTx, kid: { familyId: number; childId: n
     .returning({ id: taskDays.id });
   // Nhóm đã có người báo trước: giữ nguyên tên người báo đầu tiên.
   if (rows.length === 0 && item.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DONE);
-  return { ...item, status: "pending", reportedByChildId: item.status === "pending" ? item.reportedByChildId : kid.childId, rejectReason: null };
+  if (item.status === "pending") return { ...item, rejectReason: null };
+  const reporterName = item.members.find((m) => m.id === kid.childId)?.name ?? null;
+  return { ...item, status: "pending", reportedByChildId: kid.childId, reporterName, rejectReason: null };
 }
 
 /** Con hủy báo khi bố mẹ chưa duyệt (nhóm: bất kỳ thành viên nào). */

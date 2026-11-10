@@ -23,10 +23,9 @@ export function TodayTasks({ items, childId, currency }: { items: DayItem[]; chi
       ) : (
         <div className="grid gap-2.5 md:grid-cols-[repeat(auto-fill,minmax(240px,1fr))] md:gap-3.5">
           {items.map((i) => {
-            const reporter = i.members.find((m) => m.id === i.reportedByChildId);
             const others = i.members.filter((m) => m.id !== childId).map((m) => m.name);
             let sub = `+${i.points} ${currency}`;
-            if (i.mode === "group" && i.status === "pending" && reporter) sub += ` · ${reporter.id === childId ? "Con" : reporter.name} đã báo xong`;
+            if (i.mode === "group" && i.status === "pending" && i.reporterName) sub += ` · ${i.reportedByChildId === childId ? "Con" : i.reporterName} đã báo xong`;
             if (i.status === "todo" && i.rejectReason) sub += ` · Bố mẹ nhắn: ${i.rejectReason}`;
             return (
               <Card key={i.key} className="flex items-center gap-3 md:flex-col md:items-stretch">

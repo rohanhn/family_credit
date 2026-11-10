@@ -231,7 +231,7 @@ export function listRecentRejectedRedemptions(
 /** Yêu cầu đổi thưởng đang chờ của cả gia đình (cho hàng chờ duyệt chung), kèm số dư hiện tại của con. */
 export async function listPendingRedemptions(db: DbOrTx, familyId: number) {
   const rows = await db
-    .select({ redemption: redemptions, childName: children.name })
+    .select({ redemption: redemptions, childName: children.name, childArchivedAt: children.archivedAt })
     .from(redemptions)
     .innerJoin(children, eq(children.id, redemptions.childId))
     .where(and(eq(children.familyId, familyId), eq(redemptions.status, "pending")))
@@ -240,7 +240,7 @@ export async function listPendingRedemptions(db: DbOrTx, familyId: number) {
   for (const r of rows) {
     if (!balances.has(r.redemption.childId)) balances.set(r.redemption.childId, await getBalance(db, r.redemption.childId));
   }
-  return rows.map((r) => ({ ...r.redemption, childName: r.childName, balance: balances.get(r.redemption.childId)! }));
+  return rows.map((r) => ({ ...r.redemption, childName: r.childName, childArchived: r.childArchivedAt !== null, balance: balances.get(r.redemption.childId)! }));
 }
 
 /** Khóa yêu cầu của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
