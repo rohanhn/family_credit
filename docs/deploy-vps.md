@@ -1,4 +1,4 @@
-# Triển khai my-credit lên VPS
+# Triển khai family_credit lên VPS
 
 Hướng dẫn từng bước từ một VPS trắng tới lúc app chạy bằng HTTPS, kèm sao lưu, cập nhật, rollback và xử lý sự cố. Biến môi trường và quy trình dev xem thêm ở [README](../README.md).
 
@@ -39,12 +39,12 @@ Bố cục thư mục trên VPS:
 ```
 /opt/traefik/     compose.yaml, letsencrypt/acme.json
 /opt/postgres/    compose.yaml, .env (mật khẩu superuser)
-/opt/my-credit/   compose.yaml, .env, backup.sh
-/var/backups/my-credit/   bản sao lưu đã mã hóa
+/opt/family_credit/   compose.yaml, .env, backup.sh
+/var/backups/family_credit/   bản sao lưu đã mã hóa
 ```
 
 - Chỉ Traefik mở port ra ngoài (80, 443). Postgres và app không publish port nào.
-- CI build image và đẩy lên `ghcr.io/<owner>/my-credit`. VPS không cần mã nguồn.
+- CI build image và đẩy lên `ghcr.io/<owner>/family_credit`. VPS không cần mã nguồn.
 - Container app chạy file system chỉ đọc, bỏ mọi capability, user `node`. Mỗi lần khởi động, entrypoint chạy migration trước rồi mới chạy server; migration lỗi thì container dừng.
 
 Trong tài liệu, lệnh bắt đầu bằng `ssh vps` hoặc `scp ... vps:` chạy trên **máy của bạn**; các lệnh khác chạy **trên VPS**.
@@ -74,7 +74,7 @@ DNS phải trỏ đúng **trước** [bước 7](#bước-7-cài-traefik), nếu
 Trên máy của bạn, tạo SSH key nếu chưa có:
 
 ```bash
-ssh-keygen -t ed25519 -C "my-credit-vps"
+ssh-keygen -t ed25519 -C "family_credit-vps"
 ```
 
 Đăng nhập VPS lần đầu bằng `root` (hoặc user nhà cung cấp cấp sẵn), tạo user `deploy` có quyền sudo:
@@ -349,11 +349,11 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Khi CI xanh, image `ghcr.io/<owner>/my-credit:v0.1.0` có trong mục Packages của repo. Trên production luôn dùng tag `vX.Y.Z`, không dùng `latest`.
+Khi CI xanh, image `ghcr.io/<owner>/family_credit:v0.1.0` có trong mục Packages của repo. Trên production luôn dùng tag `vX.Y.Z`, không dùng `latest`.
 
 **Package riêng tư:** mặc định package trên GHCR là riêng tư. Có hai cách:
 
-- Đổi package sang công khai (Packages → my-credit → Package settings → Change visibility), hoặc
+- Đổi package sang công khai (Packages → family_credit → Package settings → Change visibility), hoặc
 - Tạo Personal Access Token (classic) chỉ có quyền `read:packages`, rồi đăng nhập một lần trên VPS:
 
   ```bash
@@ -375,9 +375,9 @@ docker exec -it postgres psql -U postgres
 ```
 
 ```sql
-CREATE ROLE my_credit LOGIN PASSWORD '<mật khẩu vừa tạo>';
-CREATE DATABASE my_credit OWNER my_credit;
-REVOKE ALL ON DATABASE my_credit FROM PUBLIC;
+CREATE ROLE family_credit LOGIN PASSWORD '<mật khẩu vừa tạo>';
+CREATE DATABASE family_credit OWNER family_credit;
+REVOKE ALL ON DATABASE family_credit FROM PUBLIC;
 \q
 ```
 
@@ -388,14 +388,14 @@ Thay `postgres` sau `docker exec -it` bằng tên container nếu Postgres có s
 Chép file triển khai từ repo lên VPS (chạy trên máy của bạn, ở thư mục repo):
 
 ```bash
-ssh vps 'sudo mkdir -p /opt/my-credit && sudo chown deploy: /opt/my-credit'
-scp deploy/compose.yaml deploy/.env.example scripts/backup.sh vps:/opt/my-credit/
+ssh vps 'sudo mkdir -p /opt/family_credit && sudo chown deploy: /opt/family_credit'
+scp deploy/compose.yaml deploy/.env.example scripts/backup.sh vps:/opt/family_credit/
 ```
 
 Trên VPS:
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 cp .env.example .env && chmod 600 .env
 nano .env
 ```
@@ -406,7 +406,7 @@ nano .env
 | `IMAGE_TAG` | Tag đã phát hành, ví dụ `v0.1.0` |
 | `APP_HOST` | Domain, ví dụ `app3.domain.xyz` (dùng cho rule `Host()` của Traefik) |
 | `APP_URL` | `https://` + domain, ví dụ `https://app3.domain.xyz`. Dùng lúc chạy để tạo link mời |
-| `DATABASE_URL` | `postgres://my_credit:<mật khẩu bước 9>@postgres:5432/my_credit` |
+| `DATABASE_URL` | `postgres://family_credit:<mật khẩu bước 9>@postgres:5432/family_credit` |
 | `DATABASE_POOL_MAX` | Mặc định `5` |
 | `LOG_LEVEL` | Mặc định `info` |
 | `TRAEFIK_NETWORK` | `traefik` (hoặc tên network Traefik có sẵn) |
@@ -426,7 +426,7 @@ docker compose config --quiet && echo OK
 ### Bước 11: Khởi động app
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 docker compose pull
 docker compose up -d
 docker compose ps                 # STATUS chuyển sang (healthy) sau khoảng 30 giây
@@ -443,23 +443,23 @@ Kiểm tra sau lần đầu:
 
 ### Bước 12: Cài sao lưu
 
-`backup.sh` chạy `pg_dump -Fc` trong container `PG_IMAGE` trên network Postgres, mã hóa bằng `age` ngay trong luồng, ghi `BACKUP_DIR/my-credit-<thời điểm UTC>.dump.age` (quyền 600) và giữ `BACKUP_KEEP` bản mới nhất. Trên đĩa không có bản rõ.
+`backup.sh` chạy `pg_dump -Fc` trong container `PG_IMAGE` trên network Postgres, mã hóa bằng `age` ngay trong luồng, ghi `BACKUP_DIR/family_credit-<thời điểm UTC>.dump.age` (quyền 600) và giữ `BACKUP_KEEP` bản mới nhất. Trên đĩa không có bản rõ.
 
 Tạo cặp khóa trên **máy của bạn**, không phải VPS:
 
 ```bash
-age-keygen -o my-credit-backup.key
+age-keygen -o family_credit-backup.key
 # Public key: age1...
 ```
 
-Cất `my-credit-backup.key` vào trình quản lý mật khẩu hoặc nơi an toàn ngoài VPS. Mất file này thì không giải mã được bản sao lưu nào. Chỉ đưa dòng `age1...` lên VPS.
+Cất `family_credit-backup.key` vào trình quản lý mật khẩu hoặc nơi an toàn ngoài VPS. Mất file này thì không giải mã được bản sao lưu nào. Chỉ đưa dòng `age1...` lên VPS.
 
 Trên VPS:
 
 ```bash
-cd /opt/my-credit && chmod 700 backup.sh
+cd /opt/family_credit && chmod 700 backup.sh
 nano .env      # BACKUP_AGE_RECIPIENT=age1..., BACKUP_DIR, BACKUP_KEEP, PG_IMAGE
-sudo mkdir -p /var/backups/my-credit && sudo chown deploy: /var/backups/my-credit
+sudo mkdir -p /var/backups/family_credit && sudo chown deploy: /var/backups/family_credit
 ./backup.sh    # chạy thử, in ra "backup: đã ghi ..."
 ```
 
@@ -468,10 +468,10 @@ sudo mkdir -p /var/backups/my-credit && sudo chown deploy: /var/backups/my-credi
 Cron hằng ngày lúc 3:15 (`crontab -e` của user `deploy`):
 
 ```cron
-15 3 * * * /opt/my-credit/backup.sh /opt/my-credit/.env >> /home/deploy/my-credit-backup.log 2>&1
+15 3 * * * /opt/family_credit/backup.sh /opt/family_credit/.env >> /home/deploy/family_credit-backup.log 2>&1
 ```
 
-Nên định kỳ chép `/var/backups/my-credit` ra ngoài VPS (`rsync`, `rclone` sang máy khác hoặc object storage). File đã mã hóa nên chép đi đâu cũng an toàn. Nên thử [khôi phục](#khôi-phục-từ-bản-sao-lưu) ra một database phụ ít nhất một lần để chắc bản sao lưu dùng được.
+Nên định kỳ chép `/var/backups/family_credit` ra ngoài VPS (`rsync`, `rclone` sang máy khác hoặc object storage). File đã mã hóa nên chép đi đâu cũng an toàn. Nên thử [khôi phục](#khôi-phục-từ-bản-sao-lưu) ra một database phụ ít nhất một lần để chắc bản sao lưu dùng được.
 
 ---
 
@@ -480,7 +480,7 @@ Nên định kỳ chép `/var/backups/my-credit` ra ngoài VPS (`rsync`, `rclone
 ### Cập nhật lên bản mới
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 ./backup.sh                               # sao lưu trước mỗi lần cập nhật
 sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=v0.2.0/' .env
 docker compose pull
@@ -505,26 +505,26 @@ Migration của dự án chỉ thêm (thêm cột, thêm bảng), không đổi 
 Private key không nằm trên VPS, nên giải mã trên máy của bạn rồi đẩy luồng dữ liệu qua SSH. Dừng app trước để không có ghi mới trong lúc khôi phục:
 
 ```bash
-ssh vps 'cd /opt/my-credit && docker compose stop app'
+ssh vps 'cd /opt/family_credit && docker compose stop app'
 
-age -d -i my-credit-backup.key my-credit-20261109-031500.dump.age \
-  | ssh vps 'cd /opt/my-credit && set -a && . ./.env && set +a && \
+age -d -i family_credit-backup.key family_credit-20261109-031500.dump.age \
+  | ssh vps 'cd /opt/family_credit && set -a && . ./.env && set +a && \
       docker run --rm -i --network "$POSTGRES_NETWORK" -e DATABASE_URL "${PG_IMAGE:-postgres:16-alpine}" \
         sh -c "pg_restore --clean --if-exists --no-owner -d \"\$DATABASE_URL\""'
 
-ssh vps 'cd /opt/my-credit && docker compose start app'
+ssh vps 'cd /opt/family_credit && docker compose start app'
 ```
 
-- File sao lưu đang nằm trên VPS thì chép về trước: `scp vps:/var/backups/my-credit/<file> .`
+- File sao lưu đang nằm trên VPS thì chép về trước: `scp vps:/var/backups/family_credit/<file> .`
 - `. ./.env` đọc file như script shell. Nếu mật khẩu có ký tự đặc biệt của shell (`$`, dấu nháy), đặt giá trị trong nháy đơn trong `.env`, hoặc export `DATABASE_URL` và `POSTGRES_NETWORK` bằng tay.
-- Muốn thử khôi phục mà không đụng production: tạo database khác (ví dụ `my_credit_restore`, owner `my_credit`) và trỏ `-d` vào đó.
+- Muốn thử khôi phục mà không đụng production: tạo database khác (ví dụ `family_credit_restore`, owner `family_credit`) và trỏ `-d` vào đó.
 
 ### Việc vận hành thường gặp
 
 Đặt lại mật khẩu bố mẹ (in mật khẩu tạm ra màn hình và hủy mọi phiên đăng nhập của tài khoản đó):
 
 ```bash
-cd /opt/my-credit
+cd /opt/family_credit
 docker compose exec app node scripts/reset-password.js <email>
 ```
 
@@ -563,7 +563,7 @@ docker image prune -a --filter "until=720h"
 | `network ... declared as external, but could not be found` | Chưa tạo network hoặc sai tên | [Bước 5](#bước-5-tạo-docker-network-dùng-chung); đối chiếu với `docker network ls` |
 | Container app khởi động lại liên tục, log có lỗi migration | Không kết nối được DB, sai mật khẩu, hoặc migration lỗi | `docker compose logs app`; kiểm tra host, mật khẩu trong `DATABASE_URL` và Postgres có trên `POSTGRES_NETWORK` |
 | `ECONNREFUSED` / `getaddrinfo ENOTFOUND` tới DB | Host trong `DATABASE_URL` là `localhost` hoặc sai tên container | Dùng tên container Postgres trên network chung |
-| `password authentication failed for user "my_credit"` | Mật khẩu trong `.env` khác lúc tạo role | `ALTER ROLE my_credit PASSWORD '...'` trong psql, hoặc sửa `.env` |
+| `password authentication failed for user "family_credit"` | Mật khẩu trong `.env` khác lúc tạo role | `ALTER ROLE family_credit PASSWORD '...'` trong psql, hoặc sửa `.env` |
 | App `(unhealthy)` | App chạy nhưng `/api/health` không truy vấn được DB | Xem log; `docker compose exec app wget -qO- http://127.0.0.1:3000/api/health` |
 | Traefik log `client version ... is too old` | Traefik cũ không hợp Docker Engine mới | Dùng Traefik v3.6.1 trở lên |
 | Traefik trả `404 page not found` | Sai `APP_HOST`, sai entrypoint, app chưa `healthy`, hoặc Traefik không thấy container | Kiểm tra `APP_HOST`, `TRAEFIK_ENTRYPOINT`, `docker compose ps`, log Traefik |
