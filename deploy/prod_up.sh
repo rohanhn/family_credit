@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Bật (hoặc cập nhật) my-credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
-#   cd /opt/my-credit && ./prod_up.sh
+# Bật (hoặc cập nhật) family_credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
+#   cd /opt/family_credit && ./prod_up.sh
 # Các bước: kiểm tra .env, pull image theo IMAGE_TAG, up -d, chờ container (healthy).
 # Container không healthy trong thời gian chờ thì in log và thoát với mã lỗi.
 set -euo pipefail

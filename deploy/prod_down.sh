@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Tắt my-credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
-#   cd /opt/my-credit && ./prod_down.sh
+# Tắt family_credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
+#   cd /opt/family_credit && ./prod_down.sh
 # Xóa container của app. App không giữ trạng thái; dữ liệu nằm ở Postgres nên không mất gì.
 # Network proxy-net/db-network là external nên không bị xóa; Traefik và Postgres không bị ảnh hưởng.
 set -euo pipefail

@@ -389,7 +389,7 @@ Chép file triển khai từ repo lên VPS (chạy trên máy của bạn, ở t
 
 ```bash
 ssh vps 'sudo mkdir -p /opt/family_credit && sudo chown deploy: /opt/family_credit'
-scp deploy/compose.yaml deploy/.env.example scripts/backup.sh vps:/opt/family_credit/
+scp deploy/compose.yaml deploy/.env.example deploy/prod_up.sh deploy/prod_down.sh deploy/prod_cleanup.sh scripts/backup.sh vps:/opt/family_credit/
 ```
 
 Trên VPS:
@@ -427,11 +427,11 @@ docker compose config --quiet && echo OK
 
 ```bash
 cd /opt/family_credit
-docker compose pull
-docker compose up -d
-docker compose ps                 # STATUS chuyển sang (healthy) sau khoảng 30 giây
-docker compose logs -f app        # thấy migration xong rồi server chạy; Ctrl+C để thoát
+chmod 700 prod_up.sh prod_down.sh prod_cleanup.sh
+./prod_up.sh                      # kiểm tra .env, pull, up -d, chờ (healthy); lỗi thì in log
 ```
+
+`prod_up.sh` tương đương `docker compose config --quiet && docker compose pull && docker compose up -d` rồi chờ container `(healthy)` (mặc định tối đa 120 giây, đổi bằng `TIMEOUT=180 ./prod_up.sh`). Không healthy thì in 50 dòng log cuối và thoát với mã lỗi. Tắt app: `./prod_down.sh` (xóa container, không đụng dữ liệu, Traefik, Postgres).
 
 Healthcheck gọi `GET /api/health`, trả 200 khi truy vấn được DB. Traefik phát hiện container mới và xin chứng chỉ cho `APP_HOST`; xem bằng `docker logs traefik`.
 
@@ -483,11 +483,11 @@ Nên định kỳ chép `/var/backups/family_credit` ra ngoài VPS (`rsync`, `rc
 cd /opt/family_credit
 ./backup.sh                               # sao lưu trước mỗi lần cập nhật
 sed -i 's/^IMAGE_TAG=.*/IMAGE_TAG=v0.2.0/' .env
-docker compose pull
-docker compose up -d
-docker compose ps
-docker compose logs --tail=50 app         # xem migration chạy xong
+./prod_up.sh
+./prod_cleanup.sh                         # xóa image family_credit cũ, giữ image đang chạy
 ```
+
+`prod_cleanup.sh` chỉ xóa image `ghcr.io/<owner>/family_credit`, giữ image container đang dùng và image theo `IMAGE_TAG`; image của app khác không bị đụng. Rollback về tag đã bị xóa thì `prod_up.sh` pull lại từ GHCR.
 
 ### Rollback
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Xóa image cũ của my-credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
-#   cd /opt/my-credit && ./prod_cleanup.sh
-# Chỉ đụng tới image ghcr.io/<GHCR_OWNER>/my-credit; image của app khác, Traefik, Postgres giữ nguyên.
+# Xóa image cũ của family_credit trên VPS. Chạy trong thư mục chứa compose.yaml và .env:
+#   cd /opt/family_credit && ./prod_cleanup.sh
+# Chỉ đụng tới image ghcr.io/<GHCR_OWNER>/family_credit; image của app khác, Traefik, Postgres giữ nguyên.
 # Giữ lại: image container app đang dùng và image theo IMAGE_TAG trong .env. Rollback về tag cũ thì
 # prod_up.sh sẽ pull lại từ GHCR.
 set -euo pipefail
@@ -23,7 +23,7 @@ if [ -z "$owner" ] || [ -z "$tag" ]; then
   echo "prod_cleanup: thiếu GHCR_OWNER hoặc IMAGE_TAG trong .env" >&2
   exit 1
 fi
-repo="ghcr.io/${owner}/my-credit"
+repo="ghcr.io/${owner}/family_credit"
 
 # ID image cần giữ
 keep=""
