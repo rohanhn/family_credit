@@ -117,15 +117,28 @@ export function goalProgress(balance: number, price: number): { percent: number;
   return { percent, remaining, reached: remaining === 0 };
 }
 
-/** Con chọn một phần thưởng đang hiện làm mục tiêu, hoặc bỏ mục tiêu (rewardId = null). */
-export async function setGoal(db: DbOrTx, input: { familyId: number; childId: number; rewardId: number | null }): Promise<void> {
-  if (input.rewardId !== null) await getVisibleReward(db, input.familyId, input.rewardId);
-  const rows = await db
-    .update(children)
-    .set({ goalRewardId: input.rewardId })
-    .where(and(eq(children.id, input.childId), eq(children.familyId, input.familyId)))
-    .returning({ id: children.id });
-  if (rows.length === 0) throw notFound();
+/**
+ * Con chọn một phần thưởng đang hiện làm mục tiêu, hoặc bỏ mục tiêu (rewardId = null).
+ * Chạy trong transaction và khóa dòng phần thưởng FOR SHARE (design D6): `setRewardHidden` cập nhật dòng đó
+ * (khóa ghi) nên hai thao tác chạy lần lượt, không còn mục tiêu trỏ tới phần thưởng vừa bị ẩn.
+ */
+export async function setGoal(db: Db, input: { familyId: number; childId: number; rewardId: number | null }): Promise<void> {
+  await db.transaction(async (tx) => {
+    if (input.rewardId !== null) {
+      const [reward] = await tx
+        .select({ id: rewards.id })
+        .from(rewards)
+        .where(and(eq(rewards.id, input.rewardId), eq(rewards.familyId, input.familyId), eq(rewards.hidden, false)))
+        .for("share");
+      if (!reward) throw notFound();
+    }
+    const rows = await tx
+      .update(children)
+      .set({ goalRewardId: input.rewardId })
+      .where(and(eq(children.id, input.childId), eq(children.familyId, input.familyId)))
+      .returning({ id: children.id });
+    if (rows.length === 0) throw notFound();
+  });
 }
 
 // ---------------------------------------------------------------- cửa hàng của con
