@@ -2,7 +2,7 @@
 
 ## 1. Con đã lưu trữ (family-accounts)
 
-- [ ] 1.1 Thêm cờ `allowArchived` cho `recordTransaction` theo design D1, bật ở bốn chỗ: duyệt nhiệm vụ, duyệt khai rule, duyệt đổi thưởng, điều chỉnh. `applyAction` vẫn tắt cờ nên bị từ chối với con đã lưu trữ. Kiểm tra bằng unit test: áp dụng rule hoặc thưởng/phạt đột xuất bị từ chối và số dư không đổi; mỗi đường duyệt vẫn ghi được cho yêu cầu gửi trước khi lưu trữ
+- [x] 1.1 Thêm cờ `allowArchived` cho `recordTransaction` theo design D1, bật ở bốn chỗ: duyệt nhiệm vụ, duyệt khai rule, duyệt đổi thưởng, điều chỉnh. `applyAction` vẫn tắt cờ nên bị từ chối với con đã lưu trữ. Kiểm tra bằng unit test: áp dụng rule hoặc thưởng/phạt đột xuất bị từ chối và số dư không đổi; mỗi đường duyệt vẫn ghi được cho yêu cầu gửi trước khi lưu trữ
 - [ ] 1.2 Trả `childArchived` trong hàng chờ khai rule, đổi thưởng và nhiệm vụ, rồi hiện nhãn "đã lưu trữ" cạnh tên con trên hàng chờ của bố mẹ. `today-tasks.tsx` tra tên người báo trong mọi con của gia đình. Kiểm tra bằng unit test cho cờ, và kiểm tra thủ công nhãn trên trang `/parent`
 
 ## 2. Lịch sử giao dịch (currency-ledger)

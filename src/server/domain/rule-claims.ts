@@ -89,6 +89,7 @@ export async function approveClaim(
       actorParentId: input.actorParentId,
       refType: "rule_claim",
       refId: claim.id,
+      allowArchived: true,
       notifyTitle: claim.nameSnapshot,
     });
   });

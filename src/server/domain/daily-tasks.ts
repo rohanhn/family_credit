@@ -440,6 +440,7 @@ export async function approveTaskDay(
           actorParentId: input.actorParentId,
           refType: "task_day",
           refId: rows[0].id,
+          allowArchived: true,
           notifyTitle: item.name,
         }),
       );

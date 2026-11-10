@@ -290,6 +290,7 @@ export async function approveRedemption(
       actorParentId: input.actorParentId,
       refType: "redemption",
       refId: redemption.id,
+      allowArchived: true,
       notifyTitle: `Bố mẹ đã duyệt: ${redemption.nameSnapshot}`,
     });
   });

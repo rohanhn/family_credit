@@ -21,7 +21,14 @@ export type LedgerEntryInput = {
   refId?: number;
   /** Tiêu đề thông báo cho con, mặc định là description. */
   notifyTitle?: string;
+  /**
+   * Cho phép ghi cho con đã lưu trữ (design D1): chỉ bật ở các đường duyệt yêu cầu con gửi trước khi
+   * lưu trữ và giao dịch điều chỉnh. Mặc định tắt, nên thưởng/phạt mới cho con đã lưu trữ bị từ chối.
+   */
+  allowArchived?: boolean;
 };
+
+export const CHILD_ARCHIVED_MESSAGE = "Con đã được lưu trữ";
 
 /** Khóa dòng của con trong transaction (SELECT ... FOR UPDATE) để các thao tác ghi điểm trên cùng một con chạy lần lượt. */
 export async function lockChild(tx: Tx, familyId: number, childId: number) {
@@ -58,7 +65,8 @@ export async function recordTransaction(tx: Tx, input: LedgerEntryInput): Promis
   const description = input.description.trim();
   if (!description) throw invalid("Thiếu mô tả giao dịch");
 
-  await lockChild(tx, input.familyId, input.childId);
+  const child = await lockChild(tx, input.familyId, input.childId);
+  if (child.archivedAt && !input.allowArchived) throw invalid(CHILD_ARCHIVED_MESSAGE);
   const balance = await getBalance(tx, input.childId);
   const [row] = await tx
     .insert(transactions)
@@ -117,6 +125,7 @@ export async function recordAdjustment(
       actorParentId: input.actorParentId,
       refType: "transaction",
       refId: original.id,
+      allowArchived: true,
     });
   });
 }
