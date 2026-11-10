@@ -29,7 +29,7 @@ Mục quan trọng nhất là phiên bố mẹ trên máy của con. Bố mẹ �
 - Hết cảnh báo "unstable value `Date.now()` while prerendering" ở trang `/parent/settings`.
 - Ngày bật và ngày hết hạn của thiết bị trong cài đặt hiển thị theo múi giờ của gia đình, không theo múi giờ của trình duyệt.
 
-**Giả định (chờ anh duyệt)**
+**Giả định (anh đã duyệt ngày 2026-11-10)**
 - Mốc 15 phút không thao tác là phương án đề xuất. Hai phương án khác đã cân nhắc: hết hạn cố định sau 1 giờ, hoặc phiên trình duyệt (mất khi đóng hẳn trình duyệt). Đổi mốc chỉ cần sửa một hằng số.
 - Phiên bố mẹ đã có từ trước khi bật chế độ gia đình bị kết thúc ngay khi bật, như hiện tại. Giới hạn 15 phút chỉ áp dụng cho lần đăng nhập sau đó.
 
