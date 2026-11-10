@@ -39,7 +39,7 @@ async function KidHome() {
         <div className="relative flex min-h-36 items-center gap-4 overflow-hidden rounded-[28px] bg-primary px-5 py-5 text-on-primary md:px-6">
           <CurrencyIcon icon={currency.icon} size={64} />
           <span className="relative z-10 flex flex-col">
-            <span className="font-bold opacity-90">Con đang có</span>
+            <span className="font-bold">Con đang có</span>
             <span className="font-display text-[52px] font-extrabold leading-none md:text-6xl">
               {balance} <span className="text-2xl md:text-[26px]">{currency.name}</span>
             </span>

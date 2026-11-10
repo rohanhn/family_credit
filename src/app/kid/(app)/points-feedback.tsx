@@ -133,7 +133,7 @@ function GiftBody({ screen, profile, titleId }: { screen: Extract<FeedbackScreen
         <h2 id={titleId} className="font-display text-[30px] font-extrabold leading-tight md:text-[28px]">
           {screen.total > 0 ? `Giỏi quá, ${profile.name} ơi!` : `${profile.name} nhận quà rồi!`}
         </h2>
-        <p className="font-bold opacity-95">Bố mẹ vừa duyệt cho con</p>
+        <p className="font-bold">Bố mẹ vừa duyệt cho con</p>
       </span>
       <ul className="relative flex w-full flex-col gap-2 rounded-[22px] bg-black/15 px-4 py-3 text-left">
         {screen.items.map((i) => (
