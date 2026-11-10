@@ -35,7 +35,7 @@
 ## 7. CI và đóng gói
 
 - [x] 7.1 Chạy e2e trên bản build production khi có `E2E_PROD=1`, và CI đặt biến này. Thêm kiểm tra HSTS, `upgrade-insecure-requests` và không có `'unsafe-eval'`. Kiểm tra bằng cách chạy `E2E_PROD=1 npm run test:e2e` pass trên máy
-- [ ] 7.2 Thêm bước chạy thử image vào CI trước khi push: container cùng Postgres service, `/api/health` trả 200, `node scripts/reset-password.js` chạy được. Kiểm tra workflow xanh trên một PR
+- [x] 7.2 Thêm bước chạy thử image vào CI trước khi push: container cùng Postgres service, `/api/health` trả 200, `node scripts/reset-password.js` chạy được. Kiểm tra workflow xanh trên một PR
 - [x] 7.3 Bỏ `ARG NODE_IMAGE`, ghim `node:22-alpine@sha256:<digest>` ở mọi stage, và sửa README dòng nói về Dependabot nếu cần. Kiểm tra `docker build` thành công và `actionlint`/Dependabot config hợp lệ
 
 ## 8. Test bổ sung
