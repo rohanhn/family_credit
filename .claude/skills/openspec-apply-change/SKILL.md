@@ -38,14 +38,6 @@ In both branches, never create the root as a side effect: do not run `openspec i
 
    Always announce: "Using change: <name>" and how to override (e.g., `/opsx:apply <other>`).
 
-   **Branch (project rule):** each change is implemented on exactly one branch named after the change (`<name>`, no prefix). Before editing anything:
-   - Already on branch `<name>` → continue there.
-   - Branch `<name>` exists (local, or `origin/<name>`) → `git switch <name>`.
-   - On `master` and no such branch → `git switch -c <name>` (uncommitted planning files of this change come along; commit them first as `Thêm change <name> (proposal, design, specs, tasks)` if they are not yet in git).
-   - On a different branch (another change, dependabot, etc.) → pause and ask; do not branch off it.
-   - If the working tree has uncommitted changes unrelated to this change → pause and ask before switching.
-   Never create any other branch (no per-task, backup, or experiment branches) and never delete branches. All task commits go on `<name>`. Do not push or open a PR unless the user asks; after the change is merged, the branch may be deleted only with the user's confirmation.
-
 2. **Check status to understand the schema**
    ```bash
    openspec status --change "<name>" --json
@@ -119,11 +111,9 @@ In both branches, never create the root as a side effect: do not run `openspec i
    - Before editing, confirm the checkbox at the returned `sourcePath` and `line` still matches the task description; if it does not, rerun the apply instructions and use the refreshed location
    - Mark the task complete at its returned `sourcePath` and `line`: `- [ ]` → `- [x]`
    - Rerun the apply instructions and confirm that task is now done and progress changed
-   - **Auto-commit (project rule):** once the task's checks pass (lint, typecheck, relevant tests, plus the task's own acceptance checks), commit the task's changes on the change's branch without asking. Message style: `Triển khai task <id> (<tóm tắt ngắn>) của change <name>`, add a bullet body when useful, and end with the commit attribution line. Never commit failing checks, secrets, or unrelated changes; never push.
-   - If another pending task remains, continue to it immediately without waiting for the user
+   - Continue to next task
 
-   **Pause if** (stop right away, before committing the unfinished work):
-   - Something is unclear or needs the user's confirmation (a decision, a trade-off, an action outside the repo) → ask
+   **Pause if:**
    - Task is unclear → ask for clarification
    - Implementation reveals a design issue → suggest updating artifacts
    - A task needs work beyond what the spec and tasks describe, or you are tempted to drop, narrow, defer, or accept exceptions to specified behavior to make it fit → surface the added scope and ask; do not absorb it silently
@@ -191,9 +181,7 @@ What would you like to do?
 ```
 
 **Guardrails**
-- Keep going through tasks until done or blocked; commit after each completed task and move on to the next one automatically
-- Work only on the branch named after the change; never create extra branches
-- Stop immediately when anything is unclear or needs confirmation - don't guess, don't commit half-done work
+- Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
 - If implementation reveals issues, pause and suggest artifact updates
