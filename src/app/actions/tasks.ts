@@ -37,7 +37,7 @@ export async function createTaskAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: `Đã tạo "${task.name}", bắt đầu từ ngày mai` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "createTaskAction", auth: auth, form });
   }
 }
 
@@ -48,7 +48,7 @@ export async function updateTaskAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: `Đã lưu "${task.name}", áp dụng từ ngày mai` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "updateTaskAction", auth: auth, form });
   }
 }
 
@@ -59,7 +59,7 @@ export async function pauseTaskAction(_prev: ActionState, form: FormData): Promi
     refresh();
     return { ok: true, message: "Đã tạm dừng từ ngày mai" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "pauseTaskAction", auth: auth, form });
   }
 }
 
@@ -70,7 +70,7 @@ export async function resumeTaskAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: "Nhiệm vụ chạy lại từ ngày mai" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "resumeTaskAction", auth: auth, form });
   }
 }
 
@@ -90,7 +90,7 @@ export async function approveTaskAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: `Đã duyệt ${signed(txns[0]?.appliedAmount ?? 0)} cho ${txns.length} con`, data: { applied: String(txns[0]?.appliedAmount ?? 0) } };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "approveTaskAction", auth: auth, form });
   }
 }
 
@@ -109,7 +109,7 @@ export async function rejectTaskAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: "Đã từ chối" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "rejectTaskAction", auth: auth, form });
   }
 }
 
@@ -122,7 +122,7 @@ export async function kidReportAction(_prev: ActionState, form: FormData): Promi
     refresh();
     return { ok: true, message: "Đã báo bố mẹ" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "kidReportAction", auth: kid, form });
   }
 }
 
@@ -133,6 +133,6 @@ export async function kidCancelReportAction(_prev: ActionState, form: FormData):
     refresh();
     return { ok: true };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "kidCancelReportAction", auth: kid, form });
   }
 }

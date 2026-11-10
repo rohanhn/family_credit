@@ -30,7 +30,7 @@ export async function applyAction(_prev: ActionState, form: FormData): Promise<A
       data: { applied: String(txn.appliedAmount), requested: String(txn.requestedAmount), balance: String(balance), nonce: String(txn.id) },
     };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "applyAction", auth: auth, form });
   }
 }
 
@@ -41,7 +41,7 @@ export async function createRuleAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: `Đã thêm rule "${rule.name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "createRuleAction", auth: auth, form });
   }
 }
 
@@ -52,7 +52,7 @@ export async function updateRuleAction(_prev: ActionState, form: FormData): Prom
     refresh();
     return { ok: true, message: `Đã lưu "${rule.name}". Giao dịch cũ không đổi.` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "updateRuleAction", auth: auth, form });
   }
 }
 
@@ -63,7 +63,7 @@ export async function toggleRuleHiddenAction(_prev: ActionState, form: FormData)
     refresh();
     return { ok: true, message: rule.hidden ? `Đã ẩn "${rule.name}"` : `Đã hiện lại "${rule.name}"` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "toggleRuleHiddenAction", auth: auth, form });
   }
 }
 
@@ -74,7 +74,7 @@ export async function adjustTransactionAction(_prev: ActionState, form: FormData
     refresh();
     return { ok: true, message: `Đã ghi điều chỉnh ${signed(txn.appliedAmount)}` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "adjustTransactionAction", auth: auth, form });
   }
 }
 
@@ -85,7 +85,7 @@ export async function approveClaimAction(_prev: ActionState, form: FormData): Pr
     refresh();
     return { ok: true, message: `Đã duyệt ${signed(txn.appliedAmount)}`, data: { applied: String(txn.appliedAmount) } };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "approveClaimAction", auth: auth, form });
   }
 }
 
@@ -96,7 +96,7 @@ export async function rejectClaimAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: "Đã từ chối" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "rejectClaimAction", auth: auth, form });
   }
 }
 
@@ -109,7 +109,7 @@ export async function claimRuleAction(_prev: ActionState, form: FormData): Promi
     refresh();
     return { ok: true, message: `Đã gửi "${claim.nameSnapshot}" cho bố mẹ duyệt` };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "claimRuleAction", auth: kid, form });
   }
 }
 
@@ -120,6 +120,6 @@ export async function cancelClaimAction(_prev: ActionState, form: FormData): Pro
     refresh();
     return { ok: true, message: "Đã hủy yêu cầu" };
   } catch (err) {
-    return fromError(err);
+    return fromError(err, { action: "cancelClaimAction", auth: kid, form });
   }
 }
