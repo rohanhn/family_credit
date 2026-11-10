@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getDb } from "../db/client";
 import { logSecurityEvent } from "../log";
 import { clientIpFrom } from "./client-ip";
@@ -47,11 +48,23 @@ export async function requestIp(): Promise<string> {
   return clientIpFrom(h.get("x-forwarded-for"), h.get("x-real-ip"));
 }
 
+/**
+ * Kiểm tra phiên luôn đọc giờ hiện tại (hạn phiên, gia hạn). `connection()` báo cho Next đây là phần
+ * chỉ chạy lúc có request, để không lượt prerender nào (kể cả prefetch lúc chạy, khi cookie đã có
+ * giá trị) chạm tới `Date.now()` (design D5 của change polish-after-mvp).
+ */
+async function sessionTokens<K extends SessionSubject>(...kinds: K[]): Promise<Record<K, string | undefined>> {
+  const tokens = {} as Record<K, string | undefined>;
+  for (const k of kinds) tokens[k] = await readCookie(k);
+  await connection();
+  return tokens;
+}
+
 export async function getParentAuth(): Promise<ParentAuth | null> {
   // Đọc cookie trước khi gọi getDb(): lúc prerender, cookies() dừng render trước khi chạm tới DB
   // (build Docker không có DATABASE_URL).
-  const token = await readCookie("parent");
-  return authenticateParent(getDb(), token);
+  const { parent } = await sessionTokens("parent");
+  return authenticateParent(getDb(), parent);
 }
 
 /** Bố mẹ đã đăng nhập (có thể chưa có gia đình). */
@@ -72,13 +85,13 @@ export async function requireParentWithFamily(): Promise<ParentAuth & { familyId
 }
 
 export async function getDeviceAuth(): Promise<DeviceAuth | null> {
-  const token = await readCookie("device");
-  return authenticateDevice(getDb(), token);
+  const { device } = await sessionTokens("device");
+  return authenticateDevice(getDb(), device);
 }
 
 export async function getChildAuth(): Promise<ChildAuth | null> {
-  const [deviceToken, childToken] = [await readCookie("device"), await readCookie("child")];
-  return authenticateChild(getDb(), deviceToken, childToken);
+  const { device, child } = await sessionTokens("device", "child");
+  return authenticateChild(getDb(), device, child);
 }
 
 /** Con đã đăng nhập bằng PIN trên thiết bị gia đình. */

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_SERVER_LOG } from "./tests/e2e/server-log";
 
 // Nạp .env (nếu có) để test e2e đọc được DATABASE_URL (dựng dữ liệu trực tiếp trong DB).
 try {
@@ -25,7 +26,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Desktop Chrome"], viewport: { width: 360, height: 800 } } },
   ],
   webServer: {
-    command: PROD ? `npx next build && npx next start -p ${PORT}` : `npx next dev -p ${PORT}`,
+    command: PROD ? `npx next build && npx next start -p ${PORT} 2>&1 | tee ${E2E_SERVER_LOG}` : `npx next dev -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     // Bản production luôn build mới, không dùng lại server dev đang chạy.
     reuseExistingServer: !process.env.CI && !PROD,
