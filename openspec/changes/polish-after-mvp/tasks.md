@@ -25,7 +25,7 @@
 
 ## 5. Kiểm tra tổng
 
-- [ ] 5.1 Chạy lint, `tsc`, `npm test`, e2e ở dev và `E2E_PROD=1`; tất cả xanh
+- [x] 5.1 Chạy lint, `tsc`, `npm test`, e2e ở dev và `E2E_PROD=1`; tất cả xanh
 
 ## Workflow follow-up
 
