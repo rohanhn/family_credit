@@ -21,7 +21,7 @@
 
 ## 4b. Cookie bố mẹ sau khi bật chế độ gia đình (sửa lỗi)
 
-- [ ] 4b.1 `src/proxy.ts` chỉ gia hạn cookie phiên ở request tải trang, bỏ qua request RSC và prefetch, để request chạy dở không ghi lại cookie `mc_parent` vừa bị xóa (design D6). Kiểm tra bằng unit test proxy (request RSC/prefetch không đặt cookie, request tải trang vẫn đặt) và chạy lặp e2e `action-authz` với `E2E_PROD=1` không còn lỗi
+- [x] 4b.1 `src/proxy.ts` chỉ gia hạn cookie phiên ở request tải trang (`Sec-Fetch-Mode: navigate`), bỏ qua request RSC và prefetch, để request chạy dở không ghi lại cookie `mc_parent` vừa bị xóa (design D6). Kiểm tra bằng unit test proxy (request chạy ngầm không đặt cookie, request tải trang vẫn đặt) và chạy lặp e2e `action-authz` với `E2E_PROD=1` không còn lỗi
 
 ## 5. Kiểm tra tổng
 

@@ -82,7 +82,9 @@
 - Hiện trạng: `src/proxy.ts` đặt lại cookie phiên ở mọi GET, kể cả request RSC và prefetch của client router.
   - Request như vậy xuất phát trước khi Server Action "bật chế độ gia đình" xóa `mc_parent`, nhưng trả về sau, sẽ ghi lại cookie.
   - Phiên trong DB đã bị xóa nên cookie không mở được gì, nhưng máy của con vẫn giữ cookie bố mẹ, và e2e `action-authz` lỗi lúc có lúc không (cả trên `master`).
-- Quyết định: chỉ gia hạn khi request không có header `RSC` và không phải prefetch (`Next-Router-Prefetch`, `Sec-Purpose`/`Purpose: prefetch`).
+- Quyết định: chỉ gia hạn ở request tải trang, nhận biết qua `Sec-Fetch-Mode: navigate`.
+  - Next gỡ header `RSC`, `Next-Router-Prefetch` và tham số `_rsc` trước khi gọi proxy (`next/dist/server/web/adapter.js`), nên không dựa vào chúng được.
+  - Request RSC và prefetch là `fetch()`, nên có `Sec-Fetch-Mode` khác `navigate`. Trình duyệt không gửi header này thì giữ hành vi cũ (vẫn gia hạn).
   - Trong một tab, request tải trang không chạy song song với Server Action, nên race không còn.
 - Phương án thay thế đã loại:
   - Proxy đọc DB để kiểm tra phiên: proxy cố ý không đọc DB.

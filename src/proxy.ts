@@ -4,6 +4,9 @@ import { CHILD_MODE_COOKIE, COOKIE, SESSION_TTL_MS, SLIDING, sessionCookieOption
 // Gia hạn cookie phiên trượt (bố mẹ, con) khi còn dùng, khớp với việc gia hạn `expires_at` trong DB
 // (design D4). Hạn thật vẫn do DB quyết định; ở đây chỉ để trình duyệt không xóa cookie sớm hơn DB.
 // Chỉ làm với GET: Server Action (POST) có thể xóa hoặc đặt cookie, ghi đè ở đây sẽ tranh chấp với nó.
+// Cũng chỉ làm ở request tải trang, không làm với request RSC và prefetch của client router: những
+// request này có thể xuất phát trước một Server Action xóa cookie (bật chế độ gia đình) nhưng trả về
+// sau, rồi ghi lại cookie vừa bị xóa (design D6 của change polish-after-mvp).
 
 // Cookie thiết bị cũng được đặt lại hạn: máy riêng có phiên thiết bị tự gia hạn trong DB, còn với máy
 // dùng chung hạn thật vẫn do DB quyết định (cố định 90 ngày), nên đặt lại cookie không kéo dài gì.
@@ -20,12 +23,23 @@ export function entryPath(request: NextRequest): string {
   return "/login";
 }
 
+/**
+ * Request chạy ngầm bằng `fetch()` (request RSC khi điều hướng phía client, prefetch), không phải lần tải
+ * trang. Next gỡ header `RSC`, `Next-Router-Prefetch` và tham số `_rsc` trước khi gọi proxy, nên dựa vào
+ * `Sec-Fetch-Mode` của trình duyệt: tải trang là `navigate`. Trình duyệt không gửi header này thì coi
+ * như tải trang (giữ hành vi cũ).
+ */
+export function isBackgroundRequest(request: NextRequest): boolean {
+  const mode = request.headers.get("sec-fetch-mode");
+  return mode !== null && mode !== "navigate";
+}
+
 export function proxy(request: NextRequest) {
   if (request.method === "GET" && request.nextUrl.pathname === "/") {
     return NextResponse.redirect(new URL(entryPath(request), request.url));
   }
   const response = NextResponse.next();
-  if (request.method !== "GET") return response;
+  if (request.method !== "GET" || isBackgroundRequest(request)) return response;
   const now = Date.now();
   const browserChild = request.cookies.has(CHILD_MODE_COOKIE);
   for (const subject of REFRESHED_SUBJECTS) {
