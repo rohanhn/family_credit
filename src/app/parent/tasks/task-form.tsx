@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { createTaskAction, pauseTaskAction, resumeTaskAction, updateTaskAction } from "@/app/actions/tasks";
 import { Field, FormMessage, SubmitButton } from "@/ui/form";
 import { Button } from "@/ui/primitives";
@@ -129,11 +129,19 @@ export function TaskForm({
   );
 }
 
-export function TaskRowActions({
+/**
+ * Một dòng của bảng nhiệm vụ: các ô thông tin (render ở server) và cột thao tác căn phải. Bấm "Sửa" thì form sửa
+ * hiện ở một dòng riêng rộng hết bảng ngay bên dưới, để cột thao tác không bị kéo giãn và các dòng vẫn thẳng hàng.
+ */
+export function TaskRow({
+  cells,
+  colSpan,
   task,
   kids,
   startLabel,
 }: {
+  cells: ReactNode;
+  colSpan: number;
   task: TaskFormValue & { taskId: number; paused: boolean };
   kids: { id: number; name: string }[];
   startLabel: string;
@@ -142,22 +150,33 @@ export function TaskRowActions({
   const [pState, pause] = useActionState(pauseTaskAction, undefined);
   const [rState, resume] = useActionState(resumeTaskAction, undefined);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => setEditing(!editing)} aria-expanded={editing}>
-          {editing ? "Đóng" : "Sửa"}
-        </Button>
-        <form action={task.paused ? resume : pause}>
-          <input type="hidden" name="taskId" value={task.taskId} />
-          <SubmitButton variant="soft">{task.paused ? "Chạy lại" : "Tạm dừng"}</SubmitButton>
-        </form>
-      </div>
-      <FormMessage state={pState ?? rState} />
+    <>
+      <tr className={`align-top [&>td]:px-3.5 [&>td]:py-3 ${editing ? "" : "[&>td]:border-b [&>td]:border-black/5"}`}>
+        {cells}
+        <td>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-nowrap justify-end gap-2 whitespace-nowrap">
+              <Button variant="outline" onClick={() => setEditing(!editing)} aria-expanded={editing}>
+                {editing ? "Đóng" : "Sửa"}
+              </Button>
+              <form action={task.paused ? resume : pause}>
+                <input type="hidden" name="taskId" value={task.taskId} />
+                <SubmitButton variant="soft">{task.paused ? "Chạy lại" : "Tạm dừng"}</SubmitButton>
+              </form>
+            </div>
+            <FormMessage state={pState ?? rState} />
+          </div>
+        </td>
+      </tr>
       {editing && (
-        <div className="rounded-2xl bg-bg p-3">
-          <TaskForm kids={kids} initial={task} startLabel={startLabel} onDone={() => setEditing(false)} />
-        </div>
+        <tr>
+          <td colSpan={colSpan} className="border-b border-black/5 px-3.5 pb-4">
+            <div className="rounded-2xl bg-bg p-3">
+              <TaskForm kids={kids} initial={task} startLabel={startLabel} onDone={() => setEditing(false)} />
+            </div>
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   );
 }

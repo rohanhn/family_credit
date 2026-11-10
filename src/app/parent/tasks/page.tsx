@@ -9,7 +9,7 @@ import { addDays, dateInZone, formatDate, isDateString, weekdayIndex } from "@/l
 import { ParentColumns } from "@/ui/parent-shell";
 import { Button, Card, Chip } from "@/ui/primitives";
 import { TaskDecision } from "../task-decision";
-import { TaskForm, TaskRowActions } from "./task-form";
+import { TaskForm, TaskRow } from "./task-form";
 
 export const metadata: Metadata = { title: "Nhiệm vụ · Sao nhà mình" };
 
@@ -30,6 +30,8 @@ const STATUS = {
 };
 
 type SearchParams = Promise<{ date?: string }>;
+
+const COLUMNS = ["NHIỆM VỤ", "ĐIỂM", "NGÀY", "GIAO CHO", "CÁCH LÀM", "TRẠNG THÁI", "THAO TÁC"];
 
 async function Tasks({ searchParams }: { searchParams: SearchParams }) {
   const auth = await requireParentWithFamily();
@@ -57,8 +59,8 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
               <table className="w-full min-w-[560px] border-collapse text-[15px]">
                 <thead>
                   <tr className="text-left text-xs font-extrabold tracking-wide text-muted">
-                    {["NHIỆM VỤ", "ĐIỂM", "NGÀY", "GIAO CHO", "CÁCH LÀM", "TRẠNG THÁI", ""].map((h) => (
-                      <th key={h} scope="col" className="whitespace-nowrap border-b border-black/5 px-3.5 py-3">
+                    {COLUMNS.map((h) => (
+                      <th key={h} scope="col" className={`whitespace-nowrap border-b border-black/5 px-3.5 py-3 ${h === "THAO TÁC" ? "text-right" : ""}`}>
                         {h}
                       </th>
                     ))}
@@ -66,36 +68,38 @@ async function Tasks({ searchParams }: { searchParams: SearchParams }) {
                 </thead>
                 <tbody>
                   {list.map((tk) => (
-                    <tr key={tk.id} className="align-top">
-                      <td className="border-b border-black/5 px-3.5 py-3 font-extrabold">{tk.name}</td>
-                      <td className="border-b border-black/5 px-3.5 py-3 font-display text-lg font-extrabold text-primary">+{tk.points}</td>
-                      <td className="whitespace-nowrap border-b border-black/5 px-3.5 py-3 font-bold text-muted">{daysLabel(tk.weekdaysMask)}</td>
-                      <td className="border-b border-black/5 px-3.5 py-3 font-bold">{tk.assignAll ? "Tất cả các con" : tk.assignees.map((a) => a.name).join(", ")}</td>
-                      <td className="border-b border-black/5 px-3.5 py-3">
-                        <Chip>{tk.mode === "group" ? "Cả nhóm làm chung" : tk.assignAll || tk.assignees.length > 1 ? "Mỗi con làm riêng" : "Riêng một con"}</Chip>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-black/5 px-3.5 py-3">
-                        <Chip tone={tk.state === "active" ? "done" : tk.state === "paused" ? "soft" : "wait"}>
-                          {tk.state === "active" ? "Đang chạy" : tk.state === "paused" ? "Tạm dừng" : `Từ ${formatDate(tk.effectiveFrom).slice(0, 5)}`}
-                        </Chip>
-                      </td>
-                      <td className="border-b border-black/5 px-3.5 py-3">
-                        <TaskRowActions
-                          kids={kidOptions}
-                          startLabel={startLabel}
-                          task={{
-                            taskId: tk.id,
-                            name: tk.name,
-                            points: tk.points,
-                            weekdays: weekdaysFromMask(tk.weekdaysMask),
-                            mode: tk.mode,
-                            assignAll: tk.assignAll,
-                            childIds: tk.assignees.map((a) => a.id),
-                            paused: tk.state === "paused",
-                          }}
-                        />
-                      </td>
-                    </tr>
+                    <TaskRow
+                      key={tk.id}
+                      colSpan={COLUMNS.length}
+                      kids={kidOptions}
+                      startLabel={startLabel}
+                      task={{
+                        taskId: tk.id,
+                        name: tk.name,
+                        points: tk.points,
+                        weekdays: weekdaysFromMask(tk.weekdaysMask),
+                        mode: tk.mode,
+                        assignAll: tk.assignAll,
+                        childIds: tk.assignees.map((a) => a.id),
+                        paused: tk.state === "paused",
+                      }}
+                      cells={
+                        <>
+                          <td className="font-extrabold">{tk.name}</td>
+                          <td className="font-display text-lg font-extrabold text-primary">+{tk.points}</td>
+                          <td className="whitespace-nowrap font-bold text-muted">{daysLabel(tk.weekdaysMask)}</td>
+                          <td className="font-bold">{tk.assignAll ? "Tất cả các con" : tk.assignees.map((a) => a.name).join(", ")}</td>
+                          <td>
+                            <Chip>{tk.mode === "group" ? "Cả nhóm làm chung" : tk.assignAll || tk.assignees.length > 1 ? "Mỗi con làm riêng" : "Riêng một con"}</Chip>
+                          </td>
+                          <td className="whitespace-nowrap">
+                            <Chip tone={tk.state === "active" ? "done" : tk.state === "paused" ? "soft" : "wait"}>
+                              {tk.state === "active" ? "Đang chạy" : tk.state === "paused" ? "Tạm dừng" : `Từ ${formatDate(tk.effectiveFrom).slice(0, 5)}`}
+                            </Chip>
+                          </td>
+                        </>
+                      }
+                    />
                   ))}
                 </tbody>
               </table>
