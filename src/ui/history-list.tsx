@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { formatDateTime, signed } from "@/lib/time";
+import { addDays, formatDateTime, isDateString, signed, startOfDayInZone } from "@/lib/time";
+import { TRANSACTION_KINDS } from "@/server/db/schema";
+import type { TransactionKind } from "@/server/domain/ledger";
+import { Button } from "./primitives";
 
 // Danh sách giao dịch dùng chung cho bố mẹ và con (spec currency-ledger "Xem lịch sử giao dịch").
 
@@ -87,5 +90,105 @@ export function HistoryPager({ basePath, params, nextBeforeId, isFirstPage }: { 
         </Link>
       )}
     </nav>
+  );
+}
+
+export type HistoryParams = {
+  childId?: number;
+  kind?: TransactionKind;
+  /** Ngày `YYYY-MM-DD` hoặc chuỗi rỗng. */
+  from: string;
+  to: string;
+  before?: number;
+};
+
+/**
+ * Chuẩn hóa tham số lọc lịch sử trên URL (design D3 của change polish-after-mvp). Giá trị sai bị bỏ
+ * qua; `from` sau `to` thì đổi chỗ. `child` chỉ nhận khi nằm trong `childIds` (phía bố mẹ); không
+ * truyền `childIds` thì luôn bỏ qua `child` (phía con lọc theo con của phiên).
+ */
+export function parseHistoryParams(
+  sp: { child?: string; kind?: string; from?: string; to?: string; before?: string },
+  opts: { childIds?: readonly number[] } = {},
+): HistoryParams {
+  const childId = opts.childIds?.find((id) => String(id) === sp.child);
+  const kind = (TRANSACTION_KINDS as readonly string[]).includes(sp.kind ?? "") ? (sp.kind as TransactionKind) : undefined;
+  let from = sp.from && isDateString(sp.from) ? sp.from : "";
+  let to = sp.to && isDateString(sp.to) ? sp.to : "";
+  if (from && to && from > to) [from, to] = [to, from];
+  const before = /^[1-9]\d{0,9}$/.test(sp.before ?? "") ? Number(sp.before) : undefined;
+  return { childId, kind, from, to, before };
+}
+
+/** Điều kiện truy vấn `listTransactions` từ bộ lọc; khoảng ngày tính theo múi giờ gia đình. */
+export function historyQuery(p: HistoryParams, timezone: string) {
+  return {
+    beforeId: p.before,
+    kinds: p.kind ? [p.kind] : undefined,
+    from: p.from ? startOfDayInZone(p.from, timezone) : undefined,
+    to: p.to ? startOfDayInZone(addDays(p.to, 1), timezone) : undefined,
+  };
+}
+
+/** Tham số bộ lọc giữ lại trên link phân trang. */
+export function historyPagerParams(p: HistoryParams): Record<string, string | undefined> {
+  return { child: p.childId ? String(p.childId) : undefined, kind: p.kind, from: p.from, to: p.to };
+}
+
+const selectClass = "min-h-11 rounded-xl border-2 border-black/15 bg-card px-3 text-base font-bold text-ink";
+const inputLabel = "flex flex-col gap-1 text-[13px] font-extrabold text-muted";
+
+/**
+ * Form lọc lịch sử (GET, không cần JavaScript). `showChild` hiện ô chọn con (phía bố mẹ); phía con
+ * không truyền `kids`.
+ */
+export function HistoryFilters({
+  params,
+  showChild,
+  kids = [],
+}: {
+  params: HistoryParams;
+  showChild?: boolean;
+  kids?: { id: number; name: string; archivedAt?: Date | null }[];
+}) {
+  return (
+    <form method="get" className="flex flex-wrap items-end gap-3 rounded-[20px] bg-card p-4 shadow-flat">
+      {showChild && (
+        <label className={inputLabel}>
+          Con
+          <select name="child" defaultValue={params.childId ?? ""} className={selectClass}>
+            <option value="">Cả gia đình</option>
+            {kids.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.name}
+                {k.archivedAt ? " (đã lưu trữ)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <label className={inputLabel}>
+        Loại
+        <select name="kind" defaultValue={params.kind ?? ""} className={selectClass}>
+          <option value="">Tất cả</option>
+          {TRANSACTION_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {KIND_LABELS[k]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={inputLabel}>
+        Từ ngày
+        <input type="date" name="from" defaultValue={params.from} className={selectClass} />
+      </label>
+      <label className={inputLabel}>
+        Đến ngày
+        <input type="date" name="to" defaultValue={params.to} className={selectClass} />
+      </label>
+      <Button type="submit" variant="soft">
+        Lọc
+      </Button>
+    </form>
   );
 }
