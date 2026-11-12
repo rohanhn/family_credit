@@ -7,11 +7,12 @@ type Note = readonly [freq: number, start: number, duration: number];
 
 export type SfxDef = { type: OscillatorType; gain: number; notes: readonly Note[] };
 
+// Thông số theo change lengthen-sound-effects (design D2, D5) và docs/design/README.md §5.
 export const SFX: Record<SfxName, SfxDef> = {
-  reward: { type: "triangle", gain: 0.18, notes: [[523.25, 0, 0.16], [659.25, 0.09, 0.16], [783.99, 0.18, 0.16], [1046.5, 0.27, 0.4]] },
-  penalty: { type: "sine", gain: 0.16, notes: [[392, 0, 0.28], [293.66, 0.22, 0.45]] },
-  pop: { type: "sine", gain: 0.14, notes: [[660, 0, 0.07], [990, 0.06, 0.09]] },
-  coin: { type: "square", gain: 0.06, notes: [[987.77, 0, 0.08], [1318.51, 0.08, 0.3]] },
+  reward: { type: "triangle", gain: 0.28, notes: [[523.25, 0, 0.22], [659.25, 0.14, 0.22], [783.99, 0.28, 0.22], [1046.5, 0.42, 0.6]] },
+  penalty: { type: "sine", gain: 0.24, notes: [[392, 0, 0.4], [293.66, 0.34, 0.6]] },
+  pop: { type: "sine", gain: 0.22, notes: [[660, 0, 0.14], [990, 0.12, 0.22]] },
+  coin: { type: "square", gain: 0.1, notes: [[987.77, 0, 0.14], [1318.51, 0.13, 0.42]] },
 };
 
 // Đường bao âm lượng của một nốt (change lengthen-sound-effects, design D1):

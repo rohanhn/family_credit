@@ -24,10 +24,12 @@ describe("shouldPlay", () => {
   });
 });
 
+const dbfs = (amplitude: number) => 20 * Math.log10(amplitude);
+
 describe("Thông số âm (README §5)", () => {
-  it("Có đủ 4 âm, âm lượng đỉnh nhỏ và âm phạt trầm hơn âm thưởng", () => {
+  it("Có đủ 4 âm, âm lượng đỉnh không vượt trần và âm phạt trầm hơn âm thưởng", () => {
     expect(Object.keys(SFX).sort()).toEqual(["coin", "penalty", "pop", "reward"]);
-    for (const s of Object.values(SFX)) expect(s.gain).toBeLessThanOrEqual(0.2);
+    for (const s of Object.values(SFX)) expect(dbfs(s.gain)).toBeLessThanOrEqual(-10);
     const maxFreq = (name: keyof typeof SFX) => Math.max(...SFX[name].notes.map((n) => n[0]));
     expect(maxFreq("penalty")).toBeLessThan(maxFreq("reward"));
     expect(SFX.penalty.type).toBe("sine");
@@ -59,6 +61,35 @@ describe("Đo âm: tổng độ dài và thời gian nghe rõ (change lengthen-s
 
   it("Đỉnh dưới ngưỡng: không có khoảng nghe rõ", () => {
     expect(sfxAudibleDuration({ type: "sine", gain: 0.02, notes: [[440, 0, 1]] })).toBe(0);
+  });
+});
+
+describe("spec ui-theme: Thời gian nghe rõ của âm thanh phản hồi", () => {
+  const minAudibleMs = { reward: 600, penalty: 600, coin: 300, pop: 200 } as const;
+
+  for (const name of ["reward", "penalty", "coin", "pop"] as const) {
+    it(`Âm ${name}: nghe rõ ít nhất ${minAudibleMs[name]} ms và không dài quá 1,5 giây`, () => {
+      expect(sfxAudibleDuration(SFX[name]) * 1000).toBeGreaterThanOrEqual(minAudibleMs[name]);
+      expect(sfxDuration(SFX[name])).toBeLessThanOrEqual(1.5);
+    });
+  }
+});
+
+describe("spec ui-theme: Âm lượng đỉnh của âm thanh phản hồi", () => {
+  it("Âm thưởng, âm phạt và âm pop đạt từ −14 dBFS, không vượt −10 dBFS", () => {
+    for (const name of ["reward", "penalty", "pop"] as const) {
+      expect(dbfs(SFX[name].gain)).toBeGreaterThanOrEqual(-14);
+      expect(dbfs(SFX[name].gain)).toBeLessThanOrEqual(-10);
+    }
+  });
+
+  it("Âm đổi quà đạt từ −21 dBFS, không vượt −10 dBFS", () => {
+    expect(dbfs(SFX.coin.gain)).toBeGreaterThanOrEqual(-21);
+    expect(dbfs(SFX.coin.gain)).toBeLessThanOrEqual(-10);
+  });
+
+  it("Âm phạt nhỏ hơn âm thưởng", () => {
+    expect(SFX.penalty.gain).toBeLessThan(SFX.reward.gain);
   });
 });
 
