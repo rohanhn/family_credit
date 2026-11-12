@@ -10,7 +10,7 @@
 ## 2. Phía con
 
 - [x] 2.1 Thêm server action gửi và hủy đề xuất vào `src/app/actions/rules.ts`, dùng `requireChild` và chỉ lấy `childId` từ phiên; kiểm tra: `npx tsc --noEmit` và `npm run lint` không lỗi
-- [ ] 2.2 Thêm mục "Việc ngoài rule" với hai nút "Con xin thưởng", "Con xin nhận phạt" và form vào màn "Rule của nhà mình"; gộp đề xuất đang chờ vào mục "Đang chờ bố mẹ duyệt" kèm nút "Hủy"; ẩn hai nút khi đã đủ 5 đề xuất chờ (design D5); kiểm tra: chạy dev, đăng nhập con, gửi một đề xuất mỗi loại và thấy cả hai trong mục đang chờ, hủy được
+- [x] 2.2 Thêm mục "Việc ngoài rule" với hai nút "Con xin thưởng", "Con xin nhận phạt" và form vào màn "Rule của nhà mình"; gộp đề xuất đang chờ vào mục "Đang chờ bố mẹ duyệt" kèm nút "Hủy"; ẩn hai nút khi đã đủ 5 đề xuất chờ (design D5); kiểm tra: chạy dev, đăng nhập con, gửi một đề xuất mỗi loại và thấy cả hai trong mục đang chờ, hủy được
 
 ## 3. Phía bố mẹ
 
