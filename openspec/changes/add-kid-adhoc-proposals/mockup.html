@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock: con đề xuất thưởng/phạt ngoài rule</title>
+<style>
+  /* Token theo docs/design/README.md mục 2. Font của app là Nunito và Baloo 2; mock dùng font hệ thống nếu máy không có. */
+  [data-theme="sunny"] { --bg:#FFF6DF; --card:#FFFFFF; --soft:#FFE7A8; --ring:#FFC94D; --primary:#C2410C; --on-primary:#FFFFFF; --accent:#F59E0B; --ink:#2B2118; --muted:#6B5644; }
+  [data-theme="ocean"] { --bg:#E6F5FA; --card:#FFFFFF; --soft:#C7ECF5; --ring:#7DD3E8; --primary:#0E7490; --on-primary:#FFFFFF; --accent:#14B8A6; --ink:#0F2A33; --muted:#486570; }
+  [data-theme="candy"] { --bg:#FDEEF6; --card:#FFFFFF; --soft:#F8D2E8; --ring:#F0A6D6; --primary:#A21CAF; --on-primary:#FFFFFF; --accent:#EC4899; --ink:#2E1530; --muted:#6E4D6E; }
+  [data-theme="robot"] { --bg:#EEF2F7; --card:#FFFFFF; --soft:#D6E0EE; --ring:#F5C518; --primary:#1D4ED8; --on-primary:#FFFFFF; --accent:#E11D2E; --ink:#0F172A; --muted:#475569; }
+  [data-theme="magic"] { --bg:#FFF3F8; --card:#FFFFFF; --soft:#FFD9E8; --ring:#F7C948; --primary:#BE185D; --on-primary:#FFFFFF; --accent:#E9A400; --ink:#3A0F24; --muted:#7A3B5A; }
+  :root {
+    --done-bg:#DCF5E3; --done-fg:#166534; --wait-bg:#FFF1C2; --wait-fg:#7A4A00;
+    --penalty-bg:#FDE2E1; --penalty-on:#8A1C1C; --reward-bg:#DCF5E3; --reward-on:#14532D;
+    --plus:#15803D; --minus:#B91C1C; --coin:#FFC531; --coin-edge:#8A5A00;
+    --page:#F4F1EC; --page-ink:#26211C; --page-muted:#6A6259; --page-line:#DDD6CC; --note:#1D4ED8;
+    --sans: Nunito, "Segoe UI", system-ui, -apple-system, sans-serif;
+    --display: "Baloo 2", Nunito, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--page); color:var(--page-ink); font-family:var(--sans); font-size:16px; line-height:1.4; }
+  h1,h2,h3,p { margin:0; }
+  button, input { font: inherit; color: inherit; }
+  .page { max-width:1240px; margin:0 auto; padding:24px 16px 48px; display:flex; flex-direction:column; gap:20px; }
+  .intro h1 { font-family:var(--display); font-size:28px; font-weight:800; text-wrap:balance; }
+  .intro p { color:var(--page-muted); max-width:70ch; margin-top:6px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; font-size:14px; font-weight:700; color:var(--page-muted); }
+  .toolbar .group { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+  .tool { min-height:36px; padding:0 12px; border-radius:10px; border:1.5px solid var(--page-line); background:#fff; font-weight:800; font-size:14px; cursor:pointer; color:var(--page-ink); }
+  .tool[aria-pressed="true"] { border-color:var(--page-ink); background:var(--page-ink); color:#fff; }
+  .tool:focus-visible, .btn:focus-visible, .icon-btn:focus-visible { outline:3px solid var(--note); outline-offset:2px; }
+  .stage { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; }
+  .col { display:flex; flex-direction:column; gap:10px; min-width:0; }
+  .col.kid { flex:0 1 390px; }
+  .col.parent { flex:1 1 480px; }
+  .caption { font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--page-muted); }
+
+  /* Khung màn hình */
+  .screen { background:var(--bg); color:var(--ink); border-radius:28px; border:1px solid var(--page-line); overflow:hidden; position:relative; }
+  .phone { display:flex; flex-direction:column; min-height:780px; }
+  .kid-head { display:flex; align-items:center; gap:10px; padding:20px 16px 0; }
+  .avatar { width:52px; height:52px; border-radius:50%; border:3px solid var(--ring); background:var(--soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .kid-head .who { display:flex; flex-direction:column; min-width:0; flex:1; }
+  .kid-head .who small { font-size:13px; font-weight:700; color:var(--muted); }
+  .kid-head .who b { font-family:var(--display); font-size:22px; font-weight:800; line-height:1.1; }
+  .balance { display:inline-flex; align-items:center; gap:4px; background:var(--primary); color:var(--on-primary); border-radius:999px; padding:4px 12px 4px 8px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .content { display:flex; flex-direction:column; gap:16px; padding:16px; flex:1; }
+  .content h1 { font-family:var(--display); font-size:28px; font-weight:800; }
+  .content h2 { font-family:var(--display); font-size:20px; font-weight:800; }
+  section { display:flex; flex-direction:column; gap:8px; }
+  .tabs { display:grid; grid-template-columns:repeat(4,1fr); background:var(--card); border-top:1px solid rgb(0 0 0 / .06); padding:6px 4px 10px; }
+  .tabs span { display:flex; flex-direction:column; align-items:center; gap:2px; font-size:12px; font-weight:700; color:var(--muted); padding:6px 0; border-radius:14px; }
+  .tabs span.on { background:var(--soft); color:var(--ink); font-weight:800; }
+
+  /* Thành phần dùng chung của app */
+  .card { background:var(--card); border-radius:24px; padding:16px; box-shadow:0 3px 0 rgb(0 0 0 / .05); }
+  .card.wait { background:var(--wait-bg); color:var(--wait-fg); }
+  .row { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+  .grow { flex:1 1 0; min-width:0; display:flex; flex-direction:column; }
+  .title { font-size:17px; font-weight:800; overflow-wrap:anywhere; }
+  .sub { font-size:14px; font-weight:700; overflow-wrap:anywhere; }
+  .plus { color:var(--plus); } .minus { color:var(--minus); } .muted { color:var(--muted); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 16px; border:0; border-radius:14px; font-size:15px; font-weight:800; cursor:pointer; background:var(--primary); color:var(--on-primary); box-shadow:0 3px 0 rgb(0 0 0 / .18); }
+  .btn:active { transform:translateY(1px); }
+  .btn.tall { min-height:48px; }
+  .btn.outline { background:transparent; color:var(--ink); border:2px solid rgb(0 0 0 / .15); box-shadow:none; }
+  .btn.reward { background:var(--reward-bg); color:var(--reward-on); box-shadow:none; }
+  .btn.penalty { background:var(--penalty-bg); color:var(--penalty-on); box-shadow:none; }
+  .btn.ghost { background:transparent; color:var(--muted); text-decoration:underline; box-shadow:none; padding:0 8px; }
+  .chip { display:inline-flex; align-items:center; gap:4px; width:fit-content; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:800; background:var(--soft); color:var(--ink); }
+  .chip.primary { background:var(--primary); color:var(--on-primary); }
+  .field { display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:800; color:var(--muted); }
+  .field input { min-height:44px; width:100%; border-radius:12px; border:2px solid rgb(0 0 0 / .15); background:var(--card); padding:0 12px; font-size:16px; font-weight:700; color:var(--ink); }
+  .field input:focus { border-color:var(--primary); outline:none; }
+  .field.points { width:120px; }
+  .form > .field.points { width:100%; }
+  .form > .field.points input { max-width:140px; }
+  .msg { display:flex; gap:8px; border-radius:14px; padding:10px 12px; font-size:14px; font-weight:700; }
+  .msg.error { background:var(--penalty-bg); color:var(--penalty-on); }
+  .msg.ok { background:var(--done-bg); color:var(--done-fg); }
+  .msg.warn { background:var(--wait-bg); color:var(--wait-fg); width:fit-content; padding:4px 10px; border-radius:12px; font-size:13px; }
+  .form { display:flex; flex-direction:column; gap:10px; }
+  .two { display:flex; flex-direction:column; gap:8px; }
+  .is-new { outline:2px dashed var(--note); outline-offset:4px; border-radius:26px; }
+  .new-tag { font-family:var(--sans); font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--note); border:1.5px solid var(--note); border-radius:6px; padding:0 5px; vertical-align:middle; margin-left:6px; }
+
+  /* Màn bố mẹ */
+  .parent-screen { padding:20px; display:flex; flex-direction:column; gap:12px; }
+  .parent-screen h2 { font-family:var(--display); font-size:24px; font-weight:800; display:flex; align-items:center; gap:8px; }
+  .q-main { flex:1 1 260px; min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .q-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--muted); }
+  .q-actions { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; }
+  .log { font-size:14px; font-weight:700; color:var(--muted); display:flex; flex-direction:column; gap:4px; }
+  .log li { display:flex; justify-content:space-between; gap:12px; }
+  ul { list-style:none; margin:0; padding:0; }
+
+  /* Màn thông báo của con */
+  .overlay { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:32px 24px; text-align:center; background:var(--bg); color:var(--ink); }
+  .overlay.gift { background:var(--primary); color:var(--on-primary); }
+  .overlay h2 { font-family:var(--display); font-size:30px; font-weight:800; line-height:1.15; }
+  .overlay .big { font-family:var(--display); font-size:72px; font-weight:800; line-height:1; display:flex; align-items:center; gap:8px; font-variant-numeric:tabular-nums; }
+  .overlay .list { width:100%; border-radius:22px; padding:12px 16px; text-align:left; font-weight:800; display:flex; flex-direction:column; gap:6px; background:var(--card); color:var(--ink); }
+  .overlay.gift .list { background:rgb(0 0 0 / .15); color:inherit; }
+  .overlay .list div { display:flex; justify-content:space-between; gap:12px; }
+  .overlay .wide { width:100%; min-height:56px; border-radius:20px; font-size:18px; }
+  .overlay.gift .wide { background:#fff; color:var(--primary); }
+  .notes { background:#fff; border:1px solid var(--page-line); border-radius:16px; padding:16px; font-size:14px; color:var(--page-muted); }
+  .notes b { color:var(--page-ink); }
+  .notes li { margin-top:6px; padding-left:14px; position:relative; }
+  .notes li::before { content:""; position:absolute; left:0; top:.6em; width:6px; height:6px; border-radius:50%; background:var(--page-muted); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <h1>Mock: con đề xuất thưởng/phạt ngoài rule</h1>
+    <p>Bản bấm thử cho change <code>add-kid-adhoc-proposals</code>. Gửi đề xuất ở màn của con, rồi duyệt hoặc từ chối ở màn bố mẹ bên cạnh; kết quả hiện lại trên màn của con. Phần viền nét đứt màu xanh là phần mới, phần còn lại là giao diện đang có.</p>
+  </div>
+
+  <div class="toolbar">
+    <div class="group" id="themes"><span>Theme của con:</span></div>
+    <div class="group"><span>Trạng thái:</span>
+      <button class="tool" id="fill5">Đặt đủ 5 đề xuất chờ</button>
+      <button class="tool" id="low">Số dư còn 4 Sao</button>
+      <button class="tool" id="reset">Làm lại từ đầu</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="col kid">
+      <span class="caption">Màn của con · Rule (điện thoại)</span>
+      <div class="screen phone" id="kid" data-theme="sunny">
+        <div class="kid-head">
+          <span class="avatar"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="22" r="13" fill="#FFD9B8"/><path d="M7 20c0-9 6-14 13-14s13 5 13 14c-4-5-9-7-13-7s-9 2-13 7z" fill="#5A3A22"/><circle cx="15.5" cy="23" r="1.6" fill="#2B2118"/><circle cx="24.5" cy="23" r="1.6" fill="#2B2118"/><path d="M16.5 28q3.5 2.6 7 0" fill="none" stroke="#2B2118" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <span class="who"><small>Nhà Sao Mai</small><b>Bin</b></span>
+          <span class="balance" aria-label="Số dư"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="var(--coin)" stroke="var(--coin-edge)" stroke-linejoin="round"/></svg><span id="kidBalance"></span></span>
+        </div>
+        <div class="content" id="kidContent"></div>
+        <div class="tabs" aria-hidden="true"><span>Trang chính</span><span>Cửa hàng</span><span>Lịch sử</span><span class="on">Rule</span></div>
+        <div id="overlay" hidden></div>
+      </div>
+    </div>
+
+    <div class="col parent">
+      <span class="caption">Màn của bố mẹ · Chờ duyệt</span>
+      <div class="screen parent-screen" data-theme="sunny" id="parent"></div>
+      <div class="notes">
+        <b>Ghi chú thiết kế</b>
+        <ul>
+          <li>Con xin 20, bố mẹ sửa thành 8 rồi duyệt: con chỉ thấy "+8", không có dòng báo số đã bị sửa.</li>
+          <li>Mỗi con tối đa 5 đề xuất ngoài rule đang chờ; đủ 5 thì hai nút được thay bằng dòng nhắc.</li>
+          <li>Tự nhận phạt lớn hơn số dư: bố mẹ thấy cảnh báo vàng, lịch sử ghi mức gốc và mức thực trừ.</li>
+          <li>Màn ăn mừng thật có confetti và âm thanh; mock chỉ hiện chữ và số.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CURRENCY = "Sao", LIMIT = 5;
+  var THEMES = [["sunny", "Nắng mai"], ["ocean", "Biển xanh"], ["candy", "Kẹo ngọt"], ["robot", "Robot chiến binh"], ["magic", "Phép thuật"]];
+  var RULES = [
+    { name: "Đánh răng tối", kind: "reward", points: 5 },
+    { name: "Tự dọn phòng", kind: "reward", points: 10 },
+    { name: "Nói dối", kind: "penalty", points: 10 },
+    { name: "Xem điện thoại quá giờ", kind: "penalty", points: 15 }
+  ];
+  var S;
+  function initial() {
+    return {
+      balance: 12, nextId: 3, form: null, formError: "", sent: "", rejecting: null, queueError: {},
+      overlays: [], log: [],
+      items: [
+        { id: 1, type: "claim", kind: "reward", text: "Đánh răng tối", points: 5, time: "18:40" },
+        { id: 2, type: "proposal", kind: "reward", text: "Giúp bà xách đồ", points: 20, time: "19:05" }
+      ]
+    };
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function signed(n) { return (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n); }
+  function pendingProposals() { return S.items.filter(function (i) { return i.type === "proposal"; }); }
+  function now() { var d = new Date(); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+  function value(i) { return i.kind === "reward" ? i.points : -i.points; }
+
+  function renderKid() {
+    var h = '<h1>Rule của nhà mình</h1>';
+    if (S.items.length) {
+      h += '<section aria-label="Đang chờ bố mẹ duyệt"><h2>Đang chờ bố mẹ duyệt</h2>';
+      S.items.slice().reverse().forEach(function (i) {
+        h += '<div class="card wait row"><span class="grow"><span class="title">' + esc(i.text) + '</span><span class="sub">' + signed(value(i)) + " " + CURRENCY +
+          (i.type === "proposal" ? " · " + (i.kind === "reward" ? "con xin thưởng" : "con tự nhận phạt") : "") + '</span></span>' +
+          '<button class="btn ghost" data-act="cancel" data-id="' + i.id + '">Hủy</button></div>';
+      });
+      h += '</section>';
+    }
+    h += '<section aria-label="Việc ngoài rule" class="is-new"><h2>Việc ngoài rule <span class="new-tag">MỚI</span></h2>';
+    if (S.sent) h += '<p class="msg ok" role="status">' + esc(S.sent) + '</p>';
+    if (S.form) {
+      var reward = S.form === "reward";
+      h += '<form class="card form" id="proposalForm" novalidate>' +
+        '<label class="field">' + (reward ? "Con đã làm việc gì?" : "Con đã mắc lỗi gì?") +
+        '<input name="text" maxlength="200" placeholder="' + (reward ? "Ví dụ: Giúp bà xách đồ" : "Ví dụ: Con làm vỡ cốc") + '"></label>' +
+        '<label class="field points">' + (reward ? "Con xin bao nhiêu " : "Nên trừ bao nhiêu ") + CURRENCY + '?' +
+        '<input name="points" inputmode="numeric" placeholder="5"></label>' +
+        (S.formError ? '<p class="msg error" role="alert">' + esc(S.formError) + '</p>' : "") +
+        '<div class="row"><button class="btn tall" type="submit">Gửi bố mẹ duyệt</button><button class="btn ghost" type="button" data-act="closeForm">Thôi</button></div></form>';
+    } else if (pendingProposals().length >= LIMIT) {
+      h += '<p class="card sub muted">Con đang có ' + LIMIT + ' đề xuất chờ bố mẹ duyệt. Chờ bố mẹ duyệt bớt hoặc hủy một đề xuất rồi gửi tiếp nhé.</p>';
+    } else {
+      h += '<div class="card form"><p class="sub muted">Con làm việc tốt hoặc mắc lỗi mà chưa có trong rule? Kể cho bố mẹ nhé.</p>' +
+        '<div class="two"><button class="btn reward tall" data-act="open" data-kind="reward">Con xin thưởng</button>' +
+        '<button class="btn penalty tall" data-act="open" data-kind="penalty">Con xin nhận phạt</button></div></div>';
+    }
+    h += '</section>';
+    h += '<section aria-label="Được thưởng"><h2>Được thưởng</h2>';
+    RULES.filter(function (r) { return r.kind === "reward"; }).forEach(function (r) {
+      h += '<div class="card row"><span class="grow"><span class="title">' + r.name + '</span><span class="sub plus">+' + r.points + " " + CURRENCY + '</span></span><button class="btn tall" type="button">Con đã làm</button></div>';
+    });
+    h += '</section><section aria-label="Bị trừ"><h2>Bị trừ</h2>';
+    RULES.filter(function (r) { return r.kind === "penalty"; }).forEach(function (r) {
+      h += '<div class="card row"><span class="grow title">' + r.name + '</span><span class="chip" style="font-size:14px">−' + r.points + " " + CURRENCY + '</span></div>';
+    });
+    h += '</section>';
+    document.getElementById("kidContent").innerHTML = h;
+    document.getElementById("kidBalance").textContent = S.balance;
+    var f = document.getElementById("proposalForm");
+    if (f) { f.addEventListener("submit", submitProposal); f.elements.text.focus(); }
+    renderOverlay();
+  }
+
+  function renderOverlay() {
+    var el = document.getElementById("overlay"), o = S.overlays[0];
+    if (!o) { el.hidden = true; el.innerHTML = ""; return; }
+    var star = '<svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2 6.1 20.4l1.3-6.5L2.5 9.3l6.6-.8z" fill="var(--coin)" stroke="var(--coin-edge)" stroke-linejoin="round"/></svg>';
+    var h;
+    if (o.kind === "gift") {
+      h = '<span class="big">' + star + signed(o.applied) + '</span><h2>Giỏi quá, Bin ơi!</h2><p style="font-weight:700">Bố mẹ vừa duyệt cho con</p>' +
+        '<div class="list"><div><span>' + esc(o.text) + '</span><span>' + signed(o.applied) + '</span></div></div><button class="btn wide" data-act="closeOverlay">Nhận quà</button>';
+    } else if (o.kind === "penalty") {
+      h = '<span class="big" style="font-size:60px">' + signed(o.applied) + ' <span style="font-size:28px">' + CURRENCY + '</span></span><h2 style="font-size:28px">Ôi, Bin bị trừ ' + CURRENCY + ' rồi</h2>' +
+        '<p class="muted" style="font-weight:700">Không sao, lần sau mình sửa nhé!</p><div class="list"><div><span>' + esc(o.text) + '</span><span class="minus">' + signed(o.requested) + '</span></div>' +
+        (o.applied !== o.requested ? '<span class="sub muted" style="font-size:13px">Con chỉ còn đủ để trừ ' + Math.abs(o.applied) + " " + CURRENCY + '</span>' : "") +
+        '</div><p class="muted" style="font-weight:800">Con vẫn còn ' + S.balance + " " + CURRENCY + '</p><button class="btn wide" data-act="closeOverlay">Con hiểu rồi</button>';
+    } else {
+      h = '<h2 style="font-size:28px">Bố mẹ chưa duyệt</h2><p class="muted" style="font-weight:700">Con xem lời nhắn của bố mẹ nhé</p><div class="list"><span>' + esc(o.text) + '</span>' +
+        (o.reason ? '<span class="sub muted">Bố mẹ nhắn: ' + esc(o.reason) + '</span>' : "") + '</div><button class="btn wide" data-act="closeOverlay">Con biết rồi</button>';
+    }
+    el.className = "overlay" + (o.kind === "gift" ? " gift" : "");
+    el.innerHTML = h; el.hidden = false;
+  }
+
+  function renderParent() {
+    var h = '<h2>Chờ duyệt <span class="chip primary">' + S.items.length + '</span></h2>';
+    if (!S.items.length) h += '<div class="card" style="text-align:center;font-weight:700;color:var(--muted);padding:24px">Đã duyệt hết. Các con giỏi quá!</div>';
+    S.items.forEach(function (i) {
+      var isNew = i.type === "proposal";
+      var tag = !isNew ? "Khai rule" : i.kind === "reward" ? "Xin thưởng" : "Tự nhận phạt";
+      var warn = isNew && i.kind === "penalty" && i.points > S.balance;
+      h += '<div class="card row' + (isNew ? " is-new" : "") + '"><div class="q-main"><div class="q-meta"><span class="chip">' + tag + '</span>' +
+        (isNew ? '<span class="new-tag" style="margin:0">MỚI</span>' : "") + '<span>Bin ' + (isNew ? "gửi" : "khai") + ' lúc ' + i.time + '</span></div>' +
+        '<span class="title">Bin · ' + esc(i.text) + ' <span class="' + (i.kind === "reward" ? "plus" : "minus") + '">' + signed(value(i)) + '</span></span>' +
+        (warn ? '<span class="msg warn">Số dư hiện tại (' + S.balance + ') chỉ đủ trừ ' + S.balance + '; lịch sử vẫn ghi mức gốc.</span>' : "") + '</div>';
+      if (S.rejecting === i.id) {
+        h += '<form class="q-actions" data-reject="' + i.id + '" style="flex:1 1 100%"><label class="field" style="flex:1 1 200px">Lý do (không bắt buộc)<input name="reason" maxlength="200"></label>' +
+          '<button class="btn outline" type="submit">Từ chối</button><button class="btn ghost" type="button" data-act="unreject">Thôi</button></form>';
+      } else {
+        h += '<form class="q-actions" data-approve="' + i.id + '">' +
+          (isNew ? '<label class="field points">Số điểm<input name="points" inputmode="numeric" value="' + i.points + '"></label>' : "") +
+          '<button class="btn outline" type="button" data-act="reject" data-id="' + i.id + '">Từ chối</button><button class="btn" type="submit">Duyệt</button>' +
+          (S.queueError[i.id] ? '<p class="msg error" role="alert" style="flex:1 1 100%">' + esc(S.queueError[i.id]) + '</p>' : "") + '</form>';
+      }
+      h += '</div>';
+    });
+    if (S.log.length) {
+      h += '<div class="card"><ul class="log"><li style="color:var(--ink);font-weight:800"><span>Lịch sử vừa ghi</span><span>Số dư của Bin: ' + S.balance + '</span></li>';
+      S.log.forEach(function (l) { h += '<li><span>' + esc(l.text) + ' · ' + l.kind + '</span><span class="' + (l.amount >= 0 ? "plus" : "minus") + '">' + l.amountText + '</span></li>'; });
+      h += '</ul></div>';
+    }
+    var el = document.getElementById("parent");
+    el.innerHTML = h;
+    var r = el.querySelector("form[data-reject] input");
+    if (r) r.focus();
+  }
+
+  function render() { renderKid(); renderParent(); }
+
+  function parsePoints(raw) {
+    var t = String(raw).trim();
+    if (!/^\d+$/.test(t)) return null;
+    var n = Number(t);
+    return n >= 1 && n <= 100000 ? n : null;
+  }
+
+  function submitProposal(e) {
+    e.preventDefault();
+    var text = e.target.elements.text.value.trim().replace(/\s+/g, " ");
+    var points = parsePoints(e.target.elements.points.value);
+    if (!text) { S.formError = S.form === "reward" ? "Con cần viết việc con đã làm" : "Con cần viết lỗi con đã mắc"; return keepForm(e.target); }
+    if (points === null) { S.formError = "Số điểm phải là số nguyên dương"; return keepForm(e.target); }
+    S.items.push({ id: S.nextId++, type: "proposal", kind: S.form, text: text, points: points, time: now() });
+    S.sent = 'Đã gửi "' + text + '" cho bố mẹ duyệt'; S.form = null; S.formError = "";
+    render();
+  }
+  function keepForm(form) {
+    var t = form.elements.text.value, p = form.elements.points.value;
+    renderKid();
+    var f = document.getElementById("proposalForm"); f.elements.text.value = t; f.elements.points.value = p;
+  }
+
+  function settle(id) { S.items = S.items.filter(function (i) { return i.id !== id; }); delete S.queueError[id]; if (S.rejecting === id) S.rejecting = null; }
+
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b) return;
+    var act = b.dataset.act, id = Number(b.dataset.id);
+    if (act === "open") { S.form = b.dataset.kind; S.formError = ""; S.sent = ""; renderKid(); }
+    else if (act === "closeForm") { S.form = null; S.formError = ""; renderKid(); }
+    else if (act === "cancel") { settle(id); S.sent = "Đã hủy yêu cầu"; render(); }
+    else if (act === "reject") { S.rejecting = id; renderParent(); }
+    else if (act === "unreject") { S.rejecting = null; renderParent(); }
+    else if (act === "closeOverlay") { S.overlays.shift(); renderKid(); }
+  });
+
+  document.getElementById("parent").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target, id = Number(f.dataset.approve || f.dataset.reject);
+    var item = S.items.filter(function (i) { return i.id === id; })[0]; if (!item) return;
+    if (f.dataset.reject) {
+      S.overlays.push({ kind: "rejected", text: item.text, reason: f.elements.reason.value.trim() });
+      settle(id); S.sent = ""; return render();
+    }
+    var points = item.points;
+    if (item.type === "proposal") {
+      points = parsePoints(f.elements.points.value);
+      if (points === null) { S.queueError[id] = "Số điểm phải là số nguyên dương"; return renderParent(); }
+    }
+    var requested = item.kind === "reward" ? points : -points;
+    var applied = requested >= 0 ? requested : Math.max(requested, -S.balance);
+    S.balance += applied;
+    S.log.unshift({ text: item.text, kind: item.type === "proposal" ? "đột xuất" : "rule", amount: requested,
+      amountText: signed(requested) + (applied !== requested ? " (thực trừ " + signed(applied) + ")" : "") });
+    S.overlays.push({ kind: requested > 0 ? "gift" : "penalty", text: item.text, requested: requested, applied: applied });
+    settle(id); S.sent = ""; render();
+  });
+
+  var themeBox = document.getElementById("themes");
+  THEMES.forEach(function (t, idx) {
+    var b = document.createElement("button");
+    b.className = "tool"; b.textContent = t[1]; b.setAttribute("aria-pressed", idx === 0 ? "true" : "false");
+    b.addEventListener("click", function () {
+      document.getElementById("kid").dataset.theme = t[0];
+      Array.prototype.forEach.call(themeBox.querySelectorAll("button"), function (x) { x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    });
+    themeBox.appendChild(b);
+  });
+  document.getElementById("fill5").addEventListener("click", function () {
+    var samples = [["reward", "Tưới cây giúp mẹ", 5], ["reward", "Đọc sách cho em", 8], ["penalty", "Con quên cất giày", 3], ["reward", "Tự gấp quần áo", 5], ["penalty", "Con làm vỡ cốc", 10]];
+    var k = 0;
+    while (pendingProposals().length < LIMIT) { var s = samples[k++ % samples.length]; S.items.push({ id: S.nextId++, type: "proposal", kind: s[0], text: s[1], points: s[2], time: now() }); }
+    S.form = null; S.sent = ""; render();
+  });
+  document.getElementById("low").addEventListener("click", function () {
+    S.balance = 4;
+    if (!S.items.some(function (i) { return i.type === "proposal" && i.kind === "penalty" && i.points > 4; }) && pendingProposals().length < LIMIT)
+      S.items.push({ id: S.nextId++, type: "proposal", kind: "penalty", text: "Con làm vỡ cốc", points: 10, time: now() });
+    render();
+  });
+  document.getElementById("reset").addEventListener("click", function () { S = initial(); render(); });
+
+  S = initial(); render();
+})();
+</script>
+</body>
+</html>

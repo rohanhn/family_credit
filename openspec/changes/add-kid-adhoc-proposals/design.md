@@ -71,6 +71,8 @@ Không thêm mục điều hướng mới: màn Rule là nơi con đã quen vớ
 
 `loadQueue` thêm nguồn thứ tư. Nhãn "Xin thưởng" hoặc "Tự nhận phạt"; tiêu đề là tên con và mô tả; số điểm hiển thị theo dấu. `DecisionForm` nhận ô số "Số điểm" điền sẵn số con đề xuất qua `extra`. Với tự nhận phạt lớn hơn số dư hiện tại, hiện cảnh báo vàng "chỉ trừ được N" như màn Thưởng/Phạt.
 
+Mock bấm thử cho D5 và D6: `mockup.html` trong thư mục change này (mở trực tiếp bằng trình duyệt, không cần mạng).
+
 ## Risks / Trade-offs
 
 - [Con gửi nhiều đề xuất lặt vặt hoặc số điểm rất lớn] → Giới hạn 5 đề xuất chờ; bố mẹ sửa số điểm hoặc từ chối; số điểm tối đa 100 000 như các chỗ nhập điểm khác.
