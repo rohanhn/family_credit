@@ -102,16 +102,17 @@ describe("Con đề xuất thưởng/phạt ngoài rule", () => {
     await expect(propose({ childId: other.kids[0].id })).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
-  it("Danh sách chờ của gia đình: kèm tên con, cũ nhất trước, không lẫn gia đình khác", async () => {
-    const { familyId, na, propose } = await setup();
+  it("Danh sách chờ của gia đình: kèm tên con và số dư, cũ nhất trước, không lẫn gia đình khác", async () => {
+    const { familyId, actor, na, propose } = await setup();
     const a = await propose();
     const b = await propose({ childId: na.id, kind: "penalty", description: "Con làm vỡ cốc", points: 5 });
     const other = await seedFamily(t.db, { familyName: "Khác" });
     await createProposal(t.db, { familyId: other.family.id, childId: other.kids[0].id, kind: "reward", description: "Việc nhà khác", points: 1 });
 
-    expect((await listPendingProposals(t.db, familyId)).map((p) => [p.id, p.childName, p.kind, p.childArchived])).toEqual([
-      [a.id, "Bin", "reward", false],
-      [b.id, "Na", "penalty", false],
+    await applyLedgerEntry(t.db, { familyId, childId: na.id, kind: "adhoc", amount: 4, description: "Có sẵn", actorParentId: actor });
+    expect((await listPendingProposals(t.db, familyId)).map((p) => [p.id, p.childName, p.kind, p.childArchived, p.balance])).toEqual([
+      [a.id, "Bin", "reward", false, 0],
+      [b.id, "Na", "penalty", false, 4],
     ]);
   });
 });

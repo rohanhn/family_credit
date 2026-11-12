@@ -3,7 +3,7 @@ import { systemClock, type Clock } from "../clock";
 import { adhocProposals, children, RULE_KINDS } from "../db/schema";
 import type { Db, DbOrTx, Tx } from "../db/types";
 import { DomainError, invalid, notFound } from "./errors";
-import { lockChild, recordTransaction, type Transaction } from "./ledger";
+import { getBalance, lockChild, recordTransaction, type Transaction } from "./ledger";
 import { notifyRejected } from "./notifications";
 import { ALREADY_DECIDED_MESSAGE } from "./rule-claims";
 import { validatePoints, type RuleKind } from "./rules";
@@ -75,7 +75,7 @@ export function listChildProposals(db: DbOrTx, childId: number, status: AdhocPro
     .orderBy(desc(adhocProposals.id));
 }
 
-/** Đề xuất ngoài rule đang chờ của cả gia đình (cho hàng chờ duyệt chung). */
+/** Đề xuất ngoài rule đang chờ của cả gia đình (cho hàng chờ duyệt chung), kèm số dư hiện tại của con để cảnh báo. */
 export async function listPendingProposals(db: DbOrTx, familyId: number) {
   const rows = await db
     .select({ proposal: adhocProposals, childName: children.name, childArchivedAt: children.archivedAt })
@@ -83,7 +83,11 @@ export async function listPendingProposals(db: DbOrTx, familyId: number) {
     .innerJoin(children, eq(children.id, adhocProposals.childId))
     .where(and(eq(children.familyId, familyId), eq(adhocProposals.status, "pending")))
     .orderBy(asc(adhocProposals.id));
-  return rows.map((r) => ({ ...r.proposal, childName: r.childName, childArchived: r.childArchivedAt !== null }));
+  const balances = new Map<number, number>();
+  for (const r of rows) {
+    if (!balances.has(r.proposal.childId)) balances.set(r.proposal.childId, await getBalance(db, r.proposal.childId));
+  }
+  return rows.map((r) => ({ ...r.proposal, childName: r.childName, childArchived: r.childArchivedAt !== null, balance: balances.get(r.proposal.childId)! }));
 }
 
 /** Khóa đề xuất của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
