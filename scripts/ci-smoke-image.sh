@@ -9,7 +9,7 @@ set -euo pipefail
 IMAGE="${1:?Cách dùng: scripts/ci-smoke-image.sh <image>}"
 : "${DATABASE_URL:?Thiếu DATABASE_URL}"
 PORT="${SMOKE_PORT:-3000}"
-NAME="my-credit-smoke-$$"
+NAME="family_credit-smoke-$$"
 EMAIL="smoke-$(date +%s)-$$@example.com"
 
 cleanup() {

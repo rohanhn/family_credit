@@ -144,19 +144,19 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: my-credit:scan
+          tags: family_credit:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Chạy thử image (migration, /api/health, reset-password.js)
         env:
           DATABASE_URL: postgres://my_credit:ci-only-password@localhost:5432/my_credit
-        run: scripts/ci-smoke-image.sh my-credit:scan
+        run: scripts/ci-smoke-image.sh family_credit:scan
 
       - name: Quét lỗ hổng bằng Trivy (dừng nếu có HIGH/CRITICAL đã có bản vá)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: my-credit:scan
+          image-ref: family_credit:scan
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
