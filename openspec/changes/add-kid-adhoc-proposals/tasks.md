@@ -19,6 +19,6 @@
 
 ## 4. Kiểm tra tổng thể
 
-- [ ] 4.1 Thêm test e2e: con gửi đề xuất xin thưởng, bố mẹ sửa điểm rồi duyệt, con thấy màn ăn mừng với số điểm đã sửa; con gửi đề xuất tự nhận phạt, bố mẹ từ chối kèm lý do, con thấy lý do; thêm ca phiên của con gọi action duyệt đề xuất bị từ chối vào `tests/e2e/action-authz.spec.ts`; kiểm tra: `npx playwright test` cho các file này qua
+- [x] 4.1 Thêm test e2e: con gửi đề xuất xin thưởng, bố mẹ sửa điểm rồi duyệt, con thấy màn ăn mừng với số điểm đã sửa; con gửi đề xuất tự nhận phạt, bố mẹ từ chối kèm lý do, con thấy lý do; thêm ca phiên của con gọi action duyệt đề xuất bị từ chối vào `tests/e2e/action-authz.spec.ts`; kiểm tra: `npx playwright test` cho các file này qua
 - [ ] 4.2 Chạy `npx tsc --noEmit`, `npm run lint`, `npm test`, `npx playwright test` và `openspec validate add-kid-adhoc-proposals --strict`; kiểm tra: tất cả qua
 - [ ] 4.3 Chạy thử thủ công trên điện thoại: con gửi đề xuất mỗi loại, bố mẹ duyệt một cái với số điểm sửa và từ chối một cái; kiểm tra: số dư, lịch sử, thông báo và hàng chờ đúng như spec, chữ trên form dễ hiểu với con
