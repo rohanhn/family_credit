@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { approveProposal, createProposal, listPendingProposals, rejectProposal } from "@/server/domain/adhoc-proposals";
 import { archiveChild } from "@/server/domain/children";
 import { applyLedgerEntry, CHILD_ARCHIVED_MESSAGE, getBalance, recordAdjustment } from "@/server/domain/ledger";
 import { approveClaim, createClaim, listPendingClaims, rejectClaim } from "@/server/domain/rule-claims";
@@ -64,6 +65,26 @@ describe("Con đã lưu trữ", () => {
     await approveClaim(t.db, { familyId, actorParentId, claimId: c1.id });
     await rejectClaim(t.db, { familyId, actorParentId, claimId: c2.id });
     expect(await getBalance(t.db, bin)).toBe(5);
+  });
+
+  it("Đề xuất ngoài rule gửi trước khi lưu trữ vẫn nằm trong hàng chờ, duyệt hoặc từ chối được", async () => {
+    const { familyId, actorParentId, bin, give } = await setup();
+    await give(10);
+    const reward = await createProposal(t.db, { familyId, childId: bin, kind: "reward", description: "Giúp bà xách đồ", points: 7 });
+    const penalty = await createProposal(t.db, { familyId, childId: bin, kind: "penalty", description: "Con làm vỡ cốc", points: 3 });
+    const rejected = await createProposal(t.db, { familyId, childId: bin, kind: "reward", description: "Dọn phòng", points: 5 });
+    await archiveChild(t.db, familyId, bin);
+    expect((await listPendingProposals(t.db, familyId)).map((p) => [p.childName, p.childArchived])).toEqual([
+      ["Bin", true],
+      ["Bin", true],
+      ["Bin", true],
+    ]);
+
+    await approveProposal(t.db, { familyId, actorParentId, proposalId: reward.id });
+    await approveProposal(t.db, { familyId, actorParentId, proposalId: penalty.id, points: 2 });
+    await rejectProposal(t.db, { familyId, actorParentId, proposalId: rejected.id });
+    expect(await getBalance(t.db, bin)).toBe(15);
+    expect(await listPendingProposals(t.db, familyId)).toEqual([]);
   });
 
   it("Đổi thưởng gửi trước khi lưu trữ vẫn duyệt được", async () => {

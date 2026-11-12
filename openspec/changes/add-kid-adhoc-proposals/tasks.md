@@ -5,7 +5,7 @@
 - [x] 1.1 Thêm bảng `adhoc_proposals` vào `src/server/db/schema.ts` theo design D1 và sinh migration bằng `npm run db:generate`; kiểm tra: `npm run db:migrate` chạy được trên database dev, `tests/domain/db-setup.test.ts` qua
 - [x] 1.2 Tạo `src/server/domain/adhoc-proposals.ts` với tạo, hủy, liệt kê theo con và liệt kê đang chờ theo gia đình (design D2, D3), kèm `tests/domain/adhoc-proposals.test.ts` cho các scenario của "Con đề xuất thưởng/phạt ngoài rule" và "Giới hạn đề xuất ngoài rule đang chờ" (thiếu mô tả, điểm không hợp lệ, hủy, hủy của con khác, vượt 5, gửi lại sau khi được xử lý); kiểm tra: `npx vitest run tests/domain/adhoc-proposals.test.ts` qua
 - [x] 1.3 Thêm duyệt và từ chối vào module (design D4), kèm test cho các scenario của "Bố mẹ duyệt đề xuất ngoài rule" (giữ nguyên điểm, sửa điểm và lưu cả hai số, tự nhận phạt, phạt lớn hơn số dư, điểm sửa không hợp lệ thì vẫn chờ duyệt, từ chối kèm lý do, duyệt lần hai, gia đình khác) và các scenario mới của `kid-notifications` (loại và nội dung thông báo khi duyệt, khi từ chối); kiểm tra: `npx vitest run tests/domain/adhoc-proposals.test.ts` qua
-- [ ] 1.4 Thêm ca đề xuất của con đã lưu trữ vào `tests/domain/archived-child.test.ts` (vẫn nằm trong danh sách chờ với cờ đã lưu trữ, duyệt và từ chối được) và ca "hai bố mẹ duyệt cùng một đề xuất: chỉ ghi một giao dịch" vào `tests/db/approval-race.test.ts`; kiểm tra: `npm test` qua toàn bộ
+- [x] 1.4 Thêm ca đề xuất của con đã lưu trữ vào `tests/domain/archived-child.test.ts` (vẫn nằm trong danh sách chờ với cờ đã lưu trữ, duyệt và từ chối được) và ca "hai bố mẹ duyệt cùng một đề xuất: chỉ ghi một giao dịch" vào `tests/db/approval-race.test.ts`; kiểm tra: `npm test` qua toàn bộ
 
 ## 2. Phía con
 

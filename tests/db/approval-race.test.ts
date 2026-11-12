@@ -7,6 +7,7 @@ import { DAY, fixedClock } from "@/server/clock";
 import * as schema from "@/server/db/schema";
 import { runMigrations } from "@/server/db/migrate";
 import type { Db } from "@/server/db/types";
+import { approveProposal, createProposal } from "@/server/domain/adhoc-proposals";
 import { approveTaskDay, createTask, reportDone } from "@/server/domain/daily-tasks";
 import { applyLedgerEntry, getBalance } from "@/server/domain/ledger";
 import { approveClaim, createClaim } from "@/server/domain/rule-claims";
@@ -104,6 +105,27 @@ describe.skipIf(!url)("Duyệt đồng thời", () => {
       expect(await countTxns("rule_claim", claim.id)).toBe(1);
     }
     expect(await getBalance(db, child.id)).toBe(25);
+  });
+
+  it("Hai bố mẹ duyệt cùng một đề xuất ngoài rule: chỉ ghi một giao dịch, theo số điểm của người duyệt được", async () => {
+    const { familyId, dad, mom, child } = await family("race-proposal");
+    let expected = 0;
+    for (let round = 0; round < 5; round++) {
+      const proposal = await createProposal(db, { familyId, childId: child.id, kind: "reward", description: `Việc tốt ${round}`, points: 10 });
+      const results = await Promise.allSettled([
+        approveProposal(db, { familyId, actorParentId: dad, proposalId: proposal.id }),
+        approveProposal(db, { familyId, actorParentId: mom, proposalId: proposal.id, points: 4 }),
+      ]);
+      const done = results.filter((r) => r.status === "fulfilled");
+      expect(done).toHaveLength(1);
+      expect(results.find((r) => r.status === "rejected")).toMatchObject({ reason: { code: "CONFLICT" } });
+      expect(await countTxns("adhoc_proposal", proposal.id)).toBe(1);
+      const [row] = await db.select().from(schema.adhocProposals).where(eq(schema.adhocProposals.id, proposal.id));
+      expect(row.status).toBe("approved");
+      expect(row.approvedPoints).toBe(done[0].value.appliedAmount);
+      expected += row.approvedPoints!;
+    }
+    expect(await getBalance(db, child.id)).toBe(expected);
   });
 
   it("Hai bố mẹ duyệt cùng một nhiệm vụ trong ngày: chỉ cộng một lần", async () => {
