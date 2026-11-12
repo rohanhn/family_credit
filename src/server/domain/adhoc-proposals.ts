@@ -1,14 +1,15 @@
 import { and, asc, count, desc, eq } from "drizzle-orm";
 import { systemClock, type Clock } from "../clock";
 import { adhocProposals, children, RULE_KINDS } from "../db/schema";
-import type { Db, DbOrTx } from "../db/types";
-import { DomainError, invalid } from "./errors";
-import { lockChild } from "./ledger";
+import type { Db, DbOrTx, Tx } from "../db/types";
+import { DomainError, invalid, notFound } from "./errors";
+import { lockChild, recordTransaction, type Transaction } from "./ledger";
+import { notifyRejected } from "./notifications";
 import { ALREADY_DECIDED_MESSAGE } from "./rule-claims";
 import { validatePoints, type RuleKind } from "./rules";
 
-// Con đề xuất thưởng/phạt ngoài rule, bố mẹ duyệt
-// (spec reward-rules "Con đề xuất thưởng/phạt ngoài rule", "Giới hạn đề xuất ngoài rule đang chờ").
+// Con đề xuất thưởng/phạt ngoài rule, bố mẹ duyệt (spec reward-rules "Con đề xuất thưởng/phạt ngoài rule",
+// "Giới hạn đề xuất ngoài rule đang chờ", "Bố mẹ duyệt đề xuất ngoài rule").
 
 export type AdhocProposal = typeof adhocProposals.$inferSelect;
 
@@ -80,4 +81,68 @@ export async function listPendingProposals(db: DbOrTx, familyId: number) {
     .where(and(eq(children.familyId, familyId), eq(adhocProposals.status, "pending")))
     .orderBy(asc(adhocProposals.id));
   return rows.map((r) => ({ ...r.proposal, childName: r.childName, childArchived: r.childArchivedAt !== null }));
+}
+
+/** Khóa đề xuất của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
+async function lockProposal(tx: Tx, familyId: number, proposalId: number) {
+  const [row] = await tx
+    .select({ proposal: adhocProposals })
+    .from(adhocProposals)
+    .innerJoin(children, eq(children.id, adhocProposals.childId))
+    .where(and(eq(adhocProposals.id, proposalId), eq(children.familyId, familyId)))
+    .for("update", { of: adhocProposals });
+  if (!row) throw notFound();
+  return row.proposal;
+}
+
+/**
+ * Duyệt: chuyển pending → approved có điều kiện, lưu số điểm bố mẹ chốt và ghi giao dịch "đột xuất" trong một transaction.
+ * Bỏ trống `points` thì giữ số con đề xuất. Số điểm không hợp lệ thì transaction hủy, đề xuất vẫn chờ duyệt.
+ */
+export async function approveProposal(
+  db: Db,
+  input: { familyId: number; actorParentId: number; proposalId: number; points?: number },
+  clock: Clock = systemClock,
+): Promise<Transaction> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.familyId, input.proposalId);
+    const points = input.points === undefined ? proposal.proposedPoints : validatePoints(input.points);
+    const updated = await tx
+      .update(adhocProposals)
+      .set({ status: "approved", approvedPoints: points, decidedByParentId: input.actorParentId, decidedAt: clock.now() })
+      .where(and(eq(adhocProposals.id, proposal.id), eq(adhocProposals.status, "pending")))
+      .returning({ id: adhocProposals.id });
+    if (updated.length === 0) throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
+    return recordTransaction(tx, {
+      familyId: input.familyId,
+      childId: proposal.childId,
+      kind: "adhoc",
+      amount: proposal.kind === "reward" ? points : -points,
+      description: proposal.description,
+      actorParentId: input.actorParentId,
+      refType: "adhoc_proposal",
+      refId: proposal.id,
+      allowArchived: true,
+      notifyTitle: proposal.description,
+    });
+  });
+}
+
+/** Từ chối kèm lý do tùy chọn: không ghi giao dịch, con nhận thông báo "bị từ chối". */
+export async function rejectProposal(
+  db: Db,
+  input: { familyId: number; actorParentId: number; proposalId: number; reason?: string },
+  clock: Clock = systemClock,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.familyId, input.proposalId);
+    const reason = input.reason?.trim() || null;
+    const updated = await tx
+      .update(adhocProposals)
+      .set({ status: "rejected", reason, decidedByParentId: input.actorParentId, decidedAt: clock.now() })
+      .where(and(eq(adhocProposals.id, proposal.id), eq(adhocProposals.status, "pending")))
+      .returning({ id: adhocProposals.id });
+    if (updated.length === 0) throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
+    await notifyRejected(tx, { childId: proposal.childId, title: proposal.description, reason, refType: "adhoc_proposal", refId: proposal.id });
+  });
 }
