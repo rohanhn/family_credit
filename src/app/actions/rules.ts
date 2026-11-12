@@ -3,7 +3,7 @@
 import { refresh } from "next/cache";
 import { getDb } from "@/server/db/client";
 import { requireChild, requireParentWithFamily } from "@/server/auth/next";
-import { cancelProposal, createProposal } from "@/server/domain/adhoc-proposals";
+import { approveProposal, cancelProposal, createProposal, rejectProposal } from "@/server/domain/adhoc-proposals";
 import { getBalance, recordAdjustment } from "@/server/domain/ledger";
 import { applyAdhoc, applyRule, createRule, setRuleHidden, updateRule } from "@/server/domain/rules";
 import { approveClaim, cancelClaim, createClaim, rejectClaim } from "@/server/domain/rule-claims";
@@ -98,6 +98,30 @@ export async function rejectClaimAction(_prev: ActionState, form: FormData): Pro
     return { ok: true, message: "Đã từ chối" };
   } catch (err) {
     return fromError(err, { action: "rejectClaimAction", auth: auth, form });
+  }
+}
+
+/** Duyệt đề xuất ngoài rule. Ô `points` bỏ trống thì giữ số điểm con đề xuất. */
+export async function approveProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    const points = str(form, "points").trim() === "" ? undefined : int(form, "points");
+    const txn = await approveProposal(getDb(), { familyId: auth.familyId, actorParentId: auth.parentId, proposalId: int(form, "id"), points });
+    refresh();
+    return { ok: true, message: `Đã duyệt ${signed(txn.appliedAmount)}`, data: { applied: String(txn.appliedAmount) } };
+  } catch (err) {
+    return fromError(err, { action: "approveProposalAction", auth: auth, form });
+  }
+}
+
+export async function rejectProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    await rejectProposal(getDb(), { familyId: auth.familyId, actorParentId: auth.parentId, proposalId: int(form, "id"), reason: str(form, "reason") });
+    refresh();
+    return { ok: true, message: "Đã từ chối" };
+  } catch (err) {
+    return fromError(err, { action: "rejectProposalAction", auth: auth, form });
   }
 }
 

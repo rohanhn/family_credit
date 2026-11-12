@@ -14,7 +14,7 @@
 
 ## 3. Phía bố mẹ
 
-- [ ] 3.1 Thêm server action duyệt (nhận `points` tùy chọn) và từ chối đề xuất vào `src/app/actions/rules.ts`, dùng `requireParentWithFamily`; kiểm tra: `npx tsc --noEmit` và `npm run lint` không lỗi
+- [x] 3.1 Thêm server action duyệt (nhận `points` tùy chọn) và từ chối đề xuất vào `src/app/actions/rules.ts`, dùng `requireParentWithFamily`; kiểm tra: `npx tsc --noEmit` và `npm run lint` không lỗi
 - [ ] 3.2 Thêm đề xuất ngoài rule vào `loadQueue` trong `src/app/parent/approval-queue.tsx` với nhãn "Xin thưởng" hoặc "Tự nhận phạt", ô "Số điểm" điền sẵn và cảnh báo khi phạt lớn hơn số dư (design D6); kiểm tra: chạy dev, đề xuất của con hiện trong "Chờ duyệt", duyệt với số điểm đã sửa thì lịch sử ghi đúng số đó
 
 ## 4. Kiểm tra tổng thể
