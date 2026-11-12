@@ -25,6 +25,21 @@ Mỗi âm thanh phản hồi MUST có thời gian nghe rõ đủ dài để nh�
 - **WHEN** con thấy thông báo yêu cầu đổi thưởng được duyệt và âm thanh đang bật
 - **THEN** âm đổi quà phát với thời gian nghe rõ ít nhất 300 ms
 
+### Requirement: Âm lượng đỉnh của âm thanh phản hồi
+Âm lượng đỉnh của âm thưởng, âm phạt và âm khi con báo xong nhiệm vụ hoặc bật lại loa MUST đạt từ −14 dBFS trở lên; âm đổi quà MUST đạt từ −21 dBFS trở lên. Không âm nào được vượt −10 dBFS. Âm phạt MUST có âm lượng đỉnh thấp hơn âm thưởng.
+
+#### Scenario: Âm thưởng to hơn trước
+- **WHEN** con mở màn ăn mừng và âm thanh đang bật
+- **THEN** âm thưởng phát với âm lượng đỉnh từ −14 dBFS đến −10 dBFS
+
+#### Scenario: Âm phạt vẫn nhẹ hơn âm thưởng
+- **WHEN** so sánh âm phạt với âm thưởng
+- **THEN** âm lượng đỉnh của âm phạt thấp hơn của âm thưởng và không vượt −10 dBFS
+
+#### Scenario: Âm đổi quà to hơn trước
+- **WHEN** con thấy thông báo yêu cầu đổi thưởng được duyệt và âm thanh đang bật
+- **THEN** âm đổi quà phát với âm lượng đỉnh từ −21 dBFS đến −10 dBFS
+
 ### Requirement: Âm đổi quà phát sau âm thưởng
 Khi một màn ăn mừng vừa có điểm được cộng vừa có yêu cầu đổi thưởng được duyệt, hệ thống SHALL phát âm thưởng trước và chỉ bắt đầu âm đổi quà sau khi âm thưởng đã kết thúc.
 

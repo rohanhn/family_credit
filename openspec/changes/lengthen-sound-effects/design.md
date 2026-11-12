@@ -18,12 +18,11 @@ Số đo hiện tại (dựng bằng `OfflineAudioContext` trong Chromium, 48 kH
 ## Goals / Non-Goals
 
 **Goals:**
-- Đạt các mức nghe rõ tối thiểu và độ dài tối đa trong spec delta `ui-theme`.
+- Đạt các mức nghe rõ tối thiểu, độ dài tối đa và âm lượng đỉnh trong spec delta `ui-theme`.
 - Kiểm tra được các mức đó bằng unit test, không cần trình duyệt.
-- Giữ tính chất từng âm: cao độ, loại sóng, âm phạt nhẹ và trầm.
+- Giữ tính chất từng âm: cao độ, loại sóng, âm phạt trầm và nhỏ hơn âm thưởng.
 
 **Non-Goals:**
-- Tăng âm lượng đỉnh. Người dùng yêu cầu kéo dài; âm lượng giữ nguyên để tách riêng tác dụng của việc kéo dài.
 - Sửa cách mở khóa âm thanh khi trình duyệt chặn phát trên màn cảm ứng.
 - Xử lý việc iPhone/iPad tắt âm khi bật chế độ im lặng.
 - Sửa `playSfx` trong các file mockup `docs/design/mockup/*.dc.html`.
@@ -44,12 +43,12 @@ Lý do: phần nghe rõ gần bằng độ dài nốt, nên kéo dài nốt có 
 
 | Âm | Nốt (Hz), bắt đầu → độ dài (giây) | Tổng độ dài | Nghe rõ ước tính | Mức tối thiểu trong spec |
 |---|---|---|---|---|
-| `reward` | 523 (0 → .22), 659 (.14 → .22), 784 (.28 → .22), 1047 (.42 → .6) | 1020 ms | khoảng 830 ms | 600 ms |
-| `penalty` | 392 (0 → .4), 294 (.34 → .6) | 940 ms | khoảng 750 ms | 600 ms |
-| `pop` | 660 (0 → .14), 990 (.12 → .22) | 340 ms | khoảng 270 ms | 200 ms |
-| `coin` | 988 (0 → .14), 1319 (.13 → .42) | 550 ms | khoảng 400 ms | 300 ms |
+| `reward` | 523 (0 → .22), 659 (.14 → .22), 784 (.28 → .22), 1047 (.42 → .6) | 1020 ms | khoảng 845 ms | 600 ms |
+| `penalty` | 392 (0 → .4), 294 (.34 → .6) | 940 ms | khoảng 760 ms | 600 ms |
+| `pop` | 660 (0 → .14), 990 (.12 → .22) | 340 ms | khoảng 275 ms | 200 ms |
+| `coin` | 988 (0 → .14), 1319 (.13 → .42) | 550 ms | khoảng 410 ms | 300 ms |
 
-Loại sóng và âm lượng đỉnh giữ nguyên. Các con số này là điểm xuất phát: khi nghe thử trên máy thật có thể chỉnh, miễn vẫn đạt mức tối thiểu và không vượt 1,5 giây.
+Loại sóng giữ nguyên; âm lượng đỉnh theo D5. Các con số này là điểm xuất phát: khi nghe thử trên máy thật có thể chỉnh, miễn vẫn đạt mức tối thiểu và không vượt 1,5 giây.
 
 ### D3. Tính thời gian nghe rõ bằng hàm thuần
 
@@ -67,14 +66,32 @@ Thêm vào `src/ui/sfx.ts` hai hàm thuần, tính từ thông số nốt và đ
 
 Lý do: thông số âm thưởng có thể được chỉnh sau khi nghe thử; khoảng chờ tự đi theo.
 
+### D5. Tăng nhẹ âm lượng đỉnh
+
+| Âm | Âm lượng đỉnh cũ | Âm lượng đỉnh mới | Đỉnh mới (dBFS) | Mức tăng |
+|---|---|---|---|---|
+| `reward` | 0,18 | 0,28 | −11,1 | +3,8 dB |
+| `penalty` | 0,16 | 0,24 | −12,4 | +3,5 dB |
+| `pop` | 0,14 | 0,22 | −13,2 | +3,9 dB |
+| `coin` | 0,06 | 0,10 | −20,0 | +4,4 dB |
+
+Lý do: người dùng yêu cầu tăng "một chút". Mức 3 đến 4 dB là nghe ra khác biệt nhưng chưa thành to gấp đôi (khoảng 10 dB). `coin` dùng sóng vuông, nghe chói hơn các sóng khác ở cùng biên độ, nên vẫn giữ thấp hơn hẳn. `penalty` giữ thấp hơn `reward` để vẫn là âm nhẹ.
+
+Các nốt liền nhau chỉ chồng lên nhau ở đoạn đang tắt dần của nốt trước, nên tổng biên độ không vượt quá khoảng 0,3, còn xa ngưỡng méo tiếng (1,0).
+
+Test "Thông số âm (README §5)" hiện có đang chặn âm lượng đỉnh ở 0,2; đổi giới hạn này thành trần −10 dBFS (biên độ 0,316) của spec.
+
+Đã cân nhắc tăng mạnh hơn (gấp đôi biên độ, +6 dB): dễ thành ồn khi dùng tai nghe hoặc khi bố mẹ ghi thưởng nhiều lần liên tiếp; để dành nếu chạy thử vẫn thấy nhỏ.
+
 ## Risks / Trade-offs
 
-- [Kéo dài vẫn chưa đủ nghe vì âm lượng đỉnh thấp, nhất là `coin` ở −24,7 dBFS] → Chạy thử trên điện thoại thật là task cuối; nếu vẫn không nghe được thì sửa kế hoạch bằng `/opsx:update` để thêm việc tăng âm lượng.
+- [Kéo dài và tăng nhẹ vẫn chưa đủ nghe trên loa điện thoại, nhất là `coin` ở −20 dBFS] → Chạy thử trên điện thoại thật là task cuối; nếu vẫn không nghe được thì sửa kế hoạch bằng `/opsx:update` để tăng thêm, trong trần −10 dBFS của spec.
+- [Âm to hơn gây khó chịu khi dùng tai nghe] → Mức tăng chỉ 3 đến 4 dB và có trần −10 dBFS; nút loa theo thiết bị vẫn tắt được.
 - [Không nghe được do nguyên nhân khác: chế độ im lặng của iPhone/iPad, trình duyệt chặn phát, công tắc âm thanh cả gia đình đang tắt] → Ngoài phạm vi change này; task chạy thử ghi lại điều kiện thử (âm lượng media, chế độ im lặng, nút loa) để tách riêng từng nguyên nhân.
 - [Âm dài hơn gây khó chịu khi bấm liên tục, ví dụ con báo xong nhiều nhiệm vụ liền nhau] → `pop` giữ dưới 0,4 giây; các âm chồng lên nhau khi bấm nhanh là chấp nhận được.
-- [Âm phạt dài hơn có thể nặng nề hơn với trẻ] → Giữ sóng sine, cao độ và âm lượng cũ; nghe thử trong task cuối.
+- [Âm phạt dài và to hơn có thể nặng nề hơn với trẻ] → Giữ sóng sine và cao độ cũ, âm lượng vẫn thấp hơn âm thưởng; nghe thử trong task cuối.
 - [Mockup và app lệch thông số] → README mục 5 ghi rõ bảng thông số là của app, mockup giữ bản cũ.
 
 ## Open Questions
 
-- Sau khi kéo dài, có cần tăng âm lượng đỉnh không? Trả lời được sau khi chạy thử trên máy thật; nếu cần thì là một lần sửa kế hoạch riêng, không đổi các task hiện có.
+- Mức tăng 3 đến 4 dB đã đủ chưa? Trả lời được sau khi chạy thử trên máy thật; nếu cần tăng thêm thì chỉ đổi con số ở D5 trong trần của spec, không đổi các task hiện có.
