@@ -1,4 +1,4 @@
-# Sao nhà mình (my-credit)
+# Sao nhà mình (family_credit)
 
 Ứng dụng web tự host giúp bố mẹ thưởng/phạt con bằng một "đồng tiền" riêng của gia đình: rule thưởng/phạt, nhiệm vụ hằng ngày, cửa hàng đổi thưởng, thông báo cho con. Bố mẹ đăng nhập bằng email và mật khẩu; con đăng nhập bằng avatar và PIN trên máy dùng chung của gia đình hoặc trên điện thoại riêng của con.
 
@@ -67,7 +67,7 @@ Migration chỉ nên thêm (thêm cột/bảng), không đổi tên hay xóa tro
 Build image ở máy để thử:
 
 ```bash
-docker build -t my-credit:dev .
+docker build -t family_credit:dev .
 ```
 
 ## Biến môi trường
@@ -226,7 +226,7 @@ ssh vps 'cd /opt/family_credit && docker compose start app'
 
 (`. ./.env` đọc file như script shell; nếu mật khẩu trong `DATABASE_URL` có ký tự đặc biệt của shell như `$` hay dấu nháy, hãy đặt giá trị trong nháy đơn trong `.env`, hoặc export `DATABASE_URL` và `POSTGRES_NETWORK` bằng tay.)
 
-Nếu file sao lưu đang nằm trên VPS, chép nó về máy (`scp vps:/var/backups/family_credit/<file> .`) trước. Khôi phục ra một database khác để kiểm tra mà không đụng production: tạo database mới (ví dụ `my_credit_restore`, owner `my_credit`) và trỏ `-d` vào đó.
+Nếu file sao lưu đang nằm trên VPS, chép nó về máy (`scp vps:/var/backups/family_credit/<file> .`) trước. Khôi phục ra một database khác để kiểm tra mà không đụng production: tạo database mới (ví dụ `family_credit_restore`, owner `family_credit`) và trỏ `-d` vào đó.
 
 ## Thiết bị của con
 

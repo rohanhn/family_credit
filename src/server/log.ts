@@ -21,7 +21,7 @@ const REDACT_PATHS = [
 
 export function createLogger(destination?: DestinationStream): Logger {
   const options = {
-    base: { app: "my-credit" },
+    base: { app: "family_credit" },
     level: process.env.LOG_LEVEL ?? "info",
     timestamp: pino.stdTimeFunctions.isoTime,
     redact: { paths: REDACT_PATHS, censor: "[ẩn]" },
