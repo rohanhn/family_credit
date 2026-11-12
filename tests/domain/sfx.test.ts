@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getFamily, setFamilySound } from "@/server/domain/families";
-import { SFX, sfxAudibleDuration, sfxDuration, shouldPlay, type SfxDef } from "@/ui/sfx";
+import { COIN_AFTER_REWARD_MS, SFX, sfxAudibleDuration, sfxDuration, shouldPlay, type SfxDef } from "@/ui/sfx";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
 
@@ -90,6 +90,13 @@ describe("spec ui-theme: Âm lượng đỉnh của âm thanh phản hồi", () 
 
   it("Âm phạt nhỏ hơn âm thưởng", () => {
     expect(SFX.penalty.gain).toBeLessThan(SFX.reward.gain);
+  });
+});
+
+describe("spec ui-theme: Âm đổi quà phát sau âm thưởng", () => {
+  it("Khoảng chờ trước âm đổi quà không ngắn hơn tổng độ dài âm thưởng", () => {
+    expect(COIN_AFTER_REWARD_MS).toBeGreaterThanOrEqual(sfxDuration(SFX.reward) * 1000);
+    expect(COIN_AFTER_REWARD_MS).toBeLessThanOrEqual(sfxDuration(SFX.reward) * 1000 + 100);
   });
 });
 

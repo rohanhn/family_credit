@@ -58,6 +58,9 @@ export function sfxAudibleDuration(def: SfxDef, threshold: number = AUDIBLE_AMPL
   return total;
 }
 
+/** Khoảng chờ (ms) trước âm đổi quà khi âm thưởng phát trước: hết âm thưởng cộng một khoảng đệm ngắn (design D4). */
+export const COIN_AFTER_REWARD_MS = Math.round(sfxDuration(SFX.reward) * 1000) + 30;
+
 /** Âm thanh chỉ phát khi gia đình bật **và** thiết bị không tắt loa (spec ui-theme "Âm thanh phản hồi"). */
 export function shouldPlay(opts: { familyEnabled: boolean; deviceMuted: boolean }): boolean {
   return opts.familyEnabled && !opts.deviceMuted;

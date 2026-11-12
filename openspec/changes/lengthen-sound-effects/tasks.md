@@ -9,7 +9,7 @@
 
 ## 2. Âm đổi quà phát sau âm thưởng
 
-- [ ] 2.1 Trong `src/app/kid/(app)/points-feedback.tsx`, thay khoảng chờ cố định 700 ms bằng tổng độ dài của `reward` cộng 30 ms, giữ khoảng chờ 0 khi không có điểm cộng (design D4); thêm test rằng khoảng chờ không nhỏ hơn tổng độ dài của `reward`; kiểm tra: `npm test` qua toàn bộ
+- [x] 2.1 Trong `src/app/kid/(app)/points-feedback.tsx`, thay khoảng chờ cố định 700 ms bằng tổng độ dài của `reward` cộng 30 ms, giữ khoảng chờ 0 khi không có điểm cộng (design D4); thêm test rằng khoảng chờ không nhỏ hơn tổng độ dài của `reward`; kiểm tra: `npm test` qua toàn bộ
 
 ## 3. Kiểm tra tổng thể
 
