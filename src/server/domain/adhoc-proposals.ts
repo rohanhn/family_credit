@@ -16,7 +16,10 @@ export type AdhocProposal = typeof adhocProposals.$inferSelect;
 /** Số đề xuất ngoài rule đang chờ duyệt tối đa của mỗi con, tính chung cả xin thưởng và tự nhận phạt. */
 export const MAX_PENDING_PROPOSALS = 5;
 
-export const DESCRIPTION_REQUIRED_MESSAGE = "Con hãy kể việc con đã làm";
+export const DESCRIPTION_REQUIRED_MESSAGES: Record<RuleKind, string> = {
+  reward: "Con cần viết việc con đã làm",
+  penalty: "Con cần viết lỗi con đã mắc",
+};
 export const PENDING_LIMIT_MESSAGE = `Con đang có ${MAX_PENDING_PROPOSALS} đề xuất chờ bố mẹ duyệt. Chờ bố mẹ duyệt bớt hoặc hủy một đề xuất rồi gửi tiếp nhé.`;
 
 function validateKind(kind: string): RuleKind {
@@ -24,9 +27,9 @@ function validateKind(kind: string): RuleKind {
   return kind as RuleKind;
 }
 
-function normalizeDescription(description: string): string {
+function normalizeDescription(description: string, kind: RuleKind): string {
   const d = description.trim().replace(/\s+/g, " ");
-  if (!d) throw invalid(DESCRIPTION_REQUIRED_MESSAGE);
+  if (!d) throw invalid(DESCRIPTION_REQUIRED_MESSAGES[kind]);
   if ([...d].length > 200) throw invalid("Mô tả tối đa 200 ký tự");
   return d;
 }
@@ -40,7 +43,7 @@ export async function createProposal(
   input: { familyId: number; childId: number; kind: string; description: string; points: number },
 ): Promise<AdhocProposal> {
   const kind = validateKind(input.kind);
-  const description = normalizeDescription(input.description);
+  const description = normalizeDescription(input.description, kind);
   const proposedPoints = validatePoints(input.points);
   return db.transaction(async (tx) => {
     await lockChild(tx, input.familyId, input.childId);

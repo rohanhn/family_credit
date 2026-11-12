@@ -3,7 +3,7 @@ import {
   approveProposal,
   cancelProposal,
   createProposal,
-  DESCRIPTION_REQUIRED_MESSAGE,
+  DESCRIPTION_REQUIRED_MESSAGES,
   listChildProposals,
   listPendingProposals,
   MAX_PENDING_PROPOSALS,
@@ -60,7 +60,8 @@ describe("Con đề xuất thưởng/phạt ngoài rule", () => {
   it("Thiếu mô tả: từ chối và yêu cầu nhập mô tả", async () => {
     const { bin, propose } = await setup();
     for (const description of ["", "   "]) {
-      await expect(propose({ description })).rejects.toMatchObject({ code: "INVALID_INPUT", message: DESCRIPTION_REQUIRED_MESSAGE });
+      await expect(propose({ description })).rejects.toMatchObject({ code: "INVALID_INPUT", message: DESCRIPTION_REQUIRED_MESSAGES.reward });
+      await expect(propose({ description, kind: "penalty" })).rejects.toMatchObject({ message: DESCRIPTION_REQUIRED_MESSAGES.penalty });
     }
     await expect(propose({ description: "a".repeat(201) })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await propose({ description: "a".repeat(200) });
