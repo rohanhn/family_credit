@@ -53,3 +53,16 @@ export function DecisionForm({
     </form>
   );
 }
+
+/**
+ * Ô "Số điểm" điền sẵn số con đề xuất, gửi kèm khi duyệt đề xuất ngoài rule (dùng qua `extra`).
+ * Giữ state riêng để số bố mẹ vừa sửa không bị xóa khi server báo lỗi.
+ */
+export function PointsField({ defaultPoints }: { defaultPoints: number }) {
+  const [points, setPoints] = useState(String(defaultPoints));
+  return (
+    <div className="w-28">
+      <Field label="Số điểm" name="points" inputMode="numeric" value={points} onChange={(e) => setPoints(e.target.value)} />
+    </div>
+  );
+}

@@ -3,13 +3,14 @@
 import { refresh } from "next/cache";
 import { getDb } from "@/server/db/client";
 import { requireChild, requireParentWithFamily } from "@/server/auth/next";
+import { approveProposal, cancelProposal, createProposal, rejectProposal } from "@/server/domain/adhoc-proposals";
 import { getBalance, recordAdjustment } from "@/server/domain/ledger";
 import { applyAdhoc, applyRule, createRule, setRuleHidden, updateRule } from "@/server/domain/rules";
 import { approveClaim, cancelClaim, createClaim, rejectClaim } from "@/server/domain/rule-claims";
 import { signed } from "@/lib/time";
 import { fromError, int, str, type ActionState } from "./result";
 
-// Server Actions cho rule, thưởng/phạt, khai rule và điều chỉnh (task 4.2).
+// Server Actions cho rule, thưởng/phạt, khai rule, đề xuất ngoài rule và điều chỉnh.
 
 /** Thưởng/phạt theo rule hoặc đột xuất. Trả về mức thực ghi và số dư mới để phát âm thanh, hiện thông báo. */
 export async function applyAction(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -100,6 +101,30 @@ export async function rejectClaimAction(_prev: ActionState, form: FormData): Pro
   }
 }
 
+/** Duyệt đề xuất ngoài rule. Ô `points` bỏ trống thì giữ số điểm con đề xuất. */
+export async function approveProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    const points = str(form, "points").trim() === "" ? undefined : int(form, "points");
+    const txn = await approveProposal(getDb(), { familyId: auth.familyId, actorParentId: auth.parentId, proposalId: int(form, "id"), points });
+    refresh();
+    return { ok: true, message: `Đã duyệt ${signed(txn.appliedAmount)}`, data: { applied: String(txn.appliedAmount) } };
+  } catch (err) {
+    return fromError(err, { action: "approveProposalAction", auth: auth, form });
+  }
+}
+
+export async function rejectProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const auth = await requireParentWithFamily();
+  try {
+    await rejectProposal(getDb(), { familyId: auth.familyId, actorParentId: auth.parentId, proposalId: int(form, "id"), reason: str(form, "reason") });
+    refresh();
+    return { ok: true, message: "Đã từ chối" };
+  } catch (err) {
+    return fromError(err, { action: "rejectProposalAction", auth: auth, form });
+  }
+}
+
 // ---- Phía con ----
 
 export async function claimRuleAction(_prev: ActionState, form: FormData): Promise<ActionState> {
@@ -121,5 +146,34 @@ export async function cancelClaimAction(_prev: ActionState, form: FormData): Pro
     return { ok: true, message: "Đã hủy yêu cầu" };
   } catch (err) {
     return fromError(err, { action: "cancelClaimAction", auth: kid, form });
+  }
+}
+
+/** Con gửi đề xuất thưởng/phạt ngoài rule cho chính mình; `childId` chỉ lấy từ phiên. */
+export async function createProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const kid = await requireChild();
+  try {
+    const proposal = await createProposal(getDb(), {
+      familyId: kid.familyId,
+      childId: kid.childId,
+      kind: str(form, "kind"),
+      description: str(form, "description"),
+      points: int(form, "points"),
+    });
+    refresh();
+    return { ok: true, message: `Đã gửi "${proposal.description}" cho bố mẹ duyệt`, data: { nonce: String(proposal.id) } };
+  } catch (err) {
+    return fromError(err, { action: "createProposalAction", auth: kid, form });
+  }
+}
+
+export async function cancelProposalAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  const kid = await requireChild();
+  try {
+    await cancelProposal(getDb(), { childId: kid.childId, proposalId: int(form, "id") });
+    refresh();
+    return { ok: true, message: "Đã hủy yêu cầu" };
+  } catch (err) {
+    return fromError(err, { action: "cancelProposalAction", auth: kid, form });
   }
 }
