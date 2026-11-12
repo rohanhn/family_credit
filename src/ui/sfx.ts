@@ -5,12 +5,26 @@ export type SfxName = "reward" | "penalty" | "pop" | "coin";
 
 type Note = readonly [freq: number, start: number, duration: number];
 
-export const SFX: Record<SfxName, { type: OscillatorType; gain: number; notes: readonly Note[] }> = {
+export type SfxDef = { type: OscillatorType; gain: number; notes: readonly Note[] };
+
+export const SFX: Record<SfxName, SfxDef> = {
   reward: { type: "triangle", gain: 0.18, notes: [[523.25, 0, 0.16], [659.25, 0.09, 0.16], [783.99, 0.18, 0.16], [1046.5, 0.27, 0.4]] },
   penalty: { type: "sine", gain: 0.16, notes: [[392, 0, 0.28], [293.66, 0.22, 0.45]] },
   pop: { type: "sine", gain: 0.14, notes: [[660, 0, 0.07], [990, 0.06, 0.09]] },
   coin: { type: "square", gain: 0.06, notes: [[987.77, 0, 0.08], [1318.51, 0.08, 0.3]] },
 };
+
+// Đường bao âm lượng của một nốt (change lengthen-sound-effects, design D1):
+// tăng tới đỉnh trong ATTACK_S, giữ đỉnh tới HOLD_RATIO độ dài nốt, rồi giảm theo hàm mũ về ENVELOPE_FLOOR lúc hết nốt.
+export const ATTACK_S = 0.015;
+export const HOLD_RATIO = 0.6;
+export const ENVELOPE_FLOOR = 0.0001;
+
+/** Các mốc thời gian (giây) của đường bao một nốt; `playSfx` và các hàm đo dùng chung. */
+export function noteEnvelope(start: number, duration: number): { start: number; attackEnd: number; holdEnd: number; end: number } {
+  const attackEnd = start + ATTACK_S;
+  return { start, attackEnd, holdEnd: Math.max(attackEnd, start + duration * HOLD_RATIO), end: start + duration };
+}
 
 /** Âm thanh chỉ phát khi gia đình bật **và** thiết bị không tắt loa (spec ui-theme "Âm thanh phản hồi"). */
 export function shouldPlay(opts: { familyEnabled: boolean; deviceMuted: boolean }): boolean {
@@ -62,10 +76,11 @@ export function playSfx(name: SfxName): void {
       const g = c.createGain();
       o.type = s.type;
       o.frequency.value = freq;
-      // Envelope: tăng trong 15ms rồi giảm theo hàm mũ về 0.0001 (README §5).
-      g.gain.setValueAtTime(0.0001, now + start);
-      g.gain.exponentialRampToValueAtTime(s.gain, now + start + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+      const env = noteEnvelope(start, duration);
+      g.gain.setValueAtTime(ENVELOPE_FLOOR, now + env.start);
+      g.gain.exponentialRampToValueAtTime(s.gain, now + env.attackEnd);
+      g.gain.setValueAtTime(s.gain, now + env.holdEnd);
+      g.gain.exponentialRampToValueAtTime(ENVELOPE_FLOOR, now + env.end);
       o.connect(g);
       g.connect(c.destination);
       o.start(now + start);
