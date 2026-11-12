@@ -7,6 +7,7 @@ import { formatNotificationTime } from "@/lib/time";
 import { ChibiAvatar, Mascot } from "@/ui/chibi";
 import { CurrencyIcon } from "@/ui/currency-icon";
 import { Icon } from "@/ui/icons";
+import { COIN_AFTER_REWARD_MS } from "@/ui/sfx";
 import { useSound } from "@/ui/sound";
 import { THEMES } from "@/ui/themes";
 import { usePrefersReducedMotion } from "@/ui/use-reduced-motion";
@@ -53,7 +54,7 @@ export function PointsFeedback({
     if (screen.total > 0) play("reward");
     if (!screen.hasRedeem) return;
     // Phát sau âm thưởng; không hủy khi màn đóng (âm phát muộn vô hại).
-    setTimeout(() => play("coin"), screen.total > 0 ? 700 : 0);
+    setTimeout(() => play("coin"), screen.total > 0 ? COIN_AFTER_REWARD_MS : 0);
   }, [screen, play]);
 
   // Confetti chỉ ở màn ăn mừng và khi không bật giảm chuyển động. Dùng canvas riêng, không dùng worker
