@@ -138,7 +138,7 @@ Trên thiết bị đã được bố mẹ kích hoạt "chế độ gia đình"
 - **THEN** đăng nhập của con đó bị khóa 5 phút và màn hình hiển thị thông báo thân thiện
 
 ### Requirement: Phân quyền bố mẹ và con
-Hệ thống MUST giới hạn mọi dữ liệu trong phạm vi gia đình của người dùng. Phiên của con MUST chỉ xem được dữ liệu của chính con đó và chỉ thực hiện được các thao tác của con (báo xong nhiệm vụ, khai rule thưởng, xin đổi thưởng, chọn mục tiêu, chọn theme, đọc thông báo, đổi PIN của chính mình).
+Hệ thống MUST giới hạn mọi dữ liệu trong phạm vi gia đình của người dùng. Phiên của con MUST chỉ xem được dữ liệu của chính con đó và chỉ thực hiện được các thao tác của con (báo xong nhiệm vụ, khai rule thưởng, đề xuất thưởng/phạt ngoài rule, xin đổi thưởng, chọn mục tiêu, chọn theme, đọc thông báo, đổi PIN của chính mình).
 
 #### Scenario: Truy cập dữ liệu gia đình khác
 - **WHEN** một người dùng yêu cầu dữ liệu thuộc gia đình khác
@@ -155,6 +155,10 @@ Hệ thống MUST giới hạn mọi dữ liệu trong phạm vi gia đình củ
 #### Scenario: Thoát về màn hình chọn avatar
 - **WHEN** con bấm "Thoát" trên màn hình riêng
 - **THEN** phiên của con kết thúc và thiết bị quay về màn hình chọn avatar
+
+#### Scenario: Con cố tự duyệt đề xuất của mình
+- **WHEN** phiên của con gửi yêu cầu duyệt hoặc từ chối một đề xuất ngoài rule
+- **THEN** hệ thống từ chối và đề xuất vẫn "chờ duyệt"
 
 ### Requirement: Máy riêng của con
 Bố mẹ đã đăng nhập SHALL bật được một thiết bị thành "máy riêng" của đúng một con chưa lưu trữ. Trên máy riêng, chỉ con đó MUST đăng nhập được. Bật xong, phiên bố mẹ trên thiết bị đó MUST kết thúc. Phiên của máy riêng SHALL tự gia hạn khi còn dùng. Bố mẹ SHALL thấy và thu hồi được từng máy riêng; lưu trữ con MUST thu hồi các máy riêng của con đó.

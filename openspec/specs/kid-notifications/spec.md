@@ -7,7 +7,7 @@ Báo cho con biết kết quả các quyết định của bố mẹ: được n
 ## Requirements
 
 ### Requirement: Tạo thông báo cho con
-Hệ thống SHALL tạo một thông báo cho con trong mỗi trường hợp: một giao dịch được ghi cho con (duyệt nhiệm vụ, duyệt khai rule, bố mẹ áp dụng rule, thưởng/phạt đột xuất, điều chỉnh, duyệt đổi thưởng); một yêu cầu của con bị từ chối. Thông báo MUST được tạo cùng lúc với thao tác của bố mẹ.
+Hệ thống SHALL tạo một thông báo cho con trong mỗi trường hợp: một giao dịch được ghi cho con (duyệt nhiệm vụ, duyệt khai rule, duyệt đề xuất ngoài rule, bố mẹ áp dụng rule, thưởng/phạt đột xuất, điều chỉnh, duyệt đổi thưởng); một yêu cầu của con bị từ chối. Thông báo MUST được tạo cùng lúc với thao tác của bố mẹ.
 
 #### Scenario: Duyệt nhiệm vụ tạo thông báo nhận quà
 - **WHEN** bố mẹ duyệt nhiệm vụ "Làm bài tập" 15 điểm của con
@@ -26,8 +26,16 @@ Hệ thống SHALL tạo một thông báo cho con trong mỗi trường hợp: 
 - **THEN** con có một thông báo chưa đọc loại "bị trừ điểm" với tên rule và số điểm thực trừ
 
 #### Scenario: Yêu cầu bị từ chối
-- **WHEN** bố mẹ từ chối một yêu cầu khai rule, báo xong nhiệm vụ hoặc đổi thưởng, kèm lý do
+- **WHEN** bố mẹ từ chối một yêu cầu khai rule, đề xuất ngoài rule, báo xong nhiệm vụ hoặc đổi thưởng, kèm lý do
 - **THEN** con có một thông báo chưa đọc loại "bị từ chối" với tên mục và lý do
+
+#### Scenario: Duyệt đề xuất xin thưởng với số điểm đã sửa
+- **WHEN** con đề xuất xin thưởng "Giúp bà xách đồ" 20 điểm và bố mẹ duyệt với 8 điểm
+- **THEN** con có một thông báo chưa đọc loại "nhận quà" với nội dung "Giúp bà xách đồ" và "+8"
+
+#### Scenario: Duyệt đề xuất tự nhận phạt
+- **WHEN** bố mẹ duyệt đề xuất tự nhận phạt "Con làm vỡ cốc" 5 điểm
+- **THEN** con có một thông báo chưa đọc loại "bị trừ điểm" với nội dung "Con làm vỡ cốc" và số điểm thực trừ
 
 ### Requirement: Chuông thông báo của con
 Màn hình của con SHALL hiển thị chuông thông báo kèm số thông báo chưa đọc. Mở chuông SHALL hiển thị danh sách thông báo mới nhất trước. Con MUST chỉ thấy thông báo của chính mình. Số chưa đọc MUST chỉ đếm các thông báo có trong danh sách. Thông báo bị trừ điểm SHALL hiển thị số điểm thực trừ. Thời điểm SHALL hiển thị theo múi giờ của gia đình.
