@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getFamily, setFamilySound } from "@/server/domain/families";
-import { SFX, shouldPlay } from "@/ui/sfx";
+import { SFX, sfxAudibleDuration, sfxDuration, shouldPlay, type SfxDef } from "@/ui/sfx";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
 
@@ -31,6 +31,34 @@ describe("Thông số âm (README §5)", () => {
     const maxFreq = (name: keyof typeof SFX) => Math.max(...SFX[name].notes.map((n) => n[0]));
     expect(maxFreq("penalty")).toBeLessThan(maxFreq("reward"));
     expect(SFX.penalty.type).toBe("sine");
+  });
+});
+
+describe("Đo âm: tổng độ dài và thời gian nghe rõ (change lengthen-sound-effects, design D3)", () => {
+  // Kết quả tính tay với đường bao: tăng 15 ms, giữ đỉnh tới 60% nốt, giảm hàm mũ về 0,0001; ngưỡng −30 dBFS = 0,03162.
+  // Đỉnh 0,1: đoạn tăng chạm ngưỡng sau 15 ms × ln(316,2)/ln(1000) = 12,5 ms;
+  // đoạn giảm (400 ms) rơi dưới ngưỡng sau 400 ms × ln(3,162)/ln(1000) = 66,7 ms.
+  const one: SfxDef = { type: "sine", gain: 0.1, notes: [[440, 0, 1]] };
+  const two: SfxDef = { type: "sine", gain: 0.1, notes: [[440, 0, 1], [660, 0.5, 1]] };
+
+  it("Một nốt: dài 1 giây, nghe rõ từ 12,5 ms tới 666,7 ms", () => {
+    expect(sfxDuration(one)).toBe(1);
+    expect(sfxAudibleDuration(one)).toBeCloseTo(0.6667 - 0.0125, 3);
+  });
+
+  it("Hai nốt chồng nhau: phần chồng chỉ tính một lần", () => {
+    // Nốt hai nghe rõ từ 512,5 ms tới 1166,7 ms, nối liền với nốt một.
+    expect(sfxDuration(two)).toBe(1.5);
+    expect(sfxAudibleDuration(two)).toBeCloseTo(1.1667 - 0.0125, 3);
+  });
+
+  it("Hai nốt rời nhau: cộng từng khoảng", () => {
+    const apart: SfxDef = { type: "sine", gain: 0.1, notes: [[440, 0, 1], [660, 2, 1]] };
+    expect(sfxAudibleDuration(apart)).toBeCloseTo(2 * (0.6667 - 0.0125), 3);
+  });
+
+  it("Đỉnh dưới ngưỡng: không có khoảng nghe rõ", () => {
+    expect(sfxAudibleDuration({ type: "sine", gain: 0.02, notes: [[440, 0, 1]] })).toBe(0);
   });
 });
 

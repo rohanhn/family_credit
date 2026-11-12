@@ -26,6 +26,37 @@ export function noteEnvelope(start: number, duration: number): { start: number; 
   return { start, attackEnd, holdEnd: Math.max(attackEnd, start + duration * HOLD_RATIO), end: start + duration };
 }
 
+/** Ngưỡng "nghe rõ": biên độ từ −30 dBFS trở lên (spec ui-theme "Thời gian nghe rõ của âm thanh phản hồi"). */
+export const AUDIBLE_AMPLITUDE = 10 ** (-30 / 20);
+
+/** Tổng độ dài của một âm (giây): lúc nốt cuối cùng kết thúc. */
+export function sfxDuration(def: SfxDef): number {
+  return Math.max(0, ...def.notes.map(([, start, duration]) => start + duration));
+}
+
+/** Thời gian nghe rõ của một âm (giây): hợp các khoảng mà đường bao của ít nhất một nốt đạt từ ngưỡng trở lên. */
+export function sfxAudibleDuration(def: SfxDef, threshold: number = AUDIBLE_AMPLITUDE): number {
+  if (def.gain < threshold) return 0;
+  // Trên đoạn hàm mũ giữa ENVELOPE_FLOOR và đỉnh, tỷ lệ thời gian để đi từ sàn tới ngưỡng.
+  const ratio = Math.log(threshold / ENVELOPE_FLOOR) / Math.log(def.gain / ENVELOPE_FLOOR);
+  const spans = def.notes
+    .map(([, start, duration]) => {
+      const env = noteEnvelope(start, duration);
+      const from = env.start + (env.attackEnd - env.start) * ratio;
+      const to = env.holdEnd + (env.end - env.holdEnd) * (1 - ratio);
+      return [from, to] as const;
+    })
+    .sort((a, b) => a[0] - b[0]);
+  let total = 0;
+  let covered = -Infinity;
+  for (const [from, to] of spans) {
+    if (to <= covered) continue;
+    total += to - Math.max(from, covered);
+    covered = to;
+  }
+  return total;
+}
+
 /** Âm thanh chỉ phát khi gia đình bật **và** thiết bị không tắt loa (spec ui-theme "Âm thanh phản hồi"). */
 export function shouldPlay(opts: { familyEnabled: boolean; deviceMuted: boolean }): boolean {
   return opts.familyEnabled && !opts.deviceMuted;
