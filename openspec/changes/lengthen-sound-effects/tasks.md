@@ -14,4 +14,4 @@
 ## 3. Kiểm tra tổng thể
 
 - [x] 3.1 Chạy `npx tsc --noEmit`, `npm run lint`, `npm test` và `npx playwright test tests/e2e/parent-sound.spec.ts`; kiểm tra: tất cả qua
-- [ ] 3.2 Chạy thử thủ công trên một điện thoại Android và một iPhone hoặc iPad, âm lượng media ở mức cao, iPhone/iPad tắt chế độ im lặng, nút loa đang bật: nghe được âm khi bật lại loa, khi con bấm "Con xong rồi", ở màn ăn mừng (kể cả màn có quà được duyệt: âm đổi quà đến sau âm thưởng), ở màn báo bị trừ, và khi bố mẹ bấm Thưởng/Phạt; ghi lại âm nào vẫn không nghe được hoặc quá to để quyết định có chỉnh âm lượng thêm không
+- [x] 3.2 Chạy thử thủ công trên một điện thoại Android và một iPhone hoặc iPad, âm lượng media ở mức cao, iPhone/iPad tắt chế độ im lặng, nút loa đang bật: nghe được âm khi bật lại loa, khi con bấm "Con xong rồi", ở màn ăn mừng (kể cả màn có quà được duyệt: âm đổi quà đến sau âm thưởng), ở màn báo bị trừ, và khi bố mẹ bấm Thưởng/Phạt; ghi lại âm nào vẫn không nghe được hoặc quá to để quyết định có chỉnh âm lượng thêm không
