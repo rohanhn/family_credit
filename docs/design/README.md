@@ -82,16 +82,16 @@ Ngoại lệ: chữ `primary` trên nền `soft` chỉ đạt 4.25 (sunny) và 4
 
 ## 5. Âm thanh
 
-Hiệu ứng âm thanh tổng hợp bằng Web Audio API (oscillator + envelope), không dùng file âm thanh, nên không cần giấy phép và không tăng dung lượng tải. Thông số dưới đây là bản đã nghe thử trong mockup (`playSfx` trong các file `.dc.html`).
+Hiệu ứng âm thanh tổng hợp bằng Web Audio API (oscillator + envelope), không dùng file âm thanh, nên không cần giấy phép và không tăng dung lượng tải. Thông số dưới đây là của app (`src/ui/sfx.ts`): âm dài hơn và to hơn bản trong mockup để nghe được trên loa điện thoại. Các file mockup `.dc.html` vẫn giữ bản `playSfx` ngắn ban đầu.
 
 | Âm | Khi nào | Sóng | Nốt (Hz), thời điểm bắt đầu → độ dài (giây) | Âm lượng đỉnh |
 |---|---|---|---|---|
-| `reward` | Con thấy thông báo được cộng điểm; bố mẹ bấm Thưởng | triangle | 523 (0 → .16), 659 (.09 → .16), 784 (.18 → .16), 1047 (.27 → .4) | 0.18 |
-| `penalty` | Con thấy thông báo bị trừ điểm; bố mẹ bấm Phạt | sine | 392 (0 → .28), 294 (.22 → .45) | 0.16 |
-| `pop` | Con bấm "Con xong rồi"; bật lại âm thanh | sine | 660 (0 → .07), 990 (.06 → .09) | 0.14 |
-| `coin` | Yêu cầu đổi thưởng được duyệt (phía con) | square | 988 (0 → .08), 1319 (.08 → .3) | 0.06 |
+| `reward` | Con thấy thông báo được cộng điểm; bố mẹ bấm Thưởng | triangle | 523 (0 → .22), 659 (.14 → .22), 784 (.28 → .22), 1047 (.42 → .6) | 0.28 |
+| `penalty` | Con thấy thông báo bị trừ điểm; bố mẹ bấm Phạt | sine | 392 (0 → .4), 294 (.34 → .6) | 0.24 |
+| `pop` | Con bấm "Con xong rồi"; bật lại âm thanh | sine | 660 (0 → .14), 990 (.12 → .22) | 0.22 |
+| `coin` | Yêu cầu đổi thưởng được duyệt (phía con) | square | 988 (0 → .14), 1319 (.13 → .42) | 0.10 |
 
-Envelope: tăng trong 15ms rồi giảm theo hàm mũ về 0.0001.
+Envelope của mỗi nốt: tăng tới đỉnh trong 15ms, giữ đỉnh tới 60% độ dài nốt, rồi giảm theo hàm mũ về 0.0001 lúc hết nốt. Thời gian nghe rõ (biên độ từ −30 dBFS): `reward` 835ms, `penalty` 682ms, `pop` 230ms, `coin` 348ms. Khi màn ăn mừng có cả điểm cộng và quà được duyệt, `coin` phát sau khi `reward` kết thúc.
 
 Nguyên tắc:
 - Âm phạt **nhẹ và trầm**, không dùng tiếng còi hay tiếng báo lỗi, để không làm trẻ sợ hay xấu hổ. Màn báo bị trừ dùng nền theme (không dùng nền `primary`), chibi hơi buồn, lời động viên "Không sao, lần sau mình sửa nhé!" và nút "Con hiểu rồi".

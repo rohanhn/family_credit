@@ -41,12 +41,12 @@ Lý do: phần nghe rõ gần bằng độ dài nốt, nên kéo dài nốt có 
 
 ### D2. Thông số nốt mới
 
-| Âm | Nốt (Hz), bắt đầu → độ dài (giây) | Tổng độ dài | Nghe rõ ước tính | Mức tối thiểu trong spec |
+| Âm | Nốt (Hz), bắt đầu → độ dài (giây) | Tổng độ dài | Nghe rõ (tính bằng hàm ở D3) | Mức tối thiểu trong spec |
 |---|---|---|---|---|
-| `reward` | 523 (0 → .22), 659 (.14 → .22), 784 (.28 → .22), 1047 (.42 → .6) | 1020 ms | khoảng 845 ms | 600 ms |
-| `penalty` | 392 (0 → .4), 294 (.34 → .6) | 940 ms | khoảng 760 ms | 600 ms |
-| `pop` | 660 (0 → .14), 990 (.12 → .22) | 340 ms | khoảng 275 ms | 200 ms |
-| `coin` | 988 (0 → .14), 1319 (.13 → .42) | 550 ms | khoảng 410 ms | 300 ms |
+| `reward` | 523 (0 → .22), 659 (.14 → .22), 784 (.28 → .22), 1047 (.42 → .6) | 1020 ms | 835 ms | 600 ms |
+| `penalty` | 392 (0 → .4), 294 (.34 → .6) | 940 ms | 682 ms | 600 ms |
+| `pop` | 660 (0 → .14), 990 (.12 → .22) | 340 ms | 230 ms | 200 ms |
+| `coin` | 988 (0 → .14), 1319 (.13 → .42) | 550 ms | 348 ms | 300 ms |
 
 Loại sóng giữ nguyên; âm lượng đỉnh theo D5. Các con số này là điểm xuất phát: khi nghe thử trên máy thật có thể chỉnh, miễn vẫn đạt mức tối thiểu và không vượt 1,5 giây.
 
