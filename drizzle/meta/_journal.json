@@ -50,6 +50,13 @@
       "when": 1794282033293,
       "tag": "0006_session_ttl",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794468833537,
+      "tag": "0007_adhoc_proposals",
+      "breakpoints": true
     }
   ]
 }

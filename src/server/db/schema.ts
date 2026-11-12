@@ -164,7 +164,35 @@ export const ruleClaims = pgTable(
   ],
 );
 
-export const TASK_MODES = ["individual", "group"] as const;
+/** Con đề xuất thưởng/phạt ngoài rule, bố mẹ duyệt với số điểm sửa được (spec reward-rules). */
+export const adhocProposals = pgTable(
+  "adhoc_proposals",
+  {
+    id: id(),
+    childId: ref("child_id")
+      .notNull()
+      .references(() => children.id),
+    kind: text("kind", { enum: RULE_KINDS }).notNull(),
+    description: text("description").notNull(),
+    proposedPoints: integer("proposed_points").notNull(),
+    /** Số điểm bố mẹ chốt khi duyệt; null cho tới khi duyệt. */
+    approvedPoints: integer("approved_points"),
+    status: text("status", { enum: REQUEST_STATUSES }).notNull().default("pending"),
+    reason: text("reason"),
+    decidedByParentId: ref("decided_by_parent_id").references(() => parents.id),
+    createdAt: createdAt(),
+    decidedAt: ts("decided_at"),
+  },
+  (t) => [
+    check("adhoc_proposals_kind", inList("kind", RULE_KINDS)),
+    check("adhoc_proposals_status", inList("status", REQUEST_STATUSES)),
+    check("adhoc_proposals_proposed_positive", sql`${t.proposedPoints} > 0`),
+    check("adhoc_proposals_approved_positive", sql`${t.approvedPoints} is null or ${t.approvedPoints} > 0`),
+    index("adhoc_proposals_child_status_idx").on(t.childId, t.status),
+  ],
+);
+
+export const TASK_MODES =["individual", "group"] as const;
 
 export const tasks = pgTable(
   "tasks",
