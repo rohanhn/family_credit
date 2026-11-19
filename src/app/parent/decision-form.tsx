@@ -13,12 +13,18 @@ export function DecisionForm({
   approve,
   reject,
   extra,
+  locked,
 }: {
   id: number;
   approve: Action;
   reject: Action;
   /** Trường bổ sung gửi kèm khi duyệt (ví dụ danh sách con tham gia nhiệm vụ nhóm). */
   extra?: React.ReactNode;
+  /**
+   * Đóng băng (spec reward-shop): "all" khóa cả hai nút khi con đang nợ; "approve" chỉ khóa nút duyệt
+   * (con đã lưu trữ đang nợ vẫn từ chối được). Server vẫn tự kiểm tra lại.
+   */
+  locked?: "all" | "approve";
 }) {
   const [approveState, approveAction] = useActionState(approve, undefined);
   const [rejectState, rejectAction] = useActionState(reject, undefined);
@@ -45,10 +51,10 @@ export function DecisionForm({
     <form action={approveAction} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="id" value={id} />
       {extra}
-      <Button variant="outline" onClick={() => setRejecting(true)}>
+      <Button variant="outline" onClick={() => setRejecting(true)} disabled={locked === "all"} aria-disabled={locked === "all"}>
         Từ chối
       </Button>
-      <SubmitButton>Duyệt</SubmitButton>
+      <SubmitButton disabled={locked !== undefined}>Duyệt</SubmitButton>
       {state?.error && <FormMessage state={state} />}
     </form>
   );

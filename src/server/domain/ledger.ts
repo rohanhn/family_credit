@@ -50,14 +50,38 @@ export async function getBalance(db: DbOrTx, childId: number): Promise<number> {
   return row?.balance ?? 0;
 }
 
-/** Mức thực ghi: khoản trừ chỉ trừ tối đa bằng số dư hiện có (spec "Số dư không âm"). */
-export function appliedAmount(requested: number, balance: number): number {
-  if (requested >= 0) return requested;
-  return Math.max(requested, -balance);
+/**
+ * Số dư và mốc đầu của thanh tan băng (spec debt-freeze "Thanh tan băng", design D3).
+ * `peakDebt` là số nợ lớn nhất kể từ giao dịch gần nhất làm số dư lũy kế ≥ 0 (theo thứ tự id); 0 khi không nợ.
+ */
+export async function getDebtInfo(db: DbOrTx, childId: number): Promise<{ balance: number; peakDebt: number }> {
+  const balance = await getBalance(db, childId);
+  if (balance >= 0) return { balance, peakDebt: 0 };
+  const running = db.$with("running").as(
+    db
+      .select({ id: transactions.id, total: sql<number>`(sum(${transactions.appliedAmount}) over (order by ${transactions.id}))::int`.as("total") })
+      .from(transactions)
+      .where(eq(transactions.childId, childId)),
+  );
+  const [row] = await db
+    .with(running)
+    .select({ peak: sql<number | null>`(-min(${running.total}))::int` })
+    .from(running)
+    .where(sql`${running.id} > coalesce((select max(id) from running where total >= 0), 0)`);
+  const peak = Number(row?.peak ?? -balance);
+  return { balance, peakDebt: Math.max(peak, -balance) };
 }
 
 /**
- * Ghi một giao dịch trong transaction đang mở: khóa dòng của con, tính mức thực ghi, INSERT,
+ * Mức thực ghi: luôn bằng mức gốc, số dư được phép âm (spec "Khoản trừ luôn ghi đủ", design D1).
+ * Trước đây khoản trừ bị chặn ở 0 (spec cũ "Số dư không âm"); các dòng cũ đó vẫn giữ applied khác requested.
+ */
+export function appliedAmount(requested: number): number {
+  return requested;
+}
+
+/**
+ * Ghi một giao dịch trong transaction đang mở: khóa dòng của con, INSERT với mức thực ghi bằng mức gốc,
  * rồi tạo thông báo cho con trong cùng transaction (design D3 "Thông báo").
  */
 export async function recordTransaction(tx: Tx, input: LedgerEntryInput): Promise<Transaction> {
@@ -67,7 +91,6 @@ export async function recordTransaction(tx: Tx, input: LedgerEntryInput): Promis
 
   const child = await lockChild(tx, input.familyId, input.childId);
   if (child.archivedAt && !input.allowArchived) throw invalid(CHILD_ARCHIVED_MESSAGE);
-  const balance = await getBalance(tx, input.childId);
   const [row] = await tx
     .insert(transactions)
     .values({
@@ -75,7 +98,7 @@ export async function recordTransaction(tx: Tx, input: LedgerEntryInput): Promis
       childId: input.childId,
       kind: input.kind,
       requestedAmount: input.amount,
-      appliedAmount: appliedAmount(input.amount, balance),
+      appliedAmount: appliedAmount(input.amount),
       description,
       actorParentId: input.actorParentId,
       refType: input.refType,
@@ -93,7 +116,7 @@ export function applyLedgerEntry(db: Db, input: LedgerEntryInput): Promise<Trans
 
 /**
  * Giao dịch điều chỉnh tham chiếu một giao dịch trước đó kèm lý do (spec "Giao dịch điều chỉnh"):
- * đảo ngược mức thực ghi của giao dịch gốc, vẫn tuân theo quy tắc số dư không âm.
+ * đảo ngược mức thực ghi của giao dịch gốc; khoản đảo được ghi đủ kể cả khi làm số dư âm.
  */
 export async function recordAdjustment(
   db: Db,

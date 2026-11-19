@@ -2,8 +2,13 @@
 
 import { AVATAR_LOOKS, DEFAULT_AVATAR, isAvatarId } from "@/lib/avatars";
 
-/** happy: mặc định; joy: màn ăn mừng (mắt cười, miệng mở); sad: màn báo bị trừ (lông mày cụp, giọt nước mắt). */
-export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: string; size?: number; mood?: "happy" | "joy" | "sad" }) {
+export type ChibiMood = "happy" | "joy" | "sad" | "cold";
+
+/**
+ * happy: mặc định; joy: màn ăn mừng (mắt cười, miệng mở); sad: màn báo bị trừ (lông mày cụp, giọt nước mắt);
+ * cold: khi đang nợ (má xanh, miệng run, bông tuyết) — spec debt-freeze "Giao diện đóng băng".
+ */
+export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: string; size?: number; mood?: ChibiMood }) {
   const look = AVATAR_LOOKS[isAvatarId(avatar) ? avatar : DEFAULT_AVATAR];
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -21,6 +26,17 @@ export function ChibiAvatar({ avatar, size = 56, mood = "happy" }: { avatar: str
           <ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7" />
           <ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#FF8FA3" opacity=".7" />
           <path d="M26 44q6 7 12 0z" fill="#B3261E" />
+        </>
+      ) : mood === "cold" ? (
+        <>
+          <ellipse cx="24" cy="38" rx="3.2" ry="3.4" fill="#2B2118" />
+          <ellipse cx="40" cy="38" rx="3.2" ry="3.4" fill="#2B2118" />
+          <circle cx="25.2" cy="36.8" r="1.1" fill="#fff" />
+          <circle cx="41.2" cy="36.8" r="1.1" fill="#fff" />
+          <ellipse cx="18" cy="45" rx="3.5" ry="2.2" fill="#7DD3FC" opacity=".75" />
+          <ellipse cx="46" cy="45" rx="3.5" ry="2.2" fill="#7DD3FC" opacity=".75" />
+          <path d="M26 47l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5" fill="none" stroke="#2B2118" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M52 10v8M48 14h8M49.2 11.2l5.6 5.6M54.8 11.2l-5.6 5.6" stroke="#38BDF8" strokeWidth={1.6} strokeLinecap="round" />
         </>
       ) : (
         <>

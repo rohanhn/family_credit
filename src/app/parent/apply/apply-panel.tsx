@@ -48,9 +48,10 @@ export function ApplyPanel({
   const isAdhoc = choice === "adhoc";
   const points = isAdhoc ? Number(adhocPoints) || 0 : (rule?.points ?? 0);
   const isReward = kind === "reward";
-  const applied = isReward ? points : Math.min(points, kid?.balance ?? 0);
-  const capped = !isReward && points > (kid?.balance ?? 0);
+  // Khoản phạt luôn trừ đủ, số dư được phép âm (spec currency-ledger "Khoản trừ luôn ghi đủ").
+  const applied = points;
   const after = (kid?.balance ?? 0) + (isReward ? applied : -applied);
+  const intoDebt = !isReward && after < 0;
   const ready = !!kid && points > 0 && (isAdhoc || !!rule);
 
   const pickKind = (k: "reward" | "penalty") => {
@@ -173,10 +174,11 @@ export function ApplyPanel({
           <Field label="Ghi chú (không bắt buộc)" name="note" placeholder="VD: lúc ăn tối" maxLength={100} />
         )}
 
-        {ready && capped && (
+        {ready && intoDebt && (
+          // Chỉ báo trước, không chặn thao tác (spec debt-freeze "Báo trước khi phạt thành nợ").
           <p className="flex items-start gap-2 rounded-[14px] bg-wait-bg px-3 py-2.5 text-sm font-bold text-wait-fg">
             <Icon name="info" size={18} className="mt-px shrink-0" />
-            {kid.name} chỉ còn {kid.balance} {currency}, nên chỉ trừ được {kid.balance}. Lịch sử vẫn ghi mức phạt gốc {signed(-points)}.
+            Sau khi phạt, {kid.name} sẽ nợ {-after} {currency}. Cửa hàng của con sẽ đóng băng cho tới khi hết nợ.
           </p>
         )}
 

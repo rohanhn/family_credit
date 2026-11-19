@@ -129,7 +129,7 @@ test("Bố mẹ sửa điểm rồi duyệt đề xuất xin thưởng, từ ch�
   await celebrate.getByRole("button", { name: "Nhận quà" }).click();
   await expect(celebrate).toBeHidden();
 
-  // --- Con tự nhận phạt 10 khi chỉ có 8: bố mẹ thấy cảnh báo, từ chối kèm lý do ---
+  // --- Con tự nhận phạt 10 khi chỉ có 8: bố mẹ thấy báo trước "sẽ nợ", từ chối kèm lý do ---
   await kid.goto("/kid/rules");
   await propose(kid, "penalty", "Con làm vỡ cốc", "10");
   await expect(kid.getByText('Đã gửi "Con làm vỡ cốc" cho bố mẹ duyệt')).toBeVisible();
@@ -139,7 +139,7 @@ test("Bố mẹ sửa điểm rồi duyệt đề xuất xin thưởng, từ ch�
   await expect(penaltyCard).toHaveCount(1);
   await expect(penaltyCard).toContainText("Tự nhận phạt");
   await expect(penaltyCard).toContainText("−10");
-  await expect(penaltyCard).toContainText("Số dư hiện tại (8) chỉ đủ trừ 8; lịch sử vẫn ghi mức gốc.");
+  await expect(penaltyCard).toContainText("Nếu duyệt, Bin sẽ nợ 2.");
   await penaltyCard.getByRole("button", { name: "Từ chối" }).click();
   await parent.getByLabel("Lý do (không bắt buộc)").fill("Con đã biết nhận lỗi là tốt rồi");
   await parent.getByRole("button", { name: "Từ chối" }).click();

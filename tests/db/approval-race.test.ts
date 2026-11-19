@@ -12,7 +12,7 @@ import { approveTaskDay, createTask, reportDone } from "@/server/domain/daily-ta
 import { applyLedgerEntry, getBalance } from "@/server/domain/ledger";
 import { approveClaim, createClaim } from "@/server/domain/rule-claims";
 import { createRule } from "@/server/domain/rules";
-import { approveRedemption, createRedemption, createReward } from "@/server/domain/shop";
+import { approveRedemption, createRedemption, createReward, rejectRedemption } from "@/server/domain/shop";
 import { seedFamily } from "../helpers/seed";
 
 // Task 8.1 (design D11): duyệt đồng thời trên Postgres thật. PGlite chỉ có một kết nối nên không tái hiện được.
@@ -66,7 +66,7 @@ describe.skipIf(!url)("Duyệt đồng thời", () => {
     }
   });
 
-  it("Duyệt đổi thưởng song song với phạt: số dư không âm, đổi thưởng bị từ chối nếu không đủ", async () => {
+  it("Duyệt đổi thưởng song song với phạt: số dư bằng tổng giao dịch, đổi thưởng bị từ chối nếu không đủ", async () => {
     const { familyId, dad, mom, child, give } = await family("race-redeem-penalty");
     for (let round = 0; round < 5; round++) {
       const start = await getBalance(db, child.id);
@@ -78,16 +78,40 @@ describe.skipIf(!url)("Duyệt đồng thời", () => {
         applyLedgerEntry(db, { familyId, childId: child.id, kind: "adhoc", amount: -10, description: "Phạt", actorParentId: mom }),
       ]);
       const balance = await getBalance(db, child.id);
-      expect(balance).toBeGreaterThanOrEqual(0);
       expect(penalty.status).toBe("fulfilled");
       if (approve.status === "fulfilled") {
-        // Duyệt chạy trước: 20 − 15 = 5, phạt chỉ trừ được 5.
-        expect(balance).toBe(0);
+        // Duyệt chạy trước: 20 − 15 = 5, phạt trừ đủ 10 thành −5.
+        expect(balance).toBe(-5);
       } else {
         // Phạt chạy trước: 20 − 10 = 10 < 15 nên đổi thưởng bị từ chối, không trừ.
         expect(approve.reason).toMatchObject({ code: "INSUFFICIENT_BALANCE" });
         expect(await countTxns("redemption", req.id)).toBe(0);
         expect(balance).toBe(10);
+      }
+    }
+  });
+
+  it("Duyệt đổi thưởng song song với phạt thành nợ: đổi thưởng bị đóng băng nếu phạt chạy trước", async () => {
+    const { familyId, dad, mom, child, give } = await family("race-redeem-frozen");
+    for (let round = 0; round < 5; round++) {
+      const start = await getBalance(db, child.id);
+      await give(20 - start, "Thưởng cho đủ 20");
+      const reward = await createReward(db, familyId, { name: `Bóng ${round}`, price: 15 });
+      const req = await createRedemption(db, { familyId, childId: child.id, rewardId: reward.id });
+      const [approve, penalty] = await Promise.allSettled([
+        approveRedemption(db, { familyId, actorParentId: dad, redemptionId: req.id }),
+        applyLedgerEntry(db, { familyId, childId: child.id, kind: "adhoc", amount: -25, description: "Phạt", actorParentId: mom }),
+      ]);
+      const balance = await getBalance(db, child.id);
+      expect(penalty.status).toBe("fulfilled");
+      if (approve.status === "fulfilled") {
+        expect(balance).toBe(-20);
+      } else {
+        expect(approve.reason).toMatchObject({ code: "FROZEN" });
+        expect(await countTxns("redemption", req.id)).toBe(0);
+        expect(balance).toBe(-5);
+        await give(30, "Gỡ nợ");
+        await rejectRedemption(db, { familyId, actorParentId: dad, redemptionId: req.id });
       }
     }
   });

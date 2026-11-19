@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { children, redemptions } from "@/server/db/schema";
 import { applyLedgerEntry, getBalance, listTransactions } from "@/server/domain/ledger";
+import { archiveChild } from "@/server/domain/children";
 import { getUnreadSummary } from "@/server/domain/notifications";
 import {
   approveRedemption,
@@ -147,7 +148,7 @@ describe("Con gửi yêu cầu đổi thưởng", () => {
     const r = await createReward(t.db, familyId, { name: "Kem", price: 50 });
     const first = await createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id });
     await createRedemption(t.db, { familyId, childId: na.id, rewardId: r.id });
-    await cancelRedemption(t.db, { childId: bin.id, redemptionId: first.id });
+    await cancelRedemption(t.db, { familyId, childId: bin.id, redemptionId: first.id });
     await expect(createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id })).resolves.toMatchObject({ status: "pending" });
   });
 
@@ -167,11 +168,11 @@ describe("Con gửi yêu cầu đổi thưởng", () => {
     await give(familyId, actor, bin.id, 60);
     const r = await createReward(t.db, familyId, { name: "Game", price: 50 });
     const req = await createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id });
-    await expect(cancelRedemption(t.db, { childId: na.id, redemptionId: req.id })).rejects.toMatchObject({ code: "CONFLICT" });
-    await cancelRedemption(t.db, { childId: bin.id, redemptionId: req.id });
+    await expect(cancelRedemption(t.db, { familyId, childId: na.id, redemptionId: req.id })).rejects.toMatchObject({ code: "CONFLICT" });
+    await cancelRedemption(t.db, { familyId, childId: bin.id, redemptionId: req.id });
     expect((await listChildRedemptions(t.db, bin.id, "cancelled")).map((x) => x.id)).toEqual([req.id]);
     expect(await getBalance(t.db, bin.id)).toBe(60);
-    await expect(cancelRedemption(t.db, { childId: bin.id, redemptionId: req.id })).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(cancelRedemption(t.db, { familyId, childId: bin.id, redemptionId: req.id })).rejects.toMatchObject({ code: "CONFLICT" });
   });
 });
 
@@ -328,5 +329,91 @@ describe("Mục tiêu tiết kiệm", () => {
     await expect(setGoal(t.db, { familyId, childId: bin.id, rewardId: foreign.id })).rejects.toMatchObject({ code: "NOT_FOUND" });
     await setGoal(t.db, { familyId, childId: bin.id, rewardId: null });
     expect(await goalOf(bin.id)).toBeNull();
+  });
+});
+
+describe("Đóng băng khi con đang nợ", () => {
+  /** Bin có một yêu cầu "Game" giá 50 đang chờ, rồi bị phạt tới số dư `after`. */
+  async function frozenSetup(after = -15) {
+    const s = await setup();
+    await give(s.familyId, s.actor, s.bin.id, 60);
+    const reward = await createReward(t.db, s.familyId, { name: "Game", price: 50 });
+    const req = await createRedemption(t.db, { familyId: s.familyId, childId: s.bin.id, rewardId: reward.id });
+    await give(s.familyId, s.actor, s.bin.id, after - 60);
+    const unread = async () => (await getUnreadSummary(t.db, s.bin.id)).items.length;
+    const txns = async () => (await listTransactions(t.db, { familyId: s.familyId, childId: s.bin.id })).rows.length;
+    return { ...s, reward, req, unread, txns };
+  }
+
+  it("Gửi yêu cầu khi đang nợ: bị từ chối với FROZEN", async () => {
+    const { familyId, bin, actor } = await setup();
+    await give(familyId, actor, bin.id, -5);
+    const r = await createReward(t.db, familyId, { name: "Kem", price: 10 });
+    await expect(createRedemption(t.db, { familyId, childId: bin.id, rewardId: r.id })).rejects.toMatchObject({ code: "FROZEN" });
+    expect(await listChildRedemptions(t.db, bin.id)).toEqual([]);
+  });
+
+  it("Hủy yêu cầu khi đang nợ: bị từ chối, yêu cầu vẫn chờ duyệt", async () => {
+    const { familyId, bin, req } = await frozenSetup();
+    await expect(cancelRedemption(t.db, { familyId, childId: bin.id, redemptionId: req.id })).rejects.toMatchObject({ code: "FROZEN" });
+    expect((await listChildRedemptions(t.db, bin.id)).map((x) => x.id)).toEqual([req.id]);
+  });
+
+  it("Gửi lệnh duyệt khi đang nợ: FROZEN, không có giao dịch hay thông báo mới", async () => {
+    const { familyId, actor, bin, req, unread, txns } = await frozenSetup();
+    const [u0, t0] = [await unread(), await txns()];
+    await expect(approveRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id })).rejects.toMatchObject({ code: "FROZEN" });
+    expect([await unread(), await txns()]).toEqual([u0, t0]);
+    expect((await listChildRedemptions(t.db, bin.id)).map((x) => x.status)).toEqual(["pending"]);
+  });
+
+  it("Gửi lệnh từ chối khi đang nợ: FROZEN, không có thông báo bị từ chối", async () => {
+    const { familyId, actor, bin, req, unread } = await frozenSetup();
+    const u0 = await unread();
+    await expect(rejectRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id, reason: "x" })).rejects.toMatchObject({ code: "FROZEN" });
+    expect(await unread()).toBe(u0);
+    expect((await getUnreadSummary(t.db, bin.id)).items.some((n) => n.kind === "rejected")).toBe(false);
+    expect((await listChildRedemptions(t.db, bin.id)).map((x) => x.status)).toEqual(["pending"]);
+  });
+
+  it("Con đã lưu trữ đang nợ: từ chối được, duyệt vẫn bị chặn", async () => {
+    const { familyId, actor, bin, req } = await frozenSetup();
+    await archiveChild(t.db, familyId, bin.id);
+    await expect(approveRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id })).rejects.toMatchObject({ code: "FROZEN" });
+    await rejectRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id });
+    expect((await listChildRedemptions(t.db, bin.id, "rejected")).map((x) => x.id)).toEqual([req.id]);
+  });
+
+  it("Hết nợ thì xử lý lại được: cộng tới 60 rồi duyệt", async () => {
+    const { familyId, actor, bin, req } = await frozenSetup();
+    await give(familyId, actor, bin.id, 75);
+    await approveRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id });
+    expect(await getBalance(t.db, bin.id)).toBe(10);
+  });
+
+  it("Hết nợ nhưng chưa đủ điểm: duyệt báo thiếu điểm, từ chối được", async () => {
+    const { familyId, actor, bin, req } = await frozenSetup();
+    await give(familyId, actor, bin.id, 25);
+    await expect(approveRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id })).rejects.toMatchObject({ code: "INSUFFICIENT_BALANCE" });
+    await rejectRedemption(t.db, { familyId, actorParentId: actor, redemptionId: req.id });
+    expect((await listChildRedemptions(t.db, bin.id, "rejected"))).toHaveLength(1);
+  });
+
+  it("Hàng chờ duyệt có cờ frozen: đang nợ, hết nợ, đã lưu trữ", async () => {
+    const { familyId, actor, bin, req } = await frozenSetup();
+    const frozenOf = async () => (await listPendingRedemptions(t.db, familyId)).find((r) => r.id === req.id)?.frozen;
+    expect(await frozenOf()).toBe(true);
+    await give(familyId, actor, bin.id, 15);
+    expect(await frozenOf()).toBe(false);
+    await give(familyId, actor, bin.id, -1);
+    await archiveChild(t.db, familyId, bin.id);
+    expect(await frozenOf()).toBe(false);
+  });
+
+  it("Mục tiêu khi đang nợ: nợ 15, mục tiêu giá 50 → 0%, còn thiếu 65", async () => {
+    expect(goalProgress(-15, 50)).toEqual({ percent: 0, remaining: 65, reached: false });
+    const { familyId, bin, reward } = await frozenSetup();
+    await setGoal(t.db, { familyId, childId: bin.id, rewardId: reward.id });
+    expect((await getShopView(t.db, familyId, bin.id)).goal).toMatchObject({ percent: 0, remaining: 65 });
   });
 });

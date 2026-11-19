@@ -6,6 +6,8 @@ export type DomainErrorCode =
   | "INVALID_INPUT"
   | "CONFLICT"
   | "INSUFFICIENT_BALANCE"
+  /** Con đang nợ: cửa hàng và yêu cầu đổi thưởng bị đóng băng (spec reward-shop). */
+  | "FROZEN"
   | "RATE_LIMITED"
   | "LOCKED"
   | "INVALID_CREDENTIALS";

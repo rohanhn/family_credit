@@ -46,12 +46,17 @@ describe("buildScreens", () => {
     expect(buildScreens([b, a])[0].items.map((i) => i.title)).toEqual(["A", "B"]);
   });
 
-  it("Phạt khi số dư 0: màn trừ hiện mức gốc, mức thực trừ là 0", () => {
+  it("Phạt vượt số dư: màn trừ ghi đủ mức gốc", () => {
+    const [screen] = buildScreens([n("penalty", "Nói dối", -10, { requestedAmount: -10 })]);
+    expect(screen).toMatchObject({ kind: "penalty", total: 10, applied: 10 });
+  });
+
+  it("Dòng cũ bị chặn ở 0: màn trừ hiện mức gốc, mức thực trừ là 0", () => {
     const [screen] = buildScreens([n("penalty", "Nói dối", 0, { requestedAmount: -10 })]);
     expect(screen).toMatchObject({ kind: "penalty", total: 10, applied: 0 });
   });
 
-  it("Phạt vượt số dư: tổng gốc và tổng thực trừ khác nhau", () => {
+  it("Dòng cũ bị chặn một phần: tổng gốc và tổng thực trừ khác nhau", () => {
     const [screen] = buildScreens([n("penalty", "Nói dối", -3, { requestedAmount: -10 }), n("penalty", "Đánh nhau", -5)]);
     expect(screen).toMatchObject({ total: 15, applied: 8 });
   });
@@ -68,6 +73,34 @@ describe("buildScreens", () => {
   it("Chỉ có thông báo bị từ chối: một màn từ chối, không có màn ăn mừng", () => {
     const screens = buildScreens([n("rejected", "Đổi quà", null, { reason: "Hôm nay muộn rồi" })]);
     expect(screens.map((s) => s.kind)).toEqual(["rejected"]);
+  });
+});
+
+describe("spec debt-freeze: màn ăn mừng khi đang nợ", () => {
+  it("Tan băng: nợ 5, được +10, lúc xem số dư 5", () => {
+    const [screen] = buildScreens([n("gift", "Làm bài tập", 10, { balanceAfter: 5 })], 5);
+    expect(screen).toMatchObject({ kind: "gift", thawed: true, debtLeft: 0, total: 10 });
+  });
+
+  it("Tan băng rồi lại bị phạt trước khi xem: màn thường, sau đó là màn bị trừ", () => {
+    const screens = buildScreens([n("gift", "Làm bài tập", 10, { balanceAfter: 5 }), n("penalty", "Nói dối", -20, { balanceAfter: -15 })], -15);
+    expect(screens.map((s) => s.kind)).toEqual(["gift", "penalty"]);
+    expect(screens[0]).toMatchObject({ thawed: false, debtLeft: 15 });
+  });
+
+  it("Trả được một phần nợ: nợ 15, được +10 → còn nợ 5", () => {
+    const [screen] = buildScreens([n("gift", "Làm bài tập", 10, { balanceAfter: -5 })], -5);
+    expect(screen).toMatchObject({ thawed: false, debtLeft: 5 });
+  });
+
+  it("Màn chỉ có đổi thưởng không bao giờ tan băng", () => {
+    const [screen] = buildScreens([n("gift", "Bố mẹ đã duyệt: Kem", -50, { refType: "redemption", balanceAfter: 10 })], 10);
+    expect(screen).toMatchObject({ thawed: false, debtLeft: 0 });
+  });
+
+  it("Không có số dư lúc xem: không tan băng", () => {
+    const [screen] = buildScreens([n("gift", "Làm bài tập", 10, { balanceAfter: 5 })]);
+    expect(screen).toMatchObject({ thawed: false, debtLeft: 0 });
   });
 });
 

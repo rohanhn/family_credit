@@ -10,7 +10,7 @@ import { getBalance, listTransactions } from "@/server/domain/ledger";
 import { ChibiAvatar } from "@/ui/chibi";
 import { HistoryList } from "@/ui/history-list";
 import { ParentColumns } from "@/ui/parent-shell";
-import { ButtonLink, Card } from "@/ui/primitives";
+import { ButtonLink, Card, Chip } from "@/ui/primitives";
 import { ApprovalQueue, loadQueue } from "./approval-queue";
 
 export const metadata: Metadata = { title: "Tổng quan · Sao nhà mình" };
@@ -45,10 +45,19 @@ async function Overview() {
             <div className="flex items-center gap-3">
               <ChibiAvatar avatar={k.avatar} size={56} />
               <span className="flex-1 text-lg font-extrabold">{k.name}</span>
-              <span className="text-right">
-                <span className="block font-display text-[28px] font-extrabold leading-none text-primary">{balances[i]}</span>
-                <span className="text-xs font-bold text-muted">{currency.name}</span>
-              </span>
+              {balances[i] < 0 ? (
+                // Đánh dấu con đang nợ kèm số nợ, thay cho số âm (spec debt-freeze "Bố mẹ thấy con đang nợ").
+                <span className="flex flex-col items-end gap-1 text-right">
+                  <Chip tone="wait">đang nợ</Chip>
+                  <span className="font-display text-[28px] font-extrabold leading-none text-minus">{-balances[i]}</span>
+                  <span className="text-xs font-bold text-muted">{currency.name}</span>
+                </span>
+              ) : (
+                <span className="text-right">
+                  <span className="block font-display text-[28px] font-extrabold leading-none text-primary">{balances[i]}</span>
+                  <span className="text-xs font-bold text-muted">{currency.name}</span>
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <ButtonLink href={`/parent/apply?child=${k.id}&kind=reward`} variant="reward">

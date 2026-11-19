@@ -22,6 +22,10 @@ export { REWARD_ICONS, DEFAULT_REWARD_ICON, type RewardIcon };
 export const ALREADY_DECIDED_MESSAGE = "Yêu cầu này đã được xử lý";
 export const ALREADY_PENDING_MESSAGE = "Con đã gửi yêu cầu đổi phần thưởng này, đang chờ bố mẹ duyệt";
 export const INSUFFICIENT_MESSAGE = "Chưa đủ điểm để đổi phần thưởng này";
+export const FROZEN_MESSAGE = "Cửa hàng đang đóng băng cho tới khi con hết nợ";
+export const FROZEN_REQUEST_MESSAGE = "Yêu cầu đang đóng băng vì con đang nợ";
+
+const frozen = (message: string, balance: number) => new DomainError("FROZEN", message, { balance, debt: -balance });
 
 // ---------------------------------------------------------------- danh mục phần thưởng
 
@@ -189,13 +193,14 @@ export async function getShopView(db: DbOrTx, familyId: number, childId: number)
 export async function createRedemption(db: Db, input: { familyId: number; childId: number; rewardId: number }): Promise<Redemption> {
   return db.transaction(async (tx) => {
     await lockChild(tx, input.familyId, input.childId);
+    const balance = await getBalance(tx, input.childId);
+    if (balance < 0) throw frozen(FROZEN_MESSAGE, balance);
     const reward = await getVisibleReward(tx, input.familyId, input.rewardId);
     const [existing] = await tx
       .select({ id: redemptions.id })
       .from(redemptions)
       .where(and(eq(redemptions.childId, input.childId), eq(redemptions.rewardId, reward.id), eq(redemptions.status, "pending")));
     if (existing) throw new DomainError("CONFLICT", ALREADY_PENDING_MESSAGE);
-    const balance = await getBalance(tx, input.childId);
     if (balance < reward.price) {
       throw new DomainError("INSUFFICIENT_BALANCE", INSUFFICIENT_MESSAGE, { balance, price: reward.price, missing: reward.price - balance });
     }
@@ -207,14 +212,26 @@ export async function createRedemption(db: Db, input: { familyId: number; childI
   });
 }
 
-/** Con hủy yêu cầu còn chờ duyệt của chính mình; không ghi giao dịch. */
-export async function cancelRedemption(db: DbOrTx, input: { childId: number; redemptionId: number }, clock: Clock = systemClock): Promise<void> {
-  const rows = await db
-    .update(redemptions)
-    .set({ status: "cancelled", decidedAt: clock.now() })
-    .where(and(eq(redemptions.id, input.redemptionId), eq(redemptions.childId, input.childId), eq(redemptions.status, "pending")))
-    .returning({ id: redemptions.id });
-  if (rows.length === 0) throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
+/**
+ * Con hủy yêu cầu còn chờ duyệt của chính mình; không ghi giao dịch. Khóa dòng của con trước để
+ * một khoản phạt chạy song song không lọt qua kiểm tra đóng băng (design D7).
+ */
+export async function cancelRedemption(
+  db: Db,
+  input: { familyId: number; childId: number; redemptionId: number },
+  clock: Clock = systemClock,
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await lockChild(tx, input.familyId, input.childId);
+    const balance = await getBalance(tx, input.childId);
+    if (balance < 0) throw frozen(FROZEN_MESSAGE, balance);
+    const rows = await tx
+      .update(redemptions)
+      .set({ status: "cancelled", decidedAt: clock.now() })
+      .where(and(eq(redemptions.id, input.redemptionId), eq(redemptions.childId, input.childId), eq(redemptions.status, "pending")))
+      .returning({ id: redemptions.id });
+    if (rows.length === 0) throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
+  });
 }
 
 /** Yêu cầu của một con theo trạng thái, mới nhất trước (con xem yêu cầu đang chờ và lý do bị từ chối). */
@@ -254,7 +271,12 @@ export async function listPendingRedemptions(db: DbOrTx, familyId: number) {
   for (const r of rows) {
     if (!balances.has(r.redemption.childId)) balances.set(r.redemption.childId, await getBalance(db, r.redemption.childId));
   }
-  return rows.map((r) => ({ ...r.redemption, childName: r.childName, childArchived: r.childArchivedAt !== null, balance: balances.get(r.redemption.childId)! }));
+  return rows.map((r) => {
+    const balance = balances.get(r.redemption.childId)!;
+    const childArchived = r.childArchivedAt !== null;
+    // Đóng băng: con đang nợ chưa lưu trữ thì khóa cả duyệt lẫn từ chối (spec reward-shop).
+    return { ...r.redemption, childName: r.childName, childArchived, balance, frozen: balance < 0 && !childArchived };
+  });
 }
 
 /** Khóa yêu cầu của gia đình trong transaction; NOT_FOUND nếu thuộc gia đình khác. */
@@ -283,6 +305,7 @@ export async function approveRedemption(
     if (redemption.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
     await lockChild(tx, input.familyId, redemption.childId);
     const balance = await getBalance(tx, redemption.childId);
+    if (balance < 0) throw frozen(FROZEN_REQUEST_MESSAGE, balance);
     if (balance < redemption.priceSnapshot) {
       throw new DomainError("INSUFFICIENT_BALANCE", `Không duyệt được: con chỉ còn ${balance}, cần ${redemption.priceSnapshot}`, {
         balance,
@@ -310,7 +333,7 @@ export async function approveRedemption(
   });
 }
 
-/** Từ chối kèm lý do tùy chọn: không ghi giao dịch, con nhận thông báo "bị từ chối". */
+/** Từ chối kèm lý do tùy chọn: không ghi giao dịch, con nhận thông báo "bị từ chối". Bị chặn khi con đang nợ, trừ con đã lưu trữ. */
 export async function rejectRedemption(
   db: Db,
   input: { familyId: number; actorParentId: number; redemptionId: number; reason?: string },
@@ -318,6 +341,13 @@ export async function rejectRedemption(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const redemption = await lockRedemption(tx, input.familyId, input.redemptionId);
+    if (redemption.status !== "pending") throw new DomainError("CONFLICT", ALREADY_DECIDED_MESSAGE);
+    // Con đã lưu trữ thì vẫn từ chối được để dọn hàng chờ (spec reward-shop "Con đã lưu trữ đang nợ").
+    const child = await lockChild(tx, input.familyId, redemption.childId);
+    if (!child.archivedAt) {
+      const balance = await getBalance(tx, redemption.childId);
+      if (balance < 0) throw frozen(FROZEN_REQUEST_MESSAGE, balance);
+    }
     const reason = input.reason?.trim() || null;
     const updated = await tx
       .update(redemptions)

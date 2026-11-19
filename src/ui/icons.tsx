@@ -26,6 +26,7 @@ const PATHS = {
   goal: "M12 3l5 7h-3l4 6H6l4-6H7zM12 16v5M5 21h14",
   info: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.5h.01",
   lock: "M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4",
+  snow: "M12 2v20M4.5 6.5l15 11M19.5 6.5l-15 11M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5",
   // Icon phần thưởng (REWARD_ICONS trong domain shop), theo mockup KidShop / WebKidShop.
   game: "M6 9h12a3 3 0 0 1 3 3v3a3 3 0 0 1-5 2l-1.5-1.5h-5L8 17a3 3 0 0 1-5-2v-3a3 3 0 0 1 3-3zM8 11v3M6.5 12.5h3M16 12h.01M18 14h.01",
   icecream: "M8 10a4 4 0 1 1 8 0M7 10h10l-5 11zM9.5 14h5",
