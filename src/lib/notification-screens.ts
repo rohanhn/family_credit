@@ -12,6 +12,8 @@ export type NotificationItem = {
   requestedAmount: number | null;
   reason: string | null;
   actorName: string | null;
+  /** Số dư của con ngay sau giao dịch của thông báo (null nếu không có giao dịch). */
+  balanceAfter?: number | null;
   refType: string | null;
   /** ISO 8601. */
   createdAt: string;
@@ -26,6 +28,10 @@ export type GiftScreen = {
   total: number;
   /** Có ít nhất một yêu cầu đổi thưởng được duyệt. */
   hasRedeem: boolean;
+  /** Một khoản cộng đưa số dư từ dưới 0 lên ≥ 0 và lúc xem con vẫn không nợ (spec debt-freeze "Màn tan băng"). */
+  thawed: boolean;
+  /** Số nợ còn lại lúc xem (0 nếu không nợ), để hiện "Con còn nợ X nữa thôi". */
+  debtLeft: number;
 };
 
 export type PenaltyScreen = {
@@ -43,8 +49,17 @@ export type FeedbackScreen = GiftScreen | PenaltyScreen | RejectedScreen;
 
 export const isRedeem = (n: NotificationItem) => n.refType === "redemption";
 
-/** Thứ tự: cộng trước, trừ sau, từ chối cuối cùng; trong mỗi màn giữ thứ tự cũ nhất trước. Màn rỗng bị bỏ. */
-export function buildScreens(items: NotificationItem[]): FeedbackScreen[] {
+/** Khoản cộng (không phải đổi thưởng) đưa số dư từ dưới 0 lên 0 trở lên. */
+function thaws(n: NotificationItem): boolean {
+  if (isRedeem(n) || n.balanceAfter == null || n.amount == null || n.amount <= 0) return false;
+  return n.balanceAfter - n.amount < 0 && n.balanceAfter >= 0;
+}
+
+/**
+ * Thứ tự: cộng trước, trừ sau, từ chối cuối cùng; trong mỗi màn giữ thứ tự cũ nhất trước. Màn rỗng bị bỏ.
+ * `currentBalance` là số dư lúc xem (design D6): quyết định màn tan băng và số nợ còn lại.
+ */
+export function buildScreens(items: NotificationItem[], currentBalance?: number): FeedbackScreen[] {
   const sorted = [...items].sort((a, b) => a.id - b.id);
   const gifts = sorted.filter((n) => n.kind === "gift");
   const penalties = sorted.filter((n) => n.kind === "penalty");
@@ -56,6 +71,8 @@ export function buildScreens(items: NotificationItem[]): FeedbackScreen[] {
       items: gifts,
       total: gifts.filter((n) => !isRedeem(n)).reduce((sum, n) => sum + Math.max(0, n.amount ?? 0), 0),
       hasRedeem: gifts.some(isRedeem),
+      thawed: currentBalance !== undefined && currentBalance >= 0 && gifts.some(thaws),
+      debtLeft: currentBalance !== undefined && currentBalance < 0 ? -currentBalance : 0,
     });
   }
   if (penalties.length > 0) {
@@ -79,15 +96,19 @@ export function screenKey(screen: FeedbackScreen): string {
  * Hàng đợi màn phản hồi (design D4): màn đang hiện giữ nguyên cho tới khi con đóng, dù lượt hỏi định kỳ
  * trả về thông báo mới. Chưa có màn nào đang hiện thì lấy màn đầu tiên của các thông báo chưa đọc.
  */
-export function keepCurrentScreen(current: FeedbackScreen | null, items: NotificationItem[]): FeedbackScreen | null {
-  return current ?? buildScreens(items)[0] ?? null;
+export function keepCurrentScreen(current: FeedbackScreen | null, items: NotificationItem[], currentBalance?: number): FeedbackScreen | null {
+  return current ?? buildScreens(items, currentBalance)[0] ?? null;
 }
 
 /** Sau khi con đóng màn `closed`: màn tiếp theo dựng từ các thông báo còn lại (bỏ các thông báo của màn vừa đóng). */
-export function nextScreenAfterClose(closed: FeedbackScreen, items: NotificationItem[]): { items: NotificationItem[]; current: FeedbackScreen | null } {
+export function nextScreenAfterClose(
+  closed: FeedbackScreen,
+  items: NotificationItem[],
+  currentBalance?: number,
+): { items: NotificationItem[]; current: FeedbackScreen | null } {
   const ids = new Set(closed.items.map((i) => i.id));
   const remaining = items.filter((i) => !ids.has(i.id));
-  return { items: remaining, current: buildScreens(remaining)[0] ?? null };
+  return { items: remaining, current: buildScreens(remaining, currentBalance)[0] ?? null };
 }
 
 /** "+15", "−10" (dấu trừ thật), "0". */

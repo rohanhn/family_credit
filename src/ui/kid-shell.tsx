@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ChibiAvatar } from "./chibi";
 import { Icon, type IconName } from "./icons";
 import { NavLink } from "./nav-link";
-import type { ThemeId } from "./themes";
+import { FROZEN_THEME, type DisplayTheme } from "./themes";
 
 // Khung khu vực con (design D6): tab dưới khi hẹp hơn 768px, sidebar từ 768px.
 
@@ -29,7 +29,8 @@ export function KidShell({
   nav = KID_NAV,
   children,
 }: {
-  theme: ThemeId;
+  /** Theme hiển thị: "frozen" khi con đang nợ (spec debt-freeze), avatar khi đó mang nét mặt lạnh. */
+  theme: DisplayTheme;
   childName: string;
   avatar: string;
   familyName: string;
@@ -42,13 +43,14 @@ export function KidShell({
   nav?: NavItem[];
   children: ReactNode;
 }) {
+  const mood = theme === FROZEN_THEME ? "cold" : "happy";
   return (
     <div data-theme={theme} className="flex flex-1 flex-col bg-bg text-ink">
       <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col md:flex-row md:items-start md:gap-6 md:p-6">
         <aside className="hidden flex-col gap-4 rounded-[28px] bg-card p-5 shadow-flat md:flex md:w-60 md:shrink-0">
           <div className="flex items-center gap-3">
             <span className="flex size-16 items-center justify-center rounded-full border-3 border-halo bg-soft">
-              <ChibiAvatar avatar={avatar} size={54} />
+              <ChibiAvatar avatar={avatar} size={54} mood={mood} />
             </span>
             <span className="flex min-w-0 flex-col">
               <span className="truncate font-display text-2xl font-extrabold leading-tight">{childName}</span>
@@ -74,7 +76,7 @@ export function KidShell({
 
         <header className="flex items-center gap-2.5 px-4 pt-5 md:hidden">
           <Link href="/kid/theme" aria-label="Đổi giao diện" className="relative flex size-[52px] shrink-0 items-center justify-center rounded-full border-3 border-halo bg-soft">
-            <ChibiAvatar avatar={avatar} size={44} />
+            <ChibiAvatar avatar={avatar} size={44} mood={mood} />
             <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-card text-primary shadow-flat">
               <Icon name="palette" size={16} />
             </span>

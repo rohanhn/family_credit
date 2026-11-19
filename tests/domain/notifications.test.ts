@@ -52,11 +52,11 @@ describe("spec kid-notifications: Tạo thông báo cho con", () => {
     expect(items[1]).toMatchObject({ kind: "penalty", title: "Nói dối", amount: -10, requestedAmount: -10 });
   });
 
-  it("Phạt khi số dư 0: vẫn có thông báo bị trừ điểm, kèm mức gốc", async () => {
+  it("Phạt khi số dư 0: thông báo bị trừ điểm với −10", async () => {
     const { bin, record } = await setup();
     await record(bin.id, -10, "Nói dối", "rule");
     const { items } = await getUnreadSummary(t.db, bin.id);
-    expect(items[0]).toMatchObject({ kind: "penalty", amount: 0, requestedAmount: -10 });
+    expect(items[0]).toMatchObject({ kind: "penalty", amount: -10, requestedAmount: -10 });
   });
 
   it("Yêu cầu bị từ chối: thông báo kèm tên mục và lý do, không có giao dịch", async () => {
@@ -120,11 +120,25 @@ describe("spec kid-notifications: đọc và lưu giữ thông báo", () => {
     expect(unreadInList).toHaveLength(2);
   });
 
-  it("Phạt vượt số dư: thông báo lưu mức thực trừ để chuông hiện −3", async () => {
+  it("Phạt vượt số dư trong chuông: thông báo hiện −10", async () => {
     const { bin, record } = await setup();
     await record(bin.id, 3, "Thưởng");
     await record(bin.id, -10, "Nói dối");
     const [penalty] = (await listNotifications(t.db, bin.id)).filter((n) => n.kind === "penalty");
-    expect(penalty).toMatchObject({ amount: -3, requestedAmount: -10 });
+    expect(penalty).toMatchObject({ amount: -10, requestedAmount: -10 });
   });
 });
+
+describe("balanceAfter: số dư lũy kế sau mỗi giao dịch", () => {
+  it("Chuỗi giao dịch có số dư âm: mỗi thông báo mang số dư ngay sau giao dịch của nó", async () => {
+    const { bin, record } = await setup();
+    await record(bin.id, 5, "Thưởng");
+    await record(bin.id, -20, "Nói dối");
+    await record(bin.id, 10, "Làm bài tập");
+    await notifyRejected(t.db, { childId: bin.id, title: "Đổi quà", refType: "redemption", refId: 1 });
+    const { items } = await getUnreadSummary(t.db, bin.id);
+    expect(items.map((n) => n.balanceAfter)).toEqual([5, -15, -5, null]);
+    expect((await listNotifications(t.db, bin.id)).map((n) => n.balanceAfter)).toEqual([null, -5, -15, 5]);
+  });
+});
+

@@ -29,7 +29,7 @@ describe.skipIf(!url)("Chống race trên Postgres thật", () => {
     await sql?.end();
   });
 
-  it("Hai giao dịch phạt đồng thời trên cùng một con không làm số dư âm", async () => {
+  it("Hai giao dịch phạt đồng thời trên cùng một con đều trừ đủ", async () => {
     const { family, parent, kids } = await seedFamily(db, { familyName: `race-${randomUUID()}` });
     const child = kids[0];
     const entry = (amount: number, description: string) =>
@@ -37,18 +37,18 @@ describe.skipIf(!url)("Chống race trên Postgres thật", () => {
 
     await entry(10, "Thưởng ban đầu");
 
-    // Mỗi giao dịch chạy trên một kết nối riêng của pool; không có khóa dòng thì cả hai đều
-    // đọc số dư 10 và cùng trừ 10, làm số dư thành -10.
+    // Mỗi giao dịch chạy trên một kết nối riêng của pool; khóa dòng của con giữ cho chúng chạy lần lượt
+    // và số dư luôn bằng tổng các giao dịch, không có lần nào bị mất.
     for (let round = 0; round < 5; round++) {
       const results = await Promise.all([entry(-10, `Phạt A${round}`), entry(-10, `Phạt B${round}`)]);
-      expect(results.map((r) => r.appliedAmount).sort((a, b) => a - b)).toEqual(round === 0 ? [-10, 0] : [0, 0]);
-      expect(await getBalance(db, child.id)).toBe(0);
+      expect(results.map((r) => r.appliedAmount)).toEqual([-10, -10]);
+      expect(await getBalance(db, child.id)).toBe(10 - 20 * (round + 1));
     }
 
     await entry(7, "Thưởng lại");
     const many = await Promise.all(Array.from({ length: 8 }, (_, i) => entry(-3, `Phạt song song ${i}`)));
-    expect(many.reduce((sum, r) => sum + r.appliedAmount, 0)).toBe(-7);
-    expect(await getBalance(db, child.id)).toBe(0);
+    expect(many.reduce((sum, r) => sum + r.appliedAmount, 0)).toBe(-24);
+    expect(await getBalance(db, child.id)).toBe(10 - 100 + 7 - 24);
   });
 
   it("Hai bố mẹ điều chỉnh đồng thời cùng một giao dịch: chỉ một lần được ghi", async () => {

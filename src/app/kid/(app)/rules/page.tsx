@@ -59,9 +59,12 @@ async function KidRules() {
         </section>
       )}
 
-      <ProposalSection currencyName={currency.name} atLimit={proposals.length >= MAX_PENDING_PROPOSALS} limit={MAX_PENDING_PROPOSALS} />
+      {/* Neo cho lối tắt kiếm điểm ở màn chính khi đang nợ (spec debt-freeze). */}
+      <div id="de-xuat" className="scroll-mt-4">
+        <ProposalSection currencyName={currency.name} atLimit={proposals.length >= MAX_PENDING_PROPOSALS} limit={MAX_PENDING_PROPOSALS} />
+      </div>
 
-      <section aria-label="Được thưởng" className="flex flex-col gap-2">
+      <section id="rule-thuong" aria-label="Được thưởng" className="flex scroll-mt-4 flex-col gap-2">
         <h2 className="font-display text-xl font-extrabold">Được thưởng</h2>
         {reward.length === 0 && <p className="font-semibold text-muted">Chưa có rule thưởng.</p>}
         {reward.map((r) => (

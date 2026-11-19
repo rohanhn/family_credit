@@ -200,14 +200,14 @@ describe("Bố mẹ duyệt đề xuất ngoài rule", () => {
     expect(await lastUnread(bin.id)).toMatchObject({ kind: "penalty", title: "Con làm vỡ cốc", amount: -5 });
   });
 
-  it("Tự nhận phạt lớn hơn số dư: mức gốc -10, thực trừ -4, số dư còn 0, thông báo ghi số thực trừ", async () => {
+  it("Tự nhận phạt lớn hơn số dư: ghi đủ -10, số dư còn -6", async () => {
     const { familyId, actor, bin, propose } = await withBalance(4);
     const proposal = await propose({ kind: "penalty", description: "Con làm vỡ cốc", points: 10 });
     const txn = await approveProposal(t.db, { familyId, actorParentId: actor, proposalId: proposal.id });
-    expect(txn).toMatchObject({ requestedAmount: -10, appliedAmount: -4 });
-    expect(await getBalance(t.db, bin.id)).toBe(0);
+    expect(txn).toMatchObject({ requestedAmount: -10, appliedAmount: -10 });
+    expect(await getBalance(t.db, bin.id)).toBe(-6);
     expect((await listChildProposals(t.db, bin.id, "approved"))[0]).toMatchObject({ approvedPoints: 10 });
-    expect(await lastUnread(bin.id)).toMatchObject({ kind: "penalty", amount: -4, requestedAmount: -10 });
+    expect(await lastUnread(bin.id)).toMatchObject({ kind: "penalty", amount: -10, requestedAmount: -10 });
   });
 
   it("Số điểm sửa không hợp lệ: từ chối, đề xuất vẫn chờ duyệt, không có giao dịch", async () => {

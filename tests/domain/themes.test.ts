@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getEffectiveTheme, setChildTheme, setFamilyTheme } from "@/server/domain/themes";
-import { effectiveTheme } from "@/ui/themes";
+import { displayTheme, effectiveTheme, FROZEN_THEME, isThemeId, THEME_IDS, themeCss } from "@/ui/themes";
 import { createTestDb, type TestDb } from "../helpers/db";
 import { seedFamily } from "../helpers/seed";
 
@@ -66,3 +66,25 @@ describe("spec ui-theme: Con tự chọn theme", () => {
     await expect(setChildTheme(t.db, b.family.id, a.kids[0].id, "robot")).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
+
+describe("spec debt-freeze: Giao diện đóng băng", () => {
+  it("Đang nợ thì hiển thị bảng màu băng, không nợ thì theme của con", () => {
+    expect(displayTheme("ocean", -15)).toBe(FROZEN_THEME);
+    expect(displayTheme("ocean", 0)).toBe("ocean");
+    expect(displayTheme("candy", 5)).toBe("candy");
+  });
+
+  it("Bảng màu băng không phải theme để chọn hay lưu", () => {
+    expect(isThemeId("frozen")).toBe(false);
+    expect(THEME_IDS as readonly string[]).not.toContain("frozen");
+    expect(themeCss()).toContain('[data-theme="frozen"]');
+  });
+
+  it("Đổi theme khi đang nợ: lựa chọn vẫn được lưu", async () => {
+    const { family, kids } = await seedFamily(t.db, { kids: ["Bin"] });
+    await setChildTheme(t.db, family.id, kids[0].id, "candy");
+    expect(await getEffectiveTheme(t.db, family.id, kids[0].id)).toBe("candy");
+    expect(displayTheme(await getEffectiveTheme(t.db, family.id, kids[0].id), -5)).toBe(FROZEN_THEME);
+  });
+});
+

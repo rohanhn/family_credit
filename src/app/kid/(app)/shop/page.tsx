@@ -4,6 +4,7 @@ import { getDb } from "@/server/db/client";
 import { requireChild } from "@/server/auth/next";
 import { getCurrency } from "@/server/domain/currency";
 import { getShopView, listChildRedemptions, listRecentRejectedRedemptions } from "@/server/domain/shop";
+import { debtOf, isInDebt } from "@/lib/debt";
 import { rewardIcon } from "@/lib/reward-icons";
 import { Icon } from "@/ui/icons";
 import { Card, Chip, CoinIcon, ProgressBar } from "@/ui/primitives";
@@ -21,6 +22,8 @@ async function KidShop() {
     getCurrency(db, kid.familyId),
   ]);
   const { goal } = view;
+  // Đang nợ: cửa hàng đóng băng, chỉ xem và chọn mục tiêu được (spec reward-shop "Con xem cửa hàng").
+  const frozen = isInDebt(view.balance);
 
   return (
     <>
@@ -28,9 +31,23 @@ async function KidShop() {
         <h1 className="font-display text-[28px] font-extrabold">Cửa hàng</h1>
         <span className="flex items-center gap-1.5 rounded-full bg-card px-3.5 py-1.5 font-display text-xl font-extrabold shadow-flat">
           <CoinIcon size={26} />
-          {view.balance} {currency.name}
+          {frozen ? `Đang nợ ${debtOf(view.balance)}` : view.balance} {currency.name}
         </span>
       </div>
+
+      {frozen && (
+        <Card role="status" className="flex items-center gap-3 bg-soft">
+          <span className="text-primary" aria-hidden="true">
+            <Icon name="snow" size={28} />
+          </span>
+          <span className="flex flex-col">
+            <span className="font-extrabold">Cửa hàng đang đóng băng</span>
+            <span className="text-sm font-bold text-muted">
+              Con đang nợ {debtOf(view.balance)} {currency.name}. Kiếm thêm {currency.name} để tan băng rồi đổi quà nhé!
+            </span>
+          </span>
+        </Card>
+      )}
 
       {goal ? (
         <Card className="flex flex-col gap-2 border-2 border-primary">
@@ -41,7 +58,7 @@ async function KidShop() {
           </div>
           <ProgressBar value={view.balance} max={goal.price} label={`Tiến độ mục tiêu ${goal.name}`} />
           <span className="text-sm font-bold text-muted">
-            {Math.min(view.balance, goal.price)} / {goal.price} {currency.name} ·{" "}
+            {Math.max(0, Math.min(view.balance, goal.price))} / {goal.price} {currency.name} ·{" "}
             {goal.reached ? "Đủ điểm rồi, đổi thôi!" : `Còn ${goal.remaining} nữa`}
           </span>
         </Card>
@@ -60,10 +77,18 @@ async function KidShop() {
         <section aria-label="Đang chờ bố mẹ duyệt" className="flex flex-col gap-2">
           {pending.map((r) => (
             <Card key={r.id} className="flex flex-wrap items-center gap-3 bg-wait-bg text-wait-fg">
-              <span className="flex-1 font-bold">
-                <strong className="font-extrabold">{r.nameSnapshot}</strong> đang chờ bố mẹ duyệt. Điểm chưa bị trừ.
-              </span>
-              <CancelRedemptionButton redemptionId={r.id} label="Hủy yêu cầu" />
+              {frozen ? (
+                <span className="flex-1 font-bold">
+                  <strong className="font-extrabold">{r.nameSnapshot}</strong> đang đóng băng. Bố mẹ sẽ xem khi con hết nợ.
+                </span>
+              ) : (
+                <>
+                  <span className="flex-1 font-bold">
+                    <strong className="font-extrabold">{r.nameSnapshot}</strong> đang chờ bố mẹ duyệt. Điểm chưa bị trừ.
+                  </span>
+                  <CancelRedemptionButton redemptionId={r.id} label="Hủy yêu cầu" />
+                </>
+              )}
             </Card>
           ))}
         </section>
@@ -99,7 +124,11 @@ async function KidShop() {
                   {r.description && <span className="text-sm font-semibold text-muted">{r.description}</span>}
                 </span>
               </div>
-              {r.pendingRedemptionId !== null ? (
+              {frozen ? (
+                <Chip className="text-sm">
+                  <Icon name="lock" size={14} /> Đang khóa
+                </Chip>
+              ) : r.pendingRedemptionId !== null ? (
                 <Chip tone="wait" className="text-sm">
                   Chờ duyệt
                 </Chip>

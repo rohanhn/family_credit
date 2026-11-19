@@ -317,7 +317,7 @@ export const transactions = pgTable(
   },
   (t) => [
     check("transactions_kind", inList("kind", TRANSACTION_KINDS)),
-    // Mức thực ghi cùng dấu và không vượt mức gốc (số dư không âm, spec currency-ledger).
+    // Mức thực ghi cùng dấu và không vượt mức gốc. Giao dịch mới luôn ghi applied = requested; các dòng cũ bị chặn ở 0 vẫn hợp lệ.
     check(
       "transactions_applied_within_requested",
       sql`(${t.requestedAmount} >= 0 and ${t.appliedAmount} = ${t.requestedAmount}) or (${t.requestedAmount} < 0 and ${t.appliedAmount} between ${t.requestedAmount} and 0)`,

@@ -35,21 +35,63 @@ describe("spec currency-ledger", () => {
     expect(await getBalance(t.db, bin.id)).toBe(12);
   });
 
-  it("Phạt vượt số dư: có 5, phạt 20 thì thực trừ -5, gốc -20, số dư 0", async () => {
+  it("Phạt vượt số dư: có 5, phạt 20 thì ghi đủ -20, số dư -15", async () => {
     const { bin, give } = await setup();
     await give(bin.id, 5);
     const txn = await give(bin.id, -20, "Nói dối");
     expect(txn.requestedAmount).toBe(-20);
-    expect(txn.appliedAmount).toBe(-5);
-    expect(await getBalance(t.db, bin.id)).toBe(0);
+    expect(txn.appliedAmount).toBe(-20);
+    expect(await getBalance(t.db, bin.id)).toBe(-15);
   });
 
-  it("Phạt khi số dư 0: vẫn ghi giao dịch với thực trừ 0, gốc -10", async () => {
+  it("Phạt khi số dư 0: ghi -10, số dư -10", async () => {
     const { bin, give } = await setup();
     const txn = await give(bin.id, -10, "Nói dối");
-    expect(txn.requestedAmount).toBe(-10);
-    expect(txn.appliedAmount).toBe(0);
+    expect(txn).toMatchObject({ requestedAmount: -10, appliedAmount: -10 });
+    expect(await getBalance(t.db, bin.id)).toBe(-10);
+  });
+
+  it("Phạt khi đang nợ: nợ sâu thêm", async () => {
+    const { bin, give } = await setup();
+    await give(bin.id, -10);
+    await give(bin.id, -5);
+    expect(await getBalance(t.db, bin.id)).toBe(-15);
+  });
+
+  it("Thứ tự thưởng và phạt không đổi kết quả", async () => {
+    const { bin, na, give } = await setup();
+    await give(bin.id, 10);
+    await give(bin.id, -20);
+    await give(na.id, -20);
+    await give(na.id, 10);
+    expect(await getBalance(t.db, bin.id)).toBe(-10);
+    expect(await getBalance(t.db, na.id)).toBe(-10);
+  });
+
+  it("Giao dịch cũ đã bị chặn: giữ nguyên mức gốc và mức thực trừ", async () => {
+    const { family, parent, bin, give } = await setup();
+    await give(bin.id, 5);
+    await t.db.insert(transactions).values({
+      familyId: family.id,
+      childId: bin.id,
+      kind: "adhoc",
+      requestedAmount: -20,
+      appliedAmount: -5,
+      description: "Phạt cũ",
+      actorParentId: parent.id,
+    });
     expect(await getBalance(t.db, bin.id)).toBe(0);
+    const [old] = (await listTransactions(t.db, { familyId: family.id, childId: bin.id })).rows;
+    expect(old).toMatchObject({ description: "Phạt cũ", requestedAmount: -20, appliedAmount: -5 });
+  });
+
+  it("Hoàn tác thưởng nhầm sau khi con đã tiêu hết: điều chỉnh ghi -10, số dư -10", async () => {
+    const { family, parent, bin, give } = await setup();
+    const wrong = await give(bin.id, 10, "Thưởng nhầm");
+    await give(bin.id, -10, "30 phút chơi game", "redeem");
+    const adj = await recordAdjustment(t.db, { familyId: family.id, originalTransactionId: wrong.id, reason: "bấm nhầm", actorParentId: parent.id });
+    expect(adj).toMatchObject({ requestedAmount: -10, appliedAmount: -10 });
+    expect(await getBalance(t.db, bin.id)).toBe(-10);
   });
 
   it("Hoàn tác một lần thưởng nhầm bằng giao dịch điều chỉnh", async () => {

@@ -17,6 +17,7 @@ function toItem(n: NotificationView): NotificationItem {
     requestedAmount: n.requestedAmount,
     reason: n.reason,
     actorName: n.actorName,
+    balanceAfter: n.balanceAfter,
     refType: n.refType,
     createdAt: n.createdAt.toISOString(),
     read: n.readAt !== null,

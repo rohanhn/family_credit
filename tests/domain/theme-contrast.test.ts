@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { AVATAR_IDS } from "@/lib/avatars";
-import { THEME_IDS, THEMES, type ThemeTokens } from "@/ui/themes";
+import { FROZEN_TOKENS, THEME_IDS, THEMES, type ThemeTokens } from "@/ui/themes";
 
 // spec ui-theme "Bộ theme chibi" — Độ tương phản; danh sách cặp lấy từ docs/design/README.md §2.
 
@@ -63,6 +63,14 @@ describe("spec ui-theme: Độ tương phản", () => {
     }
   }
 
+  // Bảng màu đóng băng (spec debt-freeze) cũng phải đạt cùng các cặp như theme.
+  const PALETTES: [string, ThemeTokens][] = [...THEME_IDS.map((id) => [id, THEMES[id].tokens] as [string, ThemeTokens]), ["frozen", FROZEN_TOKENS]];
+  for (const [text, bg] of THEME_PAIRS) {
+    it(`frozen: chữ ${text} trên nền ${bg} đạt 4.5:1`, () => {
+      expect(contrast(FROZEN_TOKENS[text], FROZEN_TOKENS[bg])).toBeGreaterThanOrEqual(4.5);
+    });
+  }
+
   for (const [label, text, bg] of FIXED_PAIRS) {
     it(`Màu cố định "${label}" đạt 4.5:1`, () => {
       expect(contrast(text, bg)).toBeGreaterThanOrEqual(4.5);
@@ -70,8 +78,7 @@ describe("spec ui-theme: Độ tương phản", () => {
   }
 
   // Chữ đặt trên nền phủ alpha: tính trên màu nền sau khi phủ.
-  for (const id of THEME_IDS) {
-    const t = THEMES[id].tokens;
+  for (const [id, t] of PALETTES) {
     it(`${id}: chữ trắng trên danh sách khoản của màn ăn mừng (primary phủ black/15) đạt 4.5:1`, () => {
       expect(contrast("#FFFFFF", blend("#000000", t.primary, 0.15))).toBeGreaterThanOrEqual(4.5);
     });
@@ -84,7 +91,7 @@ describe("spec ui-theme: Độ tương phản", () => {
   }
 
   it("primary trên soft vẫn đủ 3:1 cho icon và viền", () => {
-    for (const id of THEME_IDS) expect(contrast(THEMES[id].tokens.primary, THEMES[id].tokens.soft)).toBeGreaterThanOrEqual(3);
+    for (const [, t] of PALETTES) expect(contrast(t.primary, t.soft)).toBeGreaterThanOrEqual(3);
   });
 
   it("Hàm tương phản khớp giá trị đo ở README (sunny primary/soft ≈ 4.25)", () => {

@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Mascot } from "@/ui/chibi";
+import { ChibiAvatar, Mascot, type ChibiMood } from "@/ui/chibi";
 import { Icon } from "@/ui/icons";
 import { ICON_BUTTON_CLASS, KidShell } from "@/ui/kid-shell";
 import { ParentColumns, ParentShell } from "@/ui/parent-shell";
 import { Button, Card, Chip, CoinIcon, ProgressBar } from "@/ui/primitives";
-import { THEME_IDS, THEMES, type ThemeId } from "@/ui/themes";
+import { FROZEN_THEME, THEME_IDS, THEMES, type ThemeId } from "@/ui/themes";
 
 export function UiDemo() {
   const [theme, setTheme] = useState<ThemeId>("sunny");
   const [area, setArea] = useState<"kid" | "parent">("kid");
-  const mascot = THEMES[theme].mascot;
+  const [frozen, setFrozen] = useState(false);
+  const mascot = frozen ? undefined : THEMES[theme].mascot;
 
   const switcher = (
     <Card className="flex flex-wrap items-center gap-2">
@@ -21,6 +22,9 @@ export function UiDemo() {
           {THEMES[id].name}
         </Button>
       ))}
+      <Button size="md" variant={frozen ? "primary" : "soft"} aria-pressed={frozen} onClick={() => setFrozen(!frozen)}>
+        Đóng băng
+      </Button>
       <Button variant="outline" onClick={() => setArea(area === "kid" ? "parent" : "kid")}>
         {area === "kid" ? "Xem khu vực bố mẹ" : "Xem khu vực con"}
       </Button>
@@ -67,7 +71,7 @@ export function UiDemo() {
 
   return (
     <KidShell
-      theme={theme}
+      theme={frozen ? FROZEN_THEME : theme}
       childName="Bin"
       avatar="boy-brown"
       familyName="Nhà Bin & Na"
@@ -85,6 +89,15 @@ export function UiDemo() {
       }
     >
       {switcher}
+      <Card className="flex flex-wrap items-center gap-4">
+        <span className="text-sm font-extrabold text-muted">Nét mặt:</span>
+        {(["happy", "joy", "sad", "cold"] as ChibiMood[]).map((mood) => (
+          <span key={mood} className="flex flex-col items-center gap-1 text-xs font-bold text-muted">
+            <ChibiAvatar avatar="boy-brown" size={56} mood={mood} />
+            {mood}
+          </span>
+        ))}
+      </Card>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="relative flex min-h-36 items-center gap-4 overflow-hidden rounded-[28px] bg-primary px-6 py-5 text-on-primary">
           <CoinIcon size={64} />

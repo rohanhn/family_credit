@@ -10,7 +10,7 @@ import { ICON_BUTTON_CLASS, KidShell } from "@/ui/kid-shell";
 import { Button } from "@/ui/primitives";
 import { SoundProvider } from "@/ui/sound";
 import { SoundToggle } from "@/ui/sound-toggle";
-import { effectiveTheme } from "@/ui/themes";
+import { displayTheme, effectiveTheme } from "@/ui/themes";
 import { KidNotificationsProvider } from "./kid-notifications";
 import { NotificationBell } from "./notification-bell";
 
@@ -29,7 +29,7 @@ async function KidFrame({ children }: { children: ReactNode }) {
         profile={{ name: kid.name, avatar: kid.avatar, currencyName: currency.name, currencyIcon: currency.icon, theme, timezone: family.timezone }}
       >
         <KidShell
-          theme={theme}
+          theme={displayTheme(theme, unread.balance)}
           childName={kid.name}
           avatar={kid.avatar}
           familyName={family.name}

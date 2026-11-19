@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import confetti from "canvas-confetti";
+import { debtOf, isInDebt } from "@/lib/debt";
 import { formatPoints, isRedeem, type FeedbackScreen, type NotificationItem } from "@/lib/notification-screens";
 import { formatNotificationTime } from "@/lib/time";
 import { ChibiAvatar, Mascot } from "@/ui/chibi";
@@ -86,7 +87,7 @@ export function PointsFeedback({
         ].join(" ")}
       >
         {gift && <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 size-full" aria-hidden="true" />}
-        {screen.kind === "gift" && <GiftBody screen={screen} profile={profile} titleId={titleId} />}
+        {screen.kind === "gift" && <GiftBody screen={screen} profile={profile} balance={balance} titleId={titleId} />}
         {screen.kind === "penalty" && <PenaltyBody screen={screen} profile={profile} balance={balance} titleId={titleId} />}
         {screen.kind === "rejected" && <RejectedBody items={screen.items} profile={profile} titleId={titleId} />}
         <button
@@ -105,8 +106,20 @@ export function PointsFeedback({
   );
 }
 
-function GiftBody({ screen, profile, titleId }: { screen: Extract<FeedbackScreen, { kind: "gift" }>; profile: KidProfile; titleId: string }) {
-  const mascot = THEMES[profile.theme].mascot;
+function GiftBody({
+  screen,
+  profile,
+  balance,
+  titleId,
+}: {
+  screen: Extract<FeedbackScreen, { kind: "gift" }>;
+  profile: KidProfile;
+  balance: number;
+  titleId: string;
+}) {
+  // Linh vật thuộc theme con chọn, nên ẩn khi đang đóng băng (design D4).
+  const mascot = isInDebt(balance) ? undefined : THEMES[profile.theme].mascot;
+  const title = screen.thawed ? "Tan băng rồi!" : screen.total > 0 ? `Giỏi quá, ${profile.name} ơi!` : `${profile.name} nhận quà rồi!`;
   return (
     <>
       {mascot && (
@@ -132,9 +145,14 @@ function GiftBody({ screen, profile, titleId }: { screen: Extract<FeedbackScreen
       )}
       <span className="relative flex flex-col gap-1">
         <h2 id={titleId} className="font-display text-[30px] font-extrabold leading-tight md:text-[28px]">
-          {screen.total > 0 ? `Giỏi quá, ${profile.name} ơi!` : `${profile.name} nhận quà rồi!`}
+          {title}
         </h2>
-        <p className="font-bold">Bố mẹ vừa duyệt cho con</p>
+        <p className="font-bold">{screen.thawed ? `Con đã hết nợ rồi, ${profile.name} giỏi lắm!` : "Bố mẹ vừa duyệt cho con"}</p>
+        {screen.debtLeft > 0 && (
+          <p className="font-extrabold">
+            Con còn nợ {screen.debtLeft} {profile.currencyName} nữa thôi
+          </p>
+        )}
       </span>
       <ul className="relative flex w-full flex-col gap-2 rounded-[22px] bg-black/15 px-4 py-3 text-left">
         {screen.items.map((i) => (
@@ -201,9 +219,18 @@ function PenaltyBody({
           );
         })}
       </ul>
-      <span className="font-extrabold text-muted">
-        Con vẫn còn {balance} {profile.currencyName}
-      </span>
+      {isInDebt(balance) ? (
+        <span className="flex flex-col gap-1">
+          <span className="font-extrabold">
+            Con đang nợ {debtOf(balance)} {profile.currencyName}
+          </span>
+          <span className="text-sm font-bold text-muted">Làm nhiệm vụ hoặc việc tốt để kiếm {profile.currencyName} và tan băng nhé!</span>
+        </span>
+      ) : (
+        <span className="font-extrabold text-muted">
+          Con vẫn còn {balance} {profile.currencyName}
+        </span>
+      )}
     </>
   );
 }

@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation";
 import { kidMarkReadAction, kidUnreadAction, type UnreadPayload } from "@/app/actions/notifications";
 import { buildScreens, keepCurrentScreen, nextScreenAfterClose, screenKey, type FeedbackScreen, type NotificationItem } from "@/lib/notification-screens";
-import type { ThemeId } from "@/ui/themes";
+import { isInDebt } from "@/lib/debt";
+import { displayTheme, type ThemeId } from "@/ui/themes";
 import { PointsFeedback } from "./points-feedback";
 
 // Trạng thái thông báo chưa đọc của con trong layout khu vực con (design D3/D6):
@@ -41,16 +42,24 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
   const router = useRouter();
   const [items, setItems] = useState<NotificationItem[]>(initial.items);
   const [balance, setBalance] = useState(initial.balance);
+  const balanceRef = useRef(initial.balance);
   // Màn đang hiện giữ trong state riêng (design D4): thông báo mới chỉ vào hàng đợi phía sau, không thay màn giữa chừng.
-  const [current, setCurrent] = useState<FeedbackScreen | null>(() => buildScreens(initial.items)[0] ?? null);
+  const [current, setCurrent] = useState<FeedbackScreen | null>(() => buildScreens(initial.items, initial.balance)[0] ?? null);
   const dismissed = useRef(new Set<number>());
 
-  const apply = useCallback((payload: UnreadPayload) => {
-    const fresh = payload.items.filter((i) => !dismissed.current.has(i.id));
-    setItems(fresh);
-    setCurrent((c) => keepCurrentScreen(c, fresh));
-    setBalance(payload.balance);
-  }, []);
+  const apply = useCallback(
+    (payload: UnreadPayload) => {
+      const fresh = payload.items.filter((i) => !dismissed.current.has(i.id));
+      // Trạng thái nợ đổi (vào hoặc ra khỏi đóng băng): render lại khung và trang với số dư mới (design D5).
+      const debtChanged = isInDebt(payload.balance) !== isInDebt(balanceRef.current);
+      balanceRef.current = payload.balance;
+      setItems(fresh);
+      setCurrent((c) => keepCurrentScreen(c, fresh, payload.balance));
+      setBalance(payload.balance);
+      if (debtChanged) router.refresh();
+    },
+    [router],
+  );
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -93,7 +102,7 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
       if (!current) return;
       const ids = current.items.map((i) => i.id);
       for (const id of ids) dismissed.current.add(id);
-      const next = nextScreenAfterClose(current, items);
+      const next = nextScreenAfterClose(current, items, balanceRef.current);
       const remaining = next.items;
       setItems(remaining);
       setCurrent(next.current);
@@ -103,8 +112,8 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
         // Mạng lỗi: thông báo vẫn chưa đọc trên server, lần hỏi sau sẽ hiện lại (sau khi tải lại trang).
         for (const id of ids) dismissed.current.delete(id);
       }
-      // Số dư và danh sách trên trang có thể đã đổi.
-      if (next.current === null) router.refresh();
+      // Số dư và danh sách trên trang có thể đã đổi; đóng màn tan băng thì luôn làm mới để về theme thường (design D5).
+      if (next.current === null || (current.kind === "gift" && current.thawed)) router.refresh();
     },
     [current, items, router],
   );
@@ -116,7 +125,7 @@ export function KidNotificationsProvider({ initial, profile, children }: { initi
       {children}
       {current && (
         // Overlay nằm ngoài khung KidShell nên tự đặt data-theme (biến CSS kế thừa qua display: contents).
-        <div data-theme={profile.theme} className="contents">
+        <div data-theme={displayTheme(profile.theme, balance)} className="contents">
           <PointsFeedback key={screenKey(current)} screen={current} profile={profile} balance={balance} onClose={close} />
         </div>
       )}

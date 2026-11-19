@@ -46,6 +46,30 @@ export const THEMES: Record<ThemeId, { name: string; hint?: string; mascot?: "ro
   },
 };
 
+/**
+ * Bảng màu đóng băng khi con đang nợ (spec debt-freeze "Giao diện đóng băng", design D4).
+ * Không phải theme để chọn: không có trong THEME_IDS nên không hiện ở theme picker và không lưu được.
+ */
+export const FROZEN_THEME = "frozen";
+export const FROZEN_TOKENS: ThemeTokens = {
+  bg: "#E3F0F9",
+  card: "#F7FBFE",
+  soft: "#CBE3F3",
+  ring: "#8EC5E8",
+  primary: "#1F4E79",
+  onPrimary: "#FFFFFF",
+  accent: "#38BDF8",
+  ink: "#0F2537",
+  muted: "#3D5A70",
+};
+
+/** Theme dùng để hiển thị: bảng màu băng khi đang nợ, ngược lại theme của con. */
+export type DisplayTheme = ThemeId | typeof FROZEN_THEME;
+
+export function displayTheme(theme: ThemeId, balance: number): DisplayTheme {
+  return balance < 0 ? FROZEN_THEME : theme;
+}
+
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === "string" && (THEME_IDS as readonly string[]).includes(value);
 }
@@ -73,8 +97,9 @@ function declarations(tokens: ThemeTokens): string {
   return (Object.keys(CSS_VAR) as (keyof ThemeTokens)[]).map((k) => `${CSS_VAR[k]}:${tokens[k]}`).join(";");
 }
 
-/** CSS cho mọi theme; `:root` dùng theme mặc định. */
+/** CSS cho mọi theme và bảng màu đóng băng; `:root` dùng theme mặc định. */
 export function themeCss(): string {
   const rules = THEME_IDS.map((id) => `[data-theme="${id}"]{${declarations(THEMES[id].tokens)}}`);
+  rules.push(`[data-theme="${FROZEN_THEME}"]{${declarations(FROZEN_TOKENS)}}`);
   return `:root{${declarations(THEMES[DEFAULT_THEME].tokens)}}${rules.join("")}`;
 }

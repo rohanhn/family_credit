@@ -95,7 +95,7 @@ export async function redeemAction(_prev: ActionState, form: FormData): Promise<
 export async function cancelRedemptionAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   const kid = await requireChild();
   try {
-    await cancelRedemption(getDb(), { childId: kid.childId, redemptionId: int(form, "id") });
+    await cancelRedemption(getDb(), { familyId: kid.familyId, childId: kid.childId, redemptionId: int(form, "id") });
     refresh();
     return { ok: true, message: "Đã hủy yêu cầu" };
   } catch (err) {

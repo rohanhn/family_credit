@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { systemClock, type Clock, DAY } from "../clock";
 import { notifications, parents, transactions } from "../db/schema";
 import type { DbOrTx, Tx } from "../db/types";
@@ -55,13 +55,23 @@ export async function notifyRejected(
 }
 
 /** Thông báo kèm mức gốc của giao dịch và tên bố/mẹ đã thực hiện (màn báo bị trừ cần cả hai). */
-export type NotificationView = Notification & { requestedAmount: number | null; actorName: string | null };
+export type NotificationView = Notification & { requestedAmount: number | null; actorName: string | null; balanceAfter: number | null };
 
 const withRequested = {
   n: notifications,
   requestedAmount: transactions.requestedAmount,
   actorName: parents.displayName,
+  // Số dư lũy kế ngay sau giao dịch của thông báo (design D6), để dựng màn tan băng lúc hiển thị.
+  balanceAfter: sql<number | null>`case when ${notifications.transactionId} is null then null else (select coalesce(sum(t2.applied_amount), 0)::int from transactions t2 where t2.child_id = ${notifications.childId} and t2.id <= ${notifications.transactionId}) end`,
 };
+
+type Row = { n: Notification; requestedAmount: number | null; actorName: string | null; balanceAfter: number | null };
+const toView = (r: Row): NotificationView => ({
+  ...r.n,
+  requestedAmount: r.requestedAmount,
+  actorName: r.actorName,
+  balanceAfter: r.balanceAfter === null ? null : Number(r.balanceAfter),
+});
 
 function retentionCutoff(clock: Clock): Date {
   return new Date(clock.now().getTime() - NOTIFICATION_RETENTION_DAYS * DAY);
@@ -79,7 +89,7 @@ export async function getUnreadSummary(db: DbOrTx, childId: number, clock: Clock
     .leftJoin(parents, eq(parents.id, transactions.actorParentId))
     .where(and(eq(notifications.childId, childId), isNull(notifications.readAt), gte(notifications.createdAt, retentionCutoff(clock))))
     .orderBy(asc(notifications.id));
-  const items = rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount, actorName: r.actorName }));
+  const items = rows.map(toView);
   return { count: items.length, items };
 }
 
@@ -94,7 +104,7 @@ export async function listNotifications(db: DbOrTx, childId: number, clock: Cloc
     .where(and(eq(notifications.childId, childId), gte(notifications.createdAt, since)))
     .orderBy(desc(notifications.id))
     .limit(200);
-  return rows.map((r) => ({ ...r.n, requestedAmount: r.requestedAmount, actorName: r.actorName }));
+  return rows.map(toView);
 }
 
 /** Đánh dấu đã đọc; chỉ tác động lên thông báo của chính con đó. Trả về số dòng đã đánh dấu. */

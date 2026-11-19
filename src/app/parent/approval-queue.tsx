@@ -69,10 +69,8 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     childArchived: p.childArchived,
     meta: `${p.childName} gửi lúc ${formatDateTime(p.createdAt, timezone)}`,
     amount: p.kind === "reward" ? p.proposedPoints : -p.proposedPoints,
-    warning:
-      p.kind === "penalty" && p.proposedPoints > p.balance
-        ? `Số dư hiện tại (${p.balance}) chỉ đủ trừ ${p.balance}; lịch sử vẫn ghi mức gốc.`
-        : undefined,
+    // Chỉ báo trước, không chặn (spec debt-freeze "Báo trước khi phạt thành nợ"), tính theo số điểm con đề xuất.
+    warning: p.kind === "penalty" && p.proposedPoints > p.balance ? `Nếu duyệt, ${p.childName} sẽ nợ ${p.proposedPoints - p.balance}.` : undefined,
     decision: (
       <DecisionForm id={p.id} approve={approveProposalAction} reject={rejectProposalAction} extra={<PointsField defaultPoints={p.proposedPoints} />} />
     ),
@@ -83,10 +81,23 @@ export async function loadQueue(db: DbOrTx, familyId: number, timezone: string):
     tag: "Đổi thưởng",
     title: `${r.childName} · ${r.nameSnapshot}`,
     childArchived: r.childArchived,
-    meta: `${r.childName} gửi lúc ${formatDateTime(r.createdAt, timezone)} · số dư hiện tại ${r.balance}`,
+    meta: `${r.childName} gửi lúc ${formatDateTime(r.createdAt, timezone)} · ${r.balance < 0 ? `đang nợ ${-r.balance}` : `số dư hiện tại ${r.balance}`}`,
     amount: -r.priceSnapshot,
-    warning: r.balance < r.priceSnapshot ? `Số dư hiện tại (${r.balance}) không đủ để duyệt; có thể từ chối kèm lý do.` : undefined,
-    decision: <DecisionForm id={r.id} approve={approveRedemptionAction} reject={rejectRedemptionAction} />,
+    warning: r.frozen
+      ? `Đang đóng băng: con đang nợ ${-r.balance}. Duyệt hoặc từ chối được khi con hết nợ.`
+      : r.balance < 0
+        ? `Con đang nợ ${-r.balance} nên không duyệt được; có thể từ chối vì con đã được lưu trữ.`
+        : r.balance < r.priceSnapshot
+          ? `Số dư hiện tại (${r.balance}) không đủ để duyệt; có thể từ chối kèm lý do.`
+          : undefined,
+    decision: (
+      <DecisionForm
+        id={r.id}
+        approve={approveRedemptionAction}
+        reject={rejectRedemptionAction}
+        locked={r.frozen ? "all" : r.balance < 0 ? "approve" : undefined}
+      />
+    ),
     createdAt: r.createdAt,
   }));
   return [...tasks, ...items, ...proposed, ...redeems].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
